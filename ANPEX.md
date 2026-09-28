@@ -17,16 +17,14 @@ O projeto é um painel operacional, em português do Brasil, para acompanhar a a
 - ficha completa do agendamento em modal;
 - temas claro e escuro.
 
-## 2. Estado atual e limitação importante
+## 2. Estado atual
 
-O aplicativo é somente frontend. Não há banco de dados, autenticação ou API de persistência.
-
-- A agenda inicial é carregada de `src/lib/agenda-data.ts`.
-- Uma planilha importada substitui os dados apenas na memória da página.
-- Alterações de situação também existem apenas na memória.
-- Recarregar a página restaura os 21 registros iniciais e remove alterações não exportadas.
-
-Não descreva importações ou situações como “salvas” sem antes implementar persistência real.
+- Os dados ficam no Lovable Cloud: `appointments`, `profiles`, `edit_log` e `contact_log` (as duas últimas ainda sem uso).
+- É preciso entrar com e-mail e senha em `/auth`. Quem não tem `role` em `profiles` vê "Aguardando liberação de acesso".
+- O primeiro master é promovido manualmente no backend.
+- A importação de planilha INSERE registros (não apaga os existentes). A coluna opcional "Previsão de Entrega" preenche `original_deadline` e `current_deadline`.
+- A troca de situação grava direto no banco.
+- `agenda-data.ts` serviu apenas para a carga inicial única dos 21 registros.
 
 ## 3. Stack e comandos
 
