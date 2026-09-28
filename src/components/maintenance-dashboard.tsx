@@ -240,7 +240,7 @@ function deadlineState(item: Appointment, completedAt?: string, today = dateInBr
   if (item.currentDeadline === today) return "today";
   return "onTime";
 }
-function DeadlineBadge({ item, completedAt, today }: { item: Appointment; completedAt?: string; today: string }) {
+function DeadlineBadge({ item, completedAt, today }: { item: Appointment; completedAt: string | undefined; today: string }) {
   const state = deadlineState(item, completedAt, today);
   return state ? <span className={cn("inline-flex w-fit items-center whitespace-nowrap rounded border px-2 py-0.5 text-[11px] font-semibold", deadlineClasses[state])}>{deadlineLabels[state]}</span> : null;
 }
