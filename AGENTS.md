@@ -15,3 +15,4 @@
 - `appointments.id` é uuid; o ID da planilha fica em `sheet_id` — importações podem repetir IDs.
 - Regras de edição por perfil ficam em trigger BEFORE UPDATE em appointments e o histórico em trigger AFTER UPDATE (edit_log só leitura para usuários) — a tela só espelha, o banco decide.
 - Prazos usam datas de calendário em America/Sao_Paulo e a última mudança de situação para Finalizado no edit_log — evita comparar horários UTC como dias locais e mantém a entrega auditável.
+- A ficha de agendamento compartilha os campos da criação manual e envia somente colunas alteradas no UPDATE — mantém o trigger de permissões e o histórico como fonte das regras.

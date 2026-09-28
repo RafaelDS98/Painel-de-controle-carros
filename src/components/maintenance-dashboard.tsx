@@ -24,6 +24,7 @@ import {
   Download,
   LogOut,
   Moon,
+  Plus,
   RotateCcw,
   Search,
   Sun,
@@ -45,6 +46,8 @@ import {
 import { cn } from "@/lib/utils";
 import { AppointmentHistory, ChangeLogDialog } from "@/components/edit-history";
 import { History, Unlock } from "lucide-react";
+import { AppointmentForm, columnForField, emptyFields, type AppointmentFields } from "@/components/appointment-form";
+import type { TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 type Appointment = {
   dbId: string;
@@ -98,6 +101,15 @@ function fromRow(row: AppointmentRow): Appointment {
     operator: row.operator, externalOrder: row.external_order, status,
     originalDeadline: row.original_deadline, currentDeadline: row.current_deadline,
     editsUsed: row.creator_edits_used, editsAllowed: row.creator_edits_allowed, managerEditUsed: row.manager_edit_used,
+  };
+}
+
+function fieldsFromAppointment(item: Appointment): AppointmentFields {
+  return {
+    date: item.date, time: item.time, plate: item.plate, store: item.store,
+    model: item.model, contact: item.contact, workshop: item.workshop,
+    issue: item.issue, note: item.note, operator: item.operator,
+    externalOrder: item.externalOrder, currentDeadline: item.currentDeadline ?? "",
   };
 }
 
@@ -252,8 +264,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const [historyKey, setHistoryKey] = useState(0);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [completedAtById, setCompletedAtById] = useState<Record<string, string>>({});
-  const [deadlineDraft, setDeadlineDraft] = useState("");
-  const [deadlineSaving, setDeadlineSaving] = useState(false);
+  const [newOpen, setNewOpen] = useState(false);
   const [today, setToday] = useState(() => dateInBrazil(new Date()));
   const [search, setSearch] = useState("");
   const [contact, setContact] = useState("");
@@ -274,8 +285,6 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     const interval = window.setInterval(refreshToday, 60_000);
     return () => window.clearInterval(interval);
   }, []);
-
-  useEffect(() => { setDeadlineDraft(selected?.currentDeadline ?? ""); }, [selected?.dbId, selected?.currentDeadline]);
 
   async function loadCompletionLogs(rows: Appointment[]) {
     const ids = rows.filter((item) => item.status === "Finalizado" && item.currentDeadline).map((item) => item.dbId);
@@ -358,17 +367,45 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     void loadCompletionLogs(appointments.map((row) => row.dbId === dbId ? fromRow(data) : row));
   }
 
-  async function updateDeadline() {
-    if (!selected || deadlineSaving || deadlineDraft === (selected.currentDeadline ?? "")) return;
+  async function saveAppointment(changes: Partial<AppointmentFields>): Promise<boolean> {
+    if (!selected) return false;
     const blocked = editBlockReason(selected, currentUser.role);
-    if (blocked) { setMessage(blocked); return; }
-    setDeadlineSaving(true);
-    const { data, error } = await supabase.from("appointments")
-      .update({ current_deadline: deadlineDraft || null }).eq("id", selected.dbId).select(rowColumns).single();
-    setDeadlineSaving(false);
-    if (error || !data) { setMessage(error?.message || "Não foi possível salvar o prazo."); return; }
+    if (blocked) { setMessage(blocked); return false; }
+    const update: TablesUpdate<"appointments"> = {};
+    for (const [key, value] of Object.entries(changes)) {
+      if (key === "currentDeadline") update.current_deadline = value || null;
+      else Object.assign(update, { [columnForField[key as keyof AppointmentFields]]: value });
+    }
+    if (!Object.keys(update).length) return true;
+    const { data, error } = await supabase.from("appointments").update(update).eq("id", selected.dbId).select(rowColumns).single();
+    if (error || !data) { setMessage(error?.message || "Não foi possível salvar as alterações."); return false; }
     replaceRow(data);
     if (data.status === "Finalizado") void loadCompletionLogs(appointments.map((row) => row.dbId === data.id ? fromRow(data) : row));
+    setMessage("Alterações salvas.");
+    return true;
+  }
+
+  async function createAppointment(fields: Partial<AppointmentFields>): Promise<boolean> {
+    const date = fields.date?.trim();
+    const time = fields.time?.trim();
+    const plate = fields.plate?.trim();
+    if (!date || !time || !plate) { setMessage("Informe data, hora e placa."); return false; }
+    const values: TablesInsert<"appointments"> = {
+      date, time, plate, created_by: currentUser.id, status: "", sheet_id: "",
+      original_deadline: fields.currentDeadline || null,
+      current_deadline: fields.currentDeadline || null,
+    };
+    for (const [key, value] of Object.entries(fields)) {
+      if (key !== "currentDeadline" && key !== "date" && key !== "time" && key !== "plate")
+        Object.assign(values, { [columnForField[key as keyof AppointmentFields]]: value?.trim() ?? "" });
+    }
+    const { data, error } = await supabase.from("appointments").insert(values).select(rowColumns).single();
+    if (error || !data) { setMessage(error?.message || "Não foi possível criar o agendamento."); return false; }
+    setNewOpen(false);
+    resetFilters();
+    await loadAppointments();
+    setMessage(`Agendamento de ${plate} criado com sucesso.`);
+    return true;
   }
 
   async function grantExtraEdit(item: Appointment) {
@@ -438,11 +475,12 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   return (
     <div className={cn("min-h-screen bg-background text-foreground", dark && "dark")}>
       <header className="border-b bg-primary text-primary-foreground">
-        <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-4 px-5 py-4 lg:px-8">
+        <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-4 px-5 py-4 lg:px-8">
           <div className="flex items-center gap-3"><div className="grid size-10 place-items-center rounded-md bg-primary-foreground text-primary"><Wrench className="size-5" /></div><div><p className="text-xl font-bold">ANPEX</p><p className="text-xs text-primary-foreground/70">Gestão de Agendamentos</p></div></div>
           <div className="flex items-center gap-2">
             <div className="mr-2 hidden text-right text-sm sm:block"><p className="font-semibold">{currentUser.name}</p><p className="text-xs text-primary-foreground/70">{roleLabels[currentUser.role]}</p></div>
             <Button variant="secondary" onClick={() => setLogOpen(true)}><History /> Log de alterações</Button>
+            <Button variant="secondary" onClick={() => setNewOpen(true)}><Plus /> Novo agendamento</Button>
             <Button variant="secondary" onClick={() => inputRef.current?.click()}><Upload /> Importar agenda</Button>
             <input ref={inputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(event) => importFile(event.target.files?.[0])} />
             <Button variant="ghost" size="icon" onClick={() => setDark((value) => !value)} className="text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground" aria-label="Alternar tema">{dark ? <Sun /> : <Moon />}</Button>
@@ -503,7 +541,39 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
         </section>
       </main>
 
-      <Dialog open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">{selected && <><DialogHeader><DialogTitle className="flex items-center gap-3"><span className="rounded-md bg-primary px-2 py-1 text-primary-foreground">{selected.plate}</span>{selected.model}</DialogTitle><DialogDescription>Agendamento #{selected.id} • {fullDate.format(localDate(selected.date))} às {selected.time}</DialogDescription></DialogHeader><div className="space-y-3 border-b pb-4"><DeadlineBadge item={selected} completedAt={completedAtById[selected.dbId]} today={today} /><div className="grid gap-3 sm:grid-cols-2">{selected.originalDeadline && selected.originalDeadline !== selected.currentDeadline && <Detail label="Prazo original" value={fullDate.format(localDate(selected.originalDeadline))} />}{selected.currentDeadline ? <Detail label={selected.originalDeadline === selected.currentDeadline ? "Previsão de entrega" : "Prazo atual"} value={fullDate.format(localDate(selected.currentDeadline))} /> : <Detail label={selected.originalDeadline ? "Prazo atual" : "Previsão de entrega"} value="" />}</div><div className="flex flex-wrap items-end gap-2"><label className="min-w-44 flex-1"><span className="mb-1.5 block text-xs font-medium uppercase text-muted-foreground">Editar prazo atual</span><Input type="date" value={deadlineDraft} disabled={Boolean(editBlockReason(selected, currentUser.role)) || deadlineSaving} onChange={(event) => setDeadlineDraft(event.target.value)} /></label><Button variant="outline" disabled={Boolean(editBlockReason(selected, currentUser.role)) || deadlineSaving || deadlineDraft === (selected.currentDeadline ?? "")} onClick={updateDeadline}>{deadlineSaving ? "Salvando…" : "Salvar prazo"}</Button></div></div><label><span className="mb-1.5 block text-xs font-medium uppercase text-muted-foreground">Situação do veículo</span><select value={selected.status} disabled={Boolean(editBlockReason(selected, currentUser.role))} onChange={(event) => updateStatus(selected.dbId, event.target.value as ServiceStatus)} className={cn("disabled:cursor-not-allowed disabled:opacity-70 h-10 w-full rounded-md border px-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-ring", statusClasses(selected.status))}><option value="">Não atualizada</option>{serviceStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select></label>{editBlockReason(selected, currentUser.role) && <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{editBlockReason(selected, currentUser.role)}</p>}{currentUser.role !== "atendimento" && <div className="flex flex-wrap items-center gap-3"><Button variant="outline" disabled={selected.editsAllowed > 1} onClick={() => grantExtraEdit(selected)}><Unlock /> Liberar edição extra</Button><span className="text-xs text-muted-foreground">Atendimento: {selected.editsUsed} de {selected.editsAllowed} edição(ões) usada(s){selected.editsAllowed > 1 ? " • edição extra já liberada" : ""}</span></div>}<div className="grid gap-5 pt-2 sm:grid-cols-2"><Detail label="Contato" value={selected.contact} /><Detail label="Loja" value={selected.store} /><Detail label="Local / Oficina" value={selected.workshop} /><Detail label="Operador" value={selected.operator} /><div className="sm:col-span-2"><Detail label="Problema relatado" value={selected.issue} /></div><Detail label="Observação" value={selected.note} /><Detail label="O.S Externa" value={selected.externalOrder} /><Detail label="Data de cadastro" value={selected.registeredAt ? fullDate.format(localDate(selected.registeredAt)) : ""} /></div><AppointmentHistory appointmentId={selected.dbId} refreshKey={historyKey} /></>}</DialogContent></Dialog>
+      <Dialog open={newOpen} onOpenChange={setNewOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader><DialogTitle>Novo agendamento</DialogTitle><DialogDescription>Dados do atendimento</DialogDescription></DialogHeader>
+          {newOpen && <AppointmentForm initial={emptyFields} onSave={createAppointment} />}
+        </DialogContent>
+      </Dialog>
+      <Dialog open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+          {selected && <>
+            <DialogHeader>
+              <DialogTitle className="flex flex-wrap items-center gap-3"><span className="rounded-md bg-primary px-2 py-1 text-primary-foreground">{selected.plate}</span>{selected.model}</DialogTitle>
+              <DialogDescription>{selected.id ? `Agendamento #${selected.id} • ` : ""}{selected.date ? fullDate.format(localDate(selected.date)) : "Sem data"} às {selected.time}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 border-b pb-4">
+              <DeadlineBadge item={selected} completedAt={completedAtById[selected.dbId]} today={today} />
+              <div className="grid gap-3 sm:grid-cols-2">
+                {selected.originalDeadline && selected.originalDeadline !== selected.currentDeadline && <Detail label="Prazo original" value={fullDate.format(localDate(selected.originalDeadline))} />}
+                {selected.currentDeadline ? <Detail label={selected.originalDeadline === selected.currentDeadline ? "Previsão de entrega" : "Prazo atual"} value={fullDate.format(localDate(selected.currentDeadline))} /> : <Detail label={selected.originalDeadline ? "Prazo atual" : "Previsão de entrega"} value="" />}
+              </div>
+            </div>
+            <label><span className="mb-1.5 block text-xs font-medium uppercase text-muted-foreground">Situação do veículo</span>
+              <select value={selected.status} disabled={Boolean(editBlockReason(selected, currentUser.role))} onChange={(event) => updateStatus(selected.dbId, event.target.value as ServiceStatus)} className={cn("disabled:cursor-not-allowed disabled:opacity-70 h-10 w-full rounded-md border px-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-ring", statusClasses(selected.status))}>
+                <option value="">Não atualizada</option>{serviceStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
+              </select>
+            </label>
+            {editBlockReason(selected, currentUser.role) && <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{editBlockReason(selected, currentUser.role)}</p>}
+            {currentUser.role !== "atendimento" && <div className="flex flex-wrap items-center gap-3"><Button variant="outline" disabled={selected.editsAllowed > 1} onClick={() => grantExtraEdit(selected)}><Unlock /> Liberar edição extra</Button><span className="text-xs text-muted-foreground">Atendimento: {selected.editsUsed} de {selected.editsAllowed} edição(ões) usada(s){selected.editsAllowed > 1 ? " • edição extra já liberada" : ""}</span></div>}
+            <AppointmentForm key={`${selected.dbId}-${historyKey}`} initial={fieldsFromAppointment(selected)} editing blocked={editBlockReason(selected, currentUser.role)} onSave={saveAppointment} />
+            <Detail label="Data de cadastro" value={selected.registeredAt ? fullDate.format(localDate(selected.registeredAt)) : ""} />
+            <AppointmentHistory appointmentId={selected.dbId} refreshKey={historyKey} />
+          </>}
+        </DialogContent>
+      </Dialog>
       <ChangeLogDialog open={logOpen} onOpenChange={setLogOpen} />
     </div>
   );
