@@ -14,16 +14,226 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      appointments: {
+        Row: {
+          contact: string
+          created_at: string
+          created_by: string | null
+          creator_edits_allowed: number
+          creator_edits_used: number
+          current_deadline: string | null
+          date: string | null
+          external_order: string
+          id: string
+          issue: string
+          manager_edit_used: boolean
+          model: string
+          note: string
+          operator: string
+          original_deadline: string | null
+          plate: string
+          priority_urgent: boolean
+          registered_at: string | null
+          rework_of: string | null
+          rework_reason: string | null
+          sgloc_reference: string | null
+          sheet_id: string
+          status: string
+          store: string
+          time: string
+          workshop: string
+        }
+        Insert: {
+          contact?: string
+          created_at?: string
+          created_by?: string | null
+          creator_edits_allowed?: number
+          creator_edits_used?: number
+          current_deadline?: string | null
+          date?: string | null
+          external_order?: string
+          id?: string
+          issue?: string
+          manager_edit_used?: boolean
+          model?: string
+          note?: string
+          operator?: string
+          original_deadline?: string | null
+          plate?: string
+          priority_urgent?: boolean
+          registered_at?: string | null
+          rework_of?: string | null
+          rework_reason?: string | null
+          sgloc_reference?: string | null
+          sheet_id?: string
+          status?: string
+          store?: string
+          time?: string
+          workshop?: string
+        }
+        Update: {
+          contact?: string
+          created_at?: string
+          created_by?: string | null
+          creator_edits_allowed?: number
+          creator_edits_used?: number
+          current_deadline?: string | null
+          date?: string | null
+          external_order?: string
+          id?: string
+          issue?: string
+          manager_edit_used?: boolean
+          model?: string
+          note?: string
+          operator?: string
+          original_deadline?: string | null
+          plate?: string
+          priority_urgent?: boolean
+          registered_at?: string | null
+          rework_of?: string | null
+          rework_reason?: string | null
+          sgloc_reference?: string | null
+          sheet_id?: string
+          status?: string
+          store?: string
+          time?: string
+          workshop?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_rework_of_fkey"
+            columns: ["rework_of"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contact_log: {
+        Row: {
+          appointment_id: string
+          contact_at: string
+          contact_type: Database["public"]["Enums"]["contact_type"]
+          id: string
+          note: string | null
+          registered_by: string | null
+        }
+        Insert: {
+          appointment_id: string
+          contact_at?: string
+          contact_type: Database["public"]["Enums"]["contact_type"]
+          id?: string
+          note?: string | null
+          registered_by?: string | null
+        }
+        Update: {
+          appointment_id?: string
+          contact_at?: string
+          contact_type?: Database["public"]["Enums"]["contact_type"]
+          id?: string
+          note?: string | null
+          registered_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_log_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_log_registered_by_fkey"
+            columns: ["registered_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      edit_log: {
+        Row: {
+          appointment_id: string
+          changed_at: string
+          changed_by: string | null
+          field_changed: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+        }
+        Insert: {
+          appointment_id: string
+          changed_at?: string
+          changed_by?: string | null
+          field_changed: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+        }
+        Update: {
+          appointment_id?: string
+          changed_at?: string
+          changed_by?: string | null
+          field_changed?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "edit_log_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "edit_log_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          full_name: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"] | null
+        }
+        Insert: {
+          created_at?: string
+          full_name?: string | null
+          id: string
+          role?: Database["public"]["Enums"]["app_role"] | null
+        }
+        Update: {
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"] | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_access: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "atendimento" | "gerente" | "master"
+      contact_type: "ligação" | "mensagem"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +360,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["atendimento", "gerente", "master"],
+      contact_type: ["ligação", "mensagem"],
+    },
   },
 } as const
