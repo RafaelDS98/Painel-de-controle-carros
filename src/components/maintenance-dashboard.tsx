@@ -236,7 +236,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
 
   useEffect(() => { void loadAppointments(); }, []);
 
-  const option = (key: keyof Appointment) => [...new Set(appointments.map((item) => item[key]).filter(Boolean))].sort();
+  const option = (key: keyof Appointment) => [...new Set(appointments.map((item) => String(item[key])).filter(Boolean))].sort();
   const filtered = useMemo(() => appointments.filter((item) => {
     const q = search.toLocaleLowerCase("pt-BR");
     const hit = !q || [item.plate, item.contact, item.issue, item.model].some((value) => value.toLocaleLowerCase("pt-BR").includes(q));
@@ -244,8 +244,8 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   }), [appointments, contact, endDate, model, operator, search, startDate, workshop]);
 
   const sorted = useMemo(() => [...filtered].sort((a, b) => {
-    const first = sort.key === "date" ? `${a.date}${a.time}` : a[sort.key];
-    const second = sort.key === "date" ? `${b.date}${b.time}` : b[sort.key];
+    const first = sort.key === "date" ? `${a.date}${a.time}` : String(a[sort.key]);
+    const second = sort.key === "date" ? `${b.date}${b.time}` : String(b[sort.key]);
     return first.localeCompare(second, "pt-BR", { numeric: true }) * (sort.asc ? 1 : -1);
   }), [filtered, sort]);
   const pageSize = 8;
