@@ -13,3 +13,4 @@
 - Dados persistem no Lovable Cloud (tabelas appointments, profiles, edit_log, contact_log); o painel lê/grava direto via cliente do navegador com RLS — evita estado só em memória.
 - Acesso exige perfil com `role` preenchido (função `has_access`); o papel só é atribuído manualmente no backend — impede autoatribuição de privilégio.
 - `appointments.id` é uuid; o ID da planilha fica em `sheet_id` — importações podem repetir IDs.
+- Regras de edição por perfil ficam em trigger BEFORE UPDATE em appointments e o histórico em trigger AFTER UPDATE (edit_log só leitura para usuários) — a tela só espelha, o banco decide.
