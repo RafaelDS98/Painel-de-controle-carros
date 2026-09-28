@@ -1,5 +1,6 @@
 - [x] Exibir previsão original e atual na ficha e permitir editar o prazo atual com as permissões existentes.
 - [x] Mostrar situação do prazo na grade, tabela e ficha, inclusive conclusão com base no histórico.
-- [x] Confirmar importação existente e verificar os cenários de prazo solicitados.- [x] Criar agendamento manualmente com data, hora e placa obrigatórias.
+- [x] Confirmar importação existente e verificar os cenários de prazo solicitados.
+- [x] Criar agendamento manualmente com data, hora e placa obrigatórias.
 - [x] Editar os campos da ficha com a trava existente e salvar somente alterações reais.
 - [x] Validar criação e edição reais com uma conta master autorizada; remover o agendamento temporário.
