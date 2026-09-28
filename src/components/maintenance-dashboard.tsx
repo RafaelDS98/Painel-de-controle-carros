@@ -24,6 +24,7 @@ import {
   Download,
   LogOut,
   Moon,
+  Plus,
   RotateCcw,
   Search,
   Sun,
@@ -45,6 +46,7 @@ import {
 import { cn } from "@/lib/utils";
 import { AppointmentHistory, ChangeLogDialog } from "@/components/edit-history";
 import { History, Unlock } from "lucide-react";
+import { AppointmentForm, columnForField, emptyFields, type AppointmentFields } from "@/components/appointment-form";
 
 type Appointment = {
   dbId: string;
@@ -98,6 +100,15 @@ function fromRow(row: AppointmentRow): Appointment {
     operator: row.operator, externalOrder: row.external_order, status,
     originalDeadline: row.original_deadline, currentDeadline: row.current_deadline,
     editsUsed: row.creator_edits_used, editsAllowed: row.creator_edits_allowed, managerEditUsed: row.manager_edit_used,
+  };
+}
+
+function fieldsFromAppointment(item: Appointment): AppointmentFields {
+  return {
+    date: item.date, time: item.time, plate: item.plate, store: item.store,
+    model: item.model, contact: item.contact, workshop: item.workshop,
+    issue: item.issue, note: item.note, operator: item.operator,
+    externalOrder: item.externalOrder, currentDeadline: item.currentDeadline ?? "",
   };
 }
 
@@ -252,8 +263,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const [historyKey, setHistoryKey] = useState(0);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [completedAtById, setCompletedAtById] = useState<Record<string, string>>({});
-  const [deadlineDraft, setDeadlineDraft] = useState("");
-  const [deadlineSaving, setDeadlineSaving] = useState(false);
+  const [newOpen, setNewOpen] = useState(false);
   const [today, setToday] = useState(() => dateInBrazil(new Date()));
   const [search, setSearch] = useState("");
   const [contact, setContact] = useState("");
@@ -274,8 +284,6 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     const interval = window.setInterval(refreshToday, 60_000);
     return () => window.clearInterval(interval);
   }, []);
-
-  useEffect(() => { setDeadlineDraft(selected?.currentDeadline ?? ""); }, [selected?.dbId, selected?.currentDeadline]);
 
   async function loadCompletionLogs(rows: Appointment[]) {
     const ids = rows.filter((item) => item.status === "Finalizado" && item.currentDeadline).map((item) => item.dbId);
@@ -358,17 +366,36 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     void loadCompletionLogs(appointments.map((row) => row.dbId === dbId ? fromRow(data) : row));
   }
 
-  async function updateDeadline() {
-    if (!selected || deadlineSaving || deadlineDraft === (selected.currentDeadline ?? "")) return;
+  async function saveAppointment(changes: Partial<AppointmentFields>): Promise<boolean> {
+    if (!selected) return false;
     const blocked = editBlockReason(selected, currentUser.role);
-    if (blocked) { setMessage(blocked); return; }
-    setDeadlineSaving(true);
-    const { data, error } = await supabase.from("appointments")
-      .update({ current_deadline: deadlineDraft || null }).eq("id", selected.dbId).select(rowColumns).single();
-    setDeadlineSaving(false);
-    if (error || !data) { setMessage(error?.message || "Não foi possível salvar o prazo."); return; }
+    if (blocked) { setMessage(blocked); return false; }
+    const update = Object.fromEntries(Object.entries(changes).map(([key, value]) => [columnForField[key as keyof AppointmentFields], key === "currentDeadline" ? value || null : value]));
+    if (!Object.keys(update).length) return true;
+    const { data, error } = await supabase.from("appointments").update(update).eq("id", selected.dbId).select(rowColumns).single();
+    if (error || !data) { setMessage(error?.message || "Não foi possível salvar as alterações."); return false; }
     replaceRow(data);
     if (data.status === "Finalizado") void loadCompletionLogs(appointments.map((row) => row.dbId === data.id ? fromRow(data) : row));
+    setMessage("Alterações salvas.");
+    return true;
+  }
+
+  async function createAppointment(fields: Partial<AppointmentFields>): Promise<boolean> {
+    const date = fields.date?.trim();
+    const time = fields.time?.trim();
+    const plate = fields.plate?.trim();
+    if (!date || !time || !plate) { setMessage("Informe data, hora e placa."); return false; }
+    const values = Object.fromEntries(Object.entries(fields).map(([key, value]) => [columnForField[key as keyof AppointmentFields], key === "currentDeadline" ? value || null : value?.trim() ?? ""]));
+    const { data, error } = await supabase.from("appointments").insert({
+      ...values, date, time, plate, created_by: currentUser.id, status: "", sheet_id: "",
+      original_deadline: fields.currentDeadline || null,
+    }).select(rowColumns).single();
+    if (error || !data) { setMessage(error?.message || "Não foi possível criar o agendamento."); return false; }
+    setNewOpen(false);
+    resetFilters();
+    await loadAppointments();
+    setMessage(`Agendamento de ${plate} criado com sucesso.`);
+    return true;
   }
 
   async function grantExtraEdit(item: Appointment) {
@@ -443,6 +470,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
           <div className="flex items-center gap-2">
             <div className="mr-2 hidden text-right text-sm sm:block"><p className="font-semibold">{currentUser.name}</p><p className="text-xs text-primary-foreground/70">{roleLabels[currentUser.role]}</p></div>
             <Button variant="secondary" onClick={() => setLogOpen(true)}><History /> Log de alterações</Button>
+            <Button variant="secondary" onClick={() => setNewOpen(true)}><Plus /> Novo agendamento</Button>
             <Button variant="secondary" onClick={() => inputRef.current?.click()}><Upload /> Importar agenda</Button>
             <input ref={inputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(event) => importFile(event.target.files?.[0])} />
             <Button variant="ghost" size="icon" onClick={() => setDark((value) => !value)} className="text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground" aria-label="Alternar tema">{dark ? <Sun /> : <Moon />}</Button>

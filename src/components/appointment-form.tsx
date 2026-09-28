@@ -42,7 +42,7 @@ export function AppointmentForm({ initial, editing = false, blocked, onSave }: {
 }) {
   const [draft, setDraft] = useState<AppointmentFields>(initial);
   const [saving, setSaving] = useState(false);
-  useEffect(() => { setDraft(initial); }, [initial]);
+  useEffect(() => { setDraft(initial); }, [JSON.stringify(initial)]);
 
   const changes = Object.fromEntries(
     (Object.keys(initial) as (keyof AppointmentFields)[])
