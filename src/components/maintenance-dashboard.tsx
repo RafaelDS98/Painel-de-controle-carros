@@ -230,7 +230,7 @@ function dateInBrazil(date: Date) {
   const value = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
   return `${value("year")}-${value("month")}-${value("day")}`;
 }
-function deadlineState(item: Appointment, completedAt?: string, today = dateInBrazil(new Date())): DeadlineState | null {
+export function deadlineState(item: Pick<Appointment, "status" | "currentDeadline">, completedAt?: string, today = dateInBrazil(new Date())): DeadlineState | null {
   if (!item.currentDeadline) return null;
   if (item.status === "Finalizado") {
     if (!completedAt) return null;
