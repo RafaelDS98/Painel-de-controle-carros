@@ -47,6 +47,7 @@ import { cn } from "@/lib/utils";
 import { AppointmentHistory, ChangeLogDialog } from "@/components/edit-history";
 import { History, Unlock } from "lucide-react";
 import { AppointmentForm, columnForField, emptyFields, type AppointmentFields } from "@/components/appointment-form";
+import type { TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 type Appointment = {
   dbId: string;
@@ -370,7 +371,11 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     if (!selected) return false;
     const blocked = editBlockReason(selected, currentUser.role);
     if (blocked) { setMessage(blocked); return false; }
-    const update = Object.fromEntries(Object.entries(changes).map(([key, value]) => [columnForField[key as keyof AppointmentFields], key === "currentDeadline" ? value || null : value]));
+    const update: TablesUpdate<"appointments"> = {};
+    for (const [key, value] of Object.entries(changes)) {
+      if (key === "currentDeadline") update.current_deadline = value || null;
+      else Object.assign(update, { [columnForField[key as keyof AppointmentFields]]: value });
+    }
     if (!Object.keys(update).length) return true;
     const { data, error } = await supabase.from("appointments").update(update).eq("id", selected.dbId).select(rowColumns).single();
     if (error || !data) { setMessage(error?.message || "Não foi possível salvar as alterações."); return false; }
@@ -385,11 +390,16 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     const time = fields.time?.trim();
     const plate = fields.plate?.trim();
     if (!date || !time || !plate) { setMessage("Informe data, hora e placa."); return false; }
-    const values = Object.fromEntries(Object.entries(fields).map(([key, value]) => [columnForField[key as keyof AppointmentFields], key === "currentDeadline" ? value || null : value?.trim() ?? ""]));
-    const { data, error } = await supabase.from("appointments").insert({
-      ...values, date, time, plate, created_by: currentUser.id, status: "", sheet_id: "",
+    const values: TablesInsert<"appointments"> = {
+      date, time, plate, created_by: currentUser.id, status: "", sheet_id: "",
       original_deadline: fields.currentDeadline || null,
-    }).select(rowColumns).single();
+      current_deadline: fields.currentDeadline || null,
+    };
+    for (const [key, value] of Object.entries(fields)) {
+      if (key !== "currentDeadline" && key !== "date" && key !== "time" && key !== "plate")
+        Object.assign(values, { [columnForField[key as keyof AppointmentFields]]: value?.trim() ?? "" });
+    }
+    const { data, error } = await supabase.from("appointments").insert(values).select(rowColumns).single();
     if (error || !data) { setMessage(error?.message || "Não foi possível criar o agendamento."); return false; }
     setNewOpen(false);
     resetFilters();
