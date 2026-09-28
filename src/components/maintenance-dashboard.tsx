@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -22,6 +22,7 @@ import {
   CarFront,
   ChevronDown,
   Download,
+  LogOut,
   Moon,
   RotateCcw,
   Search,
@@ -31,7 +32,7 @@ import {
   Wrench,
   X,
 } from "lucide-react";
-import { initialAgenda } from "@/lib/agenda-data";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -44,6 +45,7 @@ import {
 import { cn } from "@/lib/utils";
 
 type Appointment = {
+  dbId: string;
   id: string;
   registeredAt: string;
   date: string;
@@ -64,22 +66,23 @@ type ServiceStatus = "" | "Recebido" | "Em execução" | "Peça" | "Finalizado";
 
 const serviceStatuses: Exclude<ServiceStatus, "">[] = ["Recebido", "Em execução", "Peça", "Finalizado"];
 
-const normalizedInitial: Appointment[] = initialAgenda.map((row) => ({
-  id: String(row.ID ?? ""),
-  registeredAt: row["Data Cadastro"] ?? "",
-  date: row["Data Atendimento"] ?? "",
-  time: row.Hora ?? "",
-  plate: row.Placa ?? "",
-  store: row.Loja ?? "",
-  model: row.Modelo ?? "",
-  contact: row.Contato ?? "",
-  workshop: row["Local/Oficina"] ?? "",
-  issue: row["Problemas Relatado"] ?? "",
-  note: row["Observação"] ?? "",
-  operator: row.Operador ?? "",
-  externalOrder: row["O.S Externa"] ?? "",
-  status: "",
-}));
+type AppointmentRow = {
+  id: string; sheet_id: string; registered_at: string | null; date: string | null; time: string; plate: string; store: string;
+  model: string; contact: string; workshop: string; issue: string; note: string; operator: string; external_order: string; status: string;
+};
+
+function fromRow(row: AppointmentRow): Appointment {
+  const status = (serviceStatuses as string[]).includes(row.status) ? (row.status as ServiceStatus) : "";
+  return {
+    dbId: row.id, id: row.sheet_id, registeredAt: row.registered_at ?? "", date: row.date ?? "", time: row.time, plate: row.plate,
+    store: row.store, model: row.model, contact: row.contact, workshop: row.workshop, issue: row.issue, note: row.note,
+    operator: row.operator, externalOrder: row.external_order, status,
+  };
+}
+
+function isoOrNull(value: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
+}
 
 const requiredColumns = [
   "ID",
@@ -188,8 +191,8 @@ function statusClasses(status: ServiceStatus) {
   return classes[status];
 }
 
-export function MaintenanceDashboard() {
-  const [appointments, setAppointments] = useState<Appointment[]>(normalizedInitial);
+export function MaintenanceDashboard({ onSignOut }: { onSignOut?: () => void }) {
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [search, setSearch] = useState("");
   const [contact, setContact] = useState("");
   const [workshop, setWorkshop] = useState("");
@@ -203,6 +206,14 @@ export function MaintenanceDashboard() {
   const [message, setMessage] = useState("");
   const [dark, setDark] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  async function loadAppointments() {
+    const { data, error } = await supabase.from("appointments").select("id, sheet_id, registered_at, date, time, plate, store, model, contact, workshop, issue, note, operator, external_order, status").order("date").order("time");
+    if (error) { setMessage("Não foi possível carregar a agenda."); return; }
+    setAppointments((data ?? []).map(fromRow));
+  }
+
+  useEffect(() => { void loadAppointments(); }, []);
 
   const option = (key: keyof Appointment) => [...new Set(appointments.map((item) => item[key]).filter(Boolean))].sort();
   const filtered = useMemo(() => appointments.filter((item) => {
@@ -240,9 +251,16 @@ export function MaintenanceDashboard() {
     setSort((current) => ({ key, asc: current.key === key ? !current.asc : true }));
   }
 
-  function updateStatus(id: string, status: ServiceStatus) {
-    setAppointments((current) => current.map((item) => item.id === id ? { ...item, status } : item));
-    setSelected((current) => current?.id === id ? { ...current, status } : current);
+  async function updateStatus(dbId: string, status: ServiceStatus) {
+    const previous = appointments.find((item) => item.dbId === dbId)?.status ?? "";
+    setAppointments((current) => current.map((item) => item.dbId === dbId ? { ...item, status } : item));
+    setSelected((current) => current?.dbId === dbId ? { ...current, status } : current);
+    const { error } = await supabase.from("appointments").update({ status }).eq("id", dbId);
+    if (error) {
+      setAppointments((current) => current.map((item) => item.dbId === dbId ? { ...item, status: previous } : item));
+      setSelected((current) => current?.dbId === dbId ? { ...current, status: previous } : current);
+      setMessage("Não foi possível salvar a situação. Tente novamente.");
+    }
   }
 
   async function importFile(file?: File) {
@@ -259,13 +277,22 @@ export function MaintenanceDashboard() {
       const columns = firstRow ? Object.keys(firstRow) : [];
       const missing = requiredColumns.filter((column) => !columns.includes(column));
       if (missing.length) throw new Error(`Colunas ausentes: ${missing.join(", ")}`);
-      const parsed = rows.map((row) => ({
-        id: String(row["ID"] ?? ""), registeredAt: parseExcelDate(row["Data Cadastro"]), date: parseExcelDate(row["Data Atendimento"]),
-        time: parseTime(row["Hora"]), plate: String(row["Placa"] ?? ""), store: String(row["Loja"] ?? ""), model: String(row["Modelo"] ?? ""),
-        contact: String(row["Contato"] ?? ""), workshop: String(row["Local/Oficina"] ?? ""), issue: String(row["Problemas Relatado"] ?? ""),
-         note: String(row["Observação"] ?? ""), operator: String(row["Operador"] ?? ""), externalOrder: String(row["O.S Externa"] ?? ""), status: "" as ServiceStatus,
-      }));
-      setAppointments(parsed); resetFilters(); setMessage(`${parsed.length} agendamentos importados com sucesso.`);
+      const hasDeadline = columns.includes("Previsão de Entrega");
+      const { data: userData } = await supabase.auth.getUser();
+      const createdBy = userData.user?.id ?? null;
+      const records = rows.map((row) => {
+        const deadline = hasDeadline && String(row["Previsão de Entrega"] ?? "").trim() !== "" ? isoOrNull(parseExcelDate(row["Previsão de Entrega"])) : null;
+        return {
+          sheet_id: String(row["ID"] ?? ""), registered_at: isoOrNull(parseExcelDate(row["Data Cadastro"])), date: isoOrNull(parseExcelDate(row["Data Atendimento"])),
+          time: parseTime(row["Hora"]), plate: String(row["Placa"] ?? ""), store: String(row["Loja"] ?? ""), model: String(row["Modelo"] ?? ""),
+          contact: String(row["Contato"] ?? ""), workshop: String(row["Local/Oficina"] ?? ""), issue: String(row["Problemas Relatado"] ?? ""),
+          note: String(row["Observação"] ?? ""), operator: String(row["Operador"] ?? ""), external_order: String(row["O.S Externa"] ?? ""),
+          status: "", created_by: createdBy, original_deadline: deadline, current_deadline: deadline,
+        };
+      });
+      const { error } = await supabase.from("appointments").insert(records);
+      if (error) throw new Error("Não foi possível gravar a agenda importada no banco.");
+      await loadAppointments(); resetFilters(); setMessage(`${records.length} agendamentos importados com sucesso.`);
     } catch (error) { setMessage(error instanceof Error ? error.message : "Não foi possível ler o arquivo."); }
   }
 
@@ -303,6 +330,7 @@ export function MaintenanceDashboard() {
             <Button variant="secondary" onClick={() => inputRef.current?.click()}><Upload /> Importar agenda</Button>
             <input ref={inputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(event) => importFile(event.target.files?.[0])} />
             <Button variant="ghost" size="icon" onClick={() => setDark((value) => !value)} className="text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground" aria-label="Alternar tema">{dark ? <Sun /> : <Moon />}</Button>
+            {onSignOut && <Button variant="ghost" size="icon" onClick={onSignOut} className="text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground" aria-label="Sair"><LogOut /></Button>}
           </div>
         </div>
       </header>
@@ -338,7 +366,7 @@ export function MaintenanceDashboard() {
           <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
             {days.map((day, index) => {
               const rows = filtered.filter((item) => localDate(item.date).getDay() === index + 1).sort((a,b) => a.time.localeCompare(b.time));
-              return <div key={day} className="min-h-48 rounded-lg border bg-muted/30 p-3"><div className="mb-3 flex items-center justify-between"><div><h3 className="text-sm font-semibold">{day}</h3><p className="text-xs text-muted-foreground">{rows[0] ? dayMonth.format(localDate(rows[0].date)) : "—"}</p></div><span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-semibold">{rows.length}</span></div><div className="space-y-2">{rows.map((item) => <article key={item.id} className="overflow-hidden rounded-md border bg-card shadow-sm transition hover:-translate-y-0.5 hover:border-accent"><Button variant="ghost" onClick={() => setSelected(item)} className="h-auto w-full justify-start rounded-none p-3 text-left hover:bg-transparent"><span className="min-w-0 flex-1"><span className="flex items-center justify-between"><span className="text-xs font-bold text-accent-foreground">{item.time}</span><span className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold", serviceCategory(item.issue) === "Revisão" ? "bg-service-review text-service-review-foreground" : "bg-service-repair text-service-repair-foreground")}>{serviceCategory(item.issue)}</span></span><span className="mt-2 block font-bold tracking-wide">{item.plate}</span><span className="block truncate text-xs font-normal text-muted-foreground">{item.model}</span><span className="mt-2 block truncate text-xs font-medium">{item.contact}</span><span className="mt-1 line-clamp-2 whitespace-normal text-[11px] font-normal leading-4 text-muted-foreground">{item.issue}</span></span></Button><label className="relative block border-t"><span className="sr-only">Situação de {item.plate}</span><select value={item.status} onChange={(event) => updateStatus(item.id, event.target.value as ServiceStatus)} className={cn("h-9 w-full appearance-none border-0 px-3 pr-8 text-xs font-semibold outline-none focus:ring-2 focus:ring-inset focus:ring-ring", statusClasses(item.status))}><option value="">Atualizar situação</option>{serviceStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select><ChevronDown className="pointer-events-none absolute right-3 top-2.5 size-4 opacity-70" /></label></article>)}</div></div>;
+              return <div key={day} className="min-h-48 rounded-lg border bg-muted/30 p-3"><div className="mb-3 flex items-center justify-between"><div><h3 className="text-sm font-semibold">{day}</h3><p className="text-xs text-muted-foreground">{rows[0] ? dayMonth.format(localDate(rows[0].date)) : "—"}</p></div><span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-semibold">{rows.length}</span></div><div className="space-y-2">{rows.map((item) => <article key={item.dbId} className="overflow-hidden rounded-md border bg-card shadow-sm transition hover:-translate-y-0.5 hover:border-accent"><Button variant="ghost" onClick={() => setSelected(item)} className="h-auto w-full justify-start rounded-none p-3 text-left hover:bg-transparent"><span className="min-w-0 flex-1"><span className="flex items-center justify-between"><span className="text-xs font-bold text-accent-foreground">{item.time}</span><span className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold", serviceCategory(item.issue) === "Revisão" ? "bg-service-review text-service-review-foreground" : "bg-service-repair text-service-repair-foreground")}>{serviceCategory(item.issue)}</span></span><span className="mt-2 block font-bold tracking-wide">{item.plate}</span><span className="block truncate text-xs font-normal text-muted-foreground">{item.model}</span><span className="mt-2 block truncate text-xs font-medium">{item.contact}</span><span className="mt-1 line-clamp-2 whitespace-normal text-[11px] font-normal leading-4 text-muted-foreground">{item.issue}</span></span></Button><label className="relative block border-t"><span className="sr-only">Situação de {item.plate}</span><select value={item.status} onChange={(event) => updateStatus(item.dbId, event.target.value as ServiceStatus)} className={cn("h-9 w-full appearance-none border-0 px-3 pr-8 text-xs font-semibold outline-none focus:ring-2 focus:ring-inset focus:ring-ring", statusClasses(item.status))}><option value="">Atualizar situação</option>{serviceStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select><ChevronDown className="pointer-events-none absolute right-3 top-2.5 size-4 opacity-70" /></label></article>)}</div></div>;
             })}
           </div>
         </section>
@@ -354,12 +382,12 @@ export function MaintenanceDashboard() {
 
         <section className="rounded-lg border bg-card shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4"><div><h2 className="font-semibold">Agenda detalhada</h2><p className="text-xs text-muted-foreground">{sorted.length} registros encontrados</p></div><div className="flex gap-2"><Button variant="outline" size="sm" onClick={() => exportFile("csv")}><Download /> CSV</Button><Button variant="outline" size="sm" onClick={() => exportFile("xlsx")}><Download /> Excel</Button></div></div>
-          <div className="overflow-x-auto"><table className="w-full min-w-[1400px] text-sm"><thead className="bg-muted/60 text-left text-xs text-muted-foreground"><tr>{[["id","ID"],["date","Atendimento"],["time","Hora"],["plate","Placa"],["status","Situação"],["model","Modelo"],["contact","Contato"],["workshop","Local/Oficina"],["issue","Problema relatado"],["note","Observação"],["operator","Operador"]].map(([key,label]) => <th key={key} className="px-4 py-3 font-medium"><button className="inline-flex items-center gap-1 hover:text-foreground" onClick={() => changeSort(key as keyof Appointment)}>{label}<ArrowDownAZ className="size-3" /></button></th>)}</tr></thead><tbody>{pageRows.map((item) => <tr key={item.id} onClick={() => setSelected(item)} className="cursor-pointer border-t hover:bg-muted/40"><td className="px-4 py-3 font-mono text-xs">#{item.id}</td><td className="whitespace-nowrap px-4 py-3">{fullDate.format(localDate(item.date))}</td><td className="px-4 py-3 font-semibold">{item.time}</td><td className="px-4 py-3 font-bold">{item.plate}</td><td className="px-4 py-3"><span className={cn("whitespace-nowrap rounded border px-2 py-1 text-xs font-semibold", statusClasses(item.status))}>{item.status || "Não atualizada"}</span></td><td className="max-w-48 truncate px-4 py-3">{item.model}</td><td className="px-4 py-3">{item.contact}</td><td className="max-w-52 truncate px-4 py-3">{item.workshop || "—"}</td><td className="max-w-72 truncate px-4 py-3 text-muted-foreground">{item.issue}</td><td className="max-w-36 truncate px-4 py-3">{item.note || "—"}</td><td className="whitespace-nowrap px-4 py-3 capitalize">{item.operator}</td></tr>)}</tbody></table></div>
+          <div className="overflow-x-auto"><table className="w-full min-w-[1400px] text-sm"><thead className="bg-muted/60 text-left text-xs text-muted-foreground"><tr>{[["id","ID"],["date","Atendimento"],["time","Hora"],["plate","Placa"],["status","Situação"],["model","Modelo"],["contact","Contato"],["workshop","Local/Oficina"],["issue","Problema relatado"],["note","Observação"],["operator","Operador"]].map(([key,label]) => <th key={key} className="px-4 py-3 font-medium"><button className="inline-flex items-center gap-1 hover:text-foreground" onClick={() => changeSort(key as keyof Appointment)}>{label}<ArrowDownAZ className="size-3" /></button></th>)}</tr></thead><tbody>{pageRows.map((item) => <tr key={item.dbId} onClick={() => setSelected(item)} className="cursor-pointer border-t hover:bg-muted/40"><td className="px-4 py-3 font-mono text-xs">#{item.id}</td><td className="whitespace-nowrap px-4 py-3">{fullDate.format(localDate(item.date))}</td><td className="px-4 py-3 font-semibold">{item.time}</td><td className="px-4 py-3 font-bold">{item.plate}</td><td className="px-4 py-3"><span className={cn("whitespace-nowrap rounded border px-2 py-1 text-xs font-semibold", statusClasses(item.status))}>{item.status || "Não atualizada"}</span></td><td className="max-w-48 truncate px-4 py-3">{item.model}</td><td className="px-4 py-3">{item.contact}</td><td className="max-w-52 truncate px-4 py-3">{item.workshop || "—"}</td><td className="max-w-72 truncate px-4 py-3 text-muted-foreground">{item.issue}</td><td className="max-w-36 truncate px-4 py-3">{item.note || "—"}</td><td className="whitespace-nowrap px-4 py-3 capitalize">{item.operator}</td></tr>)}</tbody></table></div>
           <div className="flex items-center justify-between border-t p-4"><p className="text-xs text-muted-foreground">Página {Math.min(page, pages)} de {pages}</p><div className="flex gap-2"><Button variant="outline" size="icon" disabled={page === 1} onClick={() => setPage((value) => Math.max(1,value-1))} aria-label="Página anterior"><ArrowLeft /></Button><Button variant="outline" size="icon" disabled={page === pages} onClick={() => setPage((value) => Math.min(pages,value+1))} aria-label="Próxima página"><ArrowRight /></Button></div></div>
         </section>
       </main>
 
-      <Dialog open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">{selected && <><DialogHeader><DialogTitle className="flex items-center gap-3"><span className="rounded-md bg-primary px-2 py-1 text-primary-foreground">{selected.plate}</span>{selected.model}</DialogTitle><DialogDescription>Agendamento #{selected.id} • {fullDate.format(localDate(selected.date))} às {selected.time}</DialogDescription></DialogHeader><label><span className="mb-1.5 block text-xs font-medium uppercase text-muted-foreground">Situação do veículo</span><select value={selected.status} onChange={(event) => updateStatus(selected.id, event.target.value as ServiceStatus)} className={cn("h-10 w-full rounded-md border px-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-ring", statusClasses(selected.status))}><option value="">Não atualizada</option>{serviceStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select></label><div className="grid gap-5 pt-2 sm:grid-cols-2"><Detail label="Contato" value={selected.contact} /><Detail label="Loja" value={selected.store} /><Detail label="Local / Oficina" value={selected.workshop} /><Detail label="Operador" value={selected.operator} /><div className="sm:col-span-2"><Detail label="Problema relatado" value={selected.issue} /></div><Detail label="Observação" value={selected.note} /><Detail label="O.S Externa" value={selected.externalOrder} /><Detail label="Data de cadastro" value={selected.registeredAt ? fullDate.format(localDate(selected.registeredAt)) : ""} /></div></>}</DialogContent></Dialog>
+      <Dialog open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">{selected && <><DialogHeader><DialogTitle className="flex items-center gap-3"><span className="rounded-md bg-primary px-2 py-1 text-primary-foreground">{selected.plate}</span>{selected.model}</DialogTitle><DialogDescription>Agendamento #{selected.id} • {fullDate.format(localDate(selected.date))} às {selected.time}</DialogDescription></DialogHeader><label><span className="mb-1.5 block text-xs font-medium uppercase text-muted-foreground">Situação do veículo</span><select value={selected.status} onChange={(event) => updateStatus(selected.dbId, event.target.value as ServiceStatus)} className={cn("h-10 w-full rounded-md border px-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-ring", statusClasses(selected.status))}><option value="">Não atualizada</option>{serviceStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select></label><div className="grid gap-5 pt-2 sm:grid-cols-2"><Detail label="Contato" value={selected.contact} /><Detail label="Loja" value={selected.store} /><Detail label="Local / Oficina" value={selected.workshop} /><Detail label="Operador" value={selected.operator} /><div className="sm:col-span-2"><Detail label="Problema relatado" value={selected.issue} /></div><Detail label="Observação" value={selected.note} /><Detail label="O.S Externa" value={selected.externalOrder} /><Detail label="Data de cadastro" value={selected.registeredAt ? fullDate.format(localDate(selected.registeredAt)) : ""} /></div></>}</DialogContent></Dialog>
     </div>
   );
 }
