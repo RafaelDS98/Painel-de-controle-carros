@@ -1,0 +1,268 @@
+# ANPEX — Guia do Projeto
+
+Este documento orienta pessoas e assistentes de IA que precisam entender, manter ou ampliar o painel de agendamentos de manutenção da ANPEX.
+
+## 1. Objetivo do sistema
+
+O projeto é um painel operacional, em português do Brasil, para acompanhar a agenda semanal de manutenção da frota ANPEX. A tela principal reúne:
+
+- importação e substituição da agenda por planilha;
+- filtros e busca instantânea;
+- indicadores operacionais;
+- grade semanal de segunda a sábado;
+- atualização da situação de cada veículo;
+- seis gráficos de distribuição;
+- tabela detalhada, ordenável e paginada;
+- exportação dos dados filtrados em CSV ou Excel;
+- ficha completa do agendamento em modal;
+- temas claro e escuro.
+
+## 2. Estado atual e limitação importante
+
+O aplicativo é somente frontend. Não há banco de dados, autenticação ou API de persistência.
+
+- A agenda inicial é carregada de `src/lib/agenda-data.ts`.
+- Uma planilha importada substitui os dados apenas na memória da página.
+- Alterações de situação também existem apenas na memória.
+- Recarregar a página restaura os 21 registros iniciais e remove alterações não exportadas.
+
+Não descreva importações ou situações como “salvas” sem antes implementar persistência real.
+
+## 3. Stack e comandos
+
+- TanStack Start v1 e TanStack Router, com rotas baseadas em arquivos;
+- React 19 e TypeScript;
+- Vite;
+- Tailwind CSS v4;
+- componentes shadcn/ui baseados em Radix UI;
+- Recharts para os gráficos;
+- SheetJS (`xlsx`) para importação e exportação;
+- Lucide React para ícones.
+
+Comandos principais:
+
+```bash
+bun install
+bun run dev
+bun run build
+bun run lint
+bun run format
+```
+
+Use `bun` para dependências e scripts. Não introduza React Router DOM: o roteamento deste projeto é TanStack Router.
+
+## 4. Mapa do código
+
+```text
+src/
+├── components/
+│   ├── maintenance-dashboard.tsx  # Toda a experiência operacional atual
+│   └── ui/                        # Componentes reutilizáveis shadcn/ui
+├── lib/
+│   ├── agenda-data.ts             # Dataset inicial real, em formato de planilha
+│   └── utils.ts                   # Utilitário `cn` para classes
+├── routes/
+│   ├── __root.tsx                 # Documento HTML, providers e tratamento global
+│   └── index.tsx                  # Rota `/` e metadados próprios da página
+├── router.tsx                     # Criação do router e QueryClient
+├── start.ts                       # Configuração de início do TanStack Start
+└── styles.css                     # Tailwind v4 e tokens semânticos do tema
+```
+
+`src/routeTree.gen.ts` é gerado automaticamente. Nunca edite esse arquivo manualmente.
+
+## 5. Fluxo dos dados
+
+### Dataset inicial
+
+`initialAgenda` mantém os nomes de colunas da planilha original. Ao carregar o módulo do painel, `normalizedInitial` converte cada linha para o tipo interno `Appointment`:
+
+| Coluna da planilha | Campo interno |
+| --- | --- |
+| ID | `id` |
+| Data Cadastro | `registeredAt` |
+| Data Atendimento | `date` |
+| Hora | `time` |
+| Placa | `plate` |
+| Loja | `store` |
+| Modelo | `model` |
+| Contato | `contact` |
+| Local/Oficina | `workshop` |
+| Problemas Relatado | `issue` |
+| Observação | `note` |
+| Operador | `operator` |
+| O.S Externa | `externalOrder` |
+
+O campo interno `status` não existe na planilha original e começa vazio.
+
+### Importação
+
+O botão **Importar agenda** aceita `.xlsx`, `.xls` e `.csv`. O arquivo é lido no navegador por importação dinâmica de `xlsx`, sempre usando a primeira aba.
+
+A importação exige, com grafia idêntica, todas estas colunas:
+
+```text
+ID
+Data Cadastro
+Data Atendimento
+Hora
+Placa
+Loja
+Modelo
+Contato
+Local/Oficina
+Problemas Relatado
+Observação
+Operador
+O.S Externa
+```
+
+Se faltar qualquer coluna, a substituição é interrompida e a interface informa os nomes ausentes. Datas são normalizadas para `YYYY-MM-DD`; horas são normalizadas para `HH:mm`. Toda agenda importada começa sem situações definidas.
+
+### Transformações derivadas
+
+O array `filtered` é a fonte de todos os indicadores, gráficos e resultados exibidos. Ele combina:
+
+- texto em placa, contato, problema ou modelo;
+- período de atendimento;
+- contato;
+- oficina;
+- modelo;
+- operador.
+
+`sorted` aplica a ordenação da tabela sobre `filtered`. As exportações usam `sorted`, portanto respeitam todos os filtros e a ordenação ativos.
+
+### Classificação dos serviços
+
+`serviceCategory()` classifica o texto de **Problemas Relatado** por palavras-chave e nesta prioridade:
+
+1. `FREIO` → Freios;
+2. `SUSPENS` → Suspensão;
+3. `PNEU`, `ALINH` ou `BALANCE` → Pneus;
+4. `REVIS` ou `MANUTEN` → Revisão;
+5. demais textos → Corretiva.
+
+Como a função retorna uma única categoria, a ordem acima afeta registros que citam vários tipos de serviço. Preserve essa decisão ou altere-a conscientemente com testes.
+
+## 6. Situações dos veículos
+
+O tipo `ServiceStatus` permite exatamente:
+
+- vazio — situação ainda não atualizada;
+- **Recebido** — o cliente chegou para realizar o serviço;
+- **Em execução** — o veículo está em serviço;
+- **Peça** — o veículo aguarda compra de peça;
+- **Finalizado** — o serviço terminou e o veículo foi entregue.
+
+`updateStatus()` atualiza o registro no estado principal e sincroniza o registro aberto no modal. A situação aparece na grade, na tabela, no modal e nas exportações.
+
+Ao adicionar uma situação, atualize conjuntamente:
+
+1. o tipo `ServiceStatus`;
+2. `serviceStatuses`;
+3. `statusClasses()`;
+4. os tokens correspondentes em `src/styles.css`;
+5. qualquer regra de importação ou exportação aplicável.
+
+## 7. Estrutura da tela
+
+`MaintenanceDashboard` concentra a tela atual e segue esta ordem:
+
+1. cabeçalho da marca, importação e alternância de tema;
+2. título e período carregado;
+3. mensagem de importação ou erro;
+4. busca e filtros;
+5. cinco KPIs;
+6. grade semanal;
+7. seis gráficos Recharts;
+8. tabela detalhada e paginação;
+9. modal da ficha do agendamento.
+
+Os KPIs são calculados sobre os registros filtrados:
+
+- total de agendamentos;
+- placas únicas;
+- contatos únicos;
+- oficinas preenchidas e únicas;
+- média de agendamentos por data com movimento.
+
+A tabela mostra oito linhas por página. Ao criar filtros novos, redefina a página para 1 para evitar uma página vazia depois da filtragem.
+
+## 8. Padrões de interface e design
+
+### Tokens antes de cores diretas
+
+As cores e funções visuais vivem em `src/styles.css`, usando variáveis em `oklch` registradas no bloco `@theme inline`. Em JSX, use classes semânticas como:
+
+- `bg-background`, `text-foreground`;
+- `bg-card`, `text-card-foreground`;
+- `bg-primary`, `text-primary-foreground`;
+- `text-muted-foreground`, `border-input`, `ring-ring`;
+- `bg-service-review`, `bg-service-repair`;
+- `bg-status-received`, `bg-status-progress`, `bg-status-part`, `bg-status-finished`.
+
+Não coloque valores hexadecimais, RGB/HSL ou cores utilitárias rígidas nos componentes. Sempre defina primeiro um token semântico com variantes clara e escura.
+
+### Componentes e controles
+
+- Use os componentes existentes em `src/components/ui` para botões, campos e diálogos.
+- Use `cn()` para classes condicionais.
+- Use ícones Lucide em ações compactas e forneça `aria-label` quando não houver texto visível.
+- Evite botões HTML crus quando existir um componente equivalente.
+- Não aninhe elementos interativos. O card da grade usa um artigo, uma ação de detalhes e um seletor de situação como controles irmãos.
+- Mantenha textos operacionais em português do Brasil.
+- Preserve boa leitura em desktop, notebook e tablet, incluindo rolagem horizontal da tabela larga.
+
+### Tema escuro
+
+O tema escuro é local ao contêiner do painel: o estado `dark` adiciona a classe `.dark` ao elemento principal. Se o tema passar a ser global ou persistente, revise essa estratégia para evitar diferenças entre o documento e o painel.
+
+## 9. Rotas e metadados
+
+- `/` é definida em `src/routes/index.tsx` e renderiza `MaintenanceDashboard`.
+- `src/routes/__root.tsx` deve continuar renderizando `<Outlet />`.
+- Toda nova rota deve ser criada em `src/routes` e ter metadados exclusivos: título, descrição, `og:title`, `og:description`, `og:type` e `twitter:card`.
+- Não crie um `App.tsx` para trocar páginas manualmente.
+- Não edite `index.html` para metadados; use `head()` na rota.
+
+## 10. Convenções para alterações
+
+1. Preserve os nomes reais das colunas da planilha na camada de entrada.
+2. Normalize dados externos antes de colocá-los no estado `Appointment`.
+3. Derive KPIs e gráficos do mesmo conjunto filtrado; não mantenha cópias calculadas em estado.
+4. Use `useMemo` para transformações relevantes dependentes de estado.
+5. Não use afirmação TypeScript não nula (`!`); trate valores ausentes explicitamente.
+6. Não invente dados de frota, clientes, oficinas ou serviços.
+7. Ao adicionar um link para outra página, crie a rota correspondente na mesma alteração.
+8. Para regras novas de negócio, documente os significados e casos-limite antes de espalhá-las pela interface.
+9. Se o painel continuar crescendo, extraia seções focadas de `maintenance-dashboard.tsx` sem duplicar o estado principal ou a lógica de filtragem.
+
+## 11. Persistência futura
+
+Caso seja solicitado histórico, colaboração entre operadores ou conservação das situações após recarregar, será necessário adicionar uma camada persistente. Uma implementação segura deve:
+
+- armazenar agendamentos e situações de forma centralizada;
+- identificar usuários antes de permitir alterações;
+- registrar quem alterou cada situação e quando;
+- controlar permissões no servidor, nunca no armazenamento do navegador;
+- evitar que uma nova importação apague silenciosamente o histórico;
+- definir uma chave estável para conciliar registros importados, em vez de depender apenas da posição da linha.
+
+Até essa implementação existir, não use `localStorage` como substituto de banco para dados operacionais compartilhados.
+
+## 12. Checklist antes de concluir uma mudança
+
+- O projeto compila sem erros.
+- A tela inicial abre com os registros padrão.
+- Busca, filtros, grade, KPIs e gráficos continuam consistentes entre si.
+- Situações atualizam grade, modal, tabela e exportação.
+- Importação válida funciona e uma coluna ausente produz mensagem clara.
+- CSV e Excel exportam apenas os resultados filtrados.
+- O modal abre pelo card e pela linha da tabela.
+- Não há elementos interativos aninhados nem erros no console.
+- A interface foi conferida em desktop e tablet.
+- Metadados da rota continuam específicos da ANPEX.
+
+## 13. Contexto do repositório
+
+O repositório é sincronizado com o Lovable. Não reescreva histórico já publicado com force push, rebase, amend ou squash. Mantenha a branch conectada sempre em estado funcional.
