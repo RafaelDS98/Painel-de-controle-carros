@@ -62,6 +62,8 @@ type Appointment = {
   operator: string;
   externalOrder: string;
   status: ServiceStatus;
+  originalDeadline: string | null;
+  currentDeadline: string | null;
   editsUsed: number;
   editsAllowed: number;
   managerEditUsed: boolean;
@@ -85,6 +87,7 @@ type AppointmentRow = {
   id: string; sheet_id: string; registered_at: string | null; date: string | null; time: string; plate: string; store: string;
   model: string; contact: string; workshop: string; issue: string; note: string; operator: string; external_order: string; status: string;
   creator_edits_used: number; creator_edits_allowed: number; manager_edit_used: boolean;
+  original_deadline: string | null; current_deadline: string | null;
 };
 
 function fromRow(row: AppointmentRow): Appointment {
@@ -93,6 +96,7 @@ function fromRow(row: AppointmentRow): Appointment {
     dbId: row.id, id: row.sheet_id, registeredAt: row.registered_at ?? "", date: row.date ?? "", time: row.time, plate: row.plate,
     store: row.store, model: row.model, contact: row.contact, workshop: row.workshop, issue: row.issue, note: row.note,
     operator: row.operator, externalOrder: row.external_order, status,
+    originalDeadline: row.original_deadline, currentDeadline: row.current_deadline,
     editsUsed: row.creator_edits_used, editsAllowed: row.creator_edits_allowed, managerEditUsed: row.manager_edit_used,
   };
 }
@@ -208,12 +212,49 @@ function statusClasses(status: ServiceStatus) {
   return classes[status];
 }
 
-const rowColumns = "id, sheet_id, registered_at, date, time, plate, store, model, contact, workshop, issue, note, operator, external_order, status, creator_edits_used, creator_edits_allowed, manager_edit_used";
+type DeadlineState = "overdue" | "today" | "onTime" | "deliveredOnTime" | "deliveredLate";
+const deadlineLabels: Record<DeadlineState, string> = {
+  overdue: "Atrasado", today: "Vence hoje", onTime: "No prazo",
+  deliveredOnTime: "Entregue no prazo", deliveredLate: "Entregue com atraso",
+};
+const deadlineClasses: Record<DeadlineState, string> = {
+  overdue: "border-destructive/40 bg-destructive/10 text-destructive",
+  today: "border-status-progress/40 bg-status-progress text-status-progress-foreground",
+  onTime: "border-border bg-muted text-muted-foreground",
+  deliveredOnTime: "border-status-finished/40 bg-status-finished text-status-finished-foreground",
+  deliveredLate: "border-status-part/40 bg-status-part text-status-part-foreground",
+};
+const businessDate = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" });
+function dateInBrazil(date: Date) {
+  const parts = businessDate.formatToParts(date);
+  const value = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
+  return `${value("year")}-${value("month")}-${value("day")}`;
+}
+function deadlineState(item: Appointment, completedAt?: string, today = dateInBrazil(new Date())): DeadlineState | null {
+  if (!item.currentDeadline) return null;
+  if (item.status === "Finalizado") {
+    if (!completedAt) return null;
+    return dateInBrazil(new Date(completedAt)) <= item.currentDeadline ? "deliveredOnTime" : "deliveredLate";
+  }
+  if (item.currentDeadline < today) return "overdue";
+  if (item.currentDeadline === today) return "today";
+  return "onTime";
+}
+function DeadlineBadge({ item, completedAt, today }: { item: Appointment; completedAt?: string; today: string }) {
+  const state = deadlineState(item, completedAt, today);
+  return state ? <span className={cn("inline-flex w-fit items-center whitespace-nowrap rounded border px-2 py-0.5 text-[11px] font-semibold", deadlineClasses[state])}>{deadlineLabels[state]}</span> : null;
+}
+
+const rowColumns = "id, sheet_id, registered_at, date, time, plate, store, model, contact, workshop, issue, note, operator, external_order, status, original_deadline, current_deadline, creator_edits_used, creator_edits_allowed, manager_edit_used";
 
 export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: () => void; currentUser: CurrentUser }) {
   const [logOpen, setLogOpen] = useState(false);
   const [historyKey, setHistoryKey] = useState(0);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [completedAtById, setCompletedAtById] = useState<Record<string, string>>({});
+  const [deadlineDraft, setDeadlineDraft] = useState("");
+  const [deadlineSaving, setDeadlineSaving] = useState(false);
+  const [today, setToday] = useState(() => dateInBrazil(new Date()));
   const [search, setSearch] = useState("");
   const [contact, setContact] = useState("");
   const [workshop, setWorkshop] = useState("");
@@ -228,10 +269,37 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const [dark, setDark] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    const refreshToday = () => setToday(dateInBrazil(new Date()));
+    const interval = window.setInterval(refreshToday, 60_000);
+    return () => window.clearInterval(interval);
+  }, []);
+
+  useEffect(() => { setDeadlineDraft(selected?.currentDeadline ?? ""); }, [selected?.dbId, selected?.currentDeadline]);
+
+  async function loadCompletionLogs(rows: Appointment[]) {
+    const ids = rows.filter((item) => item.status === "Finalizado" && item.currentDeadline).map((item) => item.dbId);
+    if (!ids.length) { setCompletedAtById({}); return; }
+    const latest: Record<string, string> = {};
+    // Page through the filtered log so a busy agenda never loses older completion records.
+    for (let offset = 0; ; offset += 500) {
+      const { data, error } = await supabase.from("edit_log")
+        .select("appointment_id, changed_at")
+        .in("appointment_id", ids).eq("field_changed", "status").eq("new_value", "Finalizado")
+        .order("changed_at", { ascending: false }).range(offset, offset + 499);
+      if (error) { setMessage("Não foi possível verificar os prazos de entrega."); return; }
+      for (const log of data ?? []) latest[log.appointment_id] ??= log.changed_at;
+      if (!data || data.length < 500) break;
+    }
+    setCompletedAtById(latest);
+  }
+
   async function loadAppointments() {
     const { data, error } = await supabase.from("appointments").select(rowColumns).order("date").order("time");
     if (error) { setMessage("Não foi possível carregar a agenda."); return; }
-    setAppointments((data ?? []).map(fromRow));
+    const rows = (data ?? []).map(fromRow);
+    setAppointments(rows);
+    void loadCompletionLogs(rows);
   }
 
   useEffect(() => { void loadAppointments(); }, []);
@@ -287,6 +355,20 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     const { data, error } = await supabase.from("appointments").update({ status }).eq("id", dbId).select(rowColumns).single();
     if (error || !data) { setMessage(error?.message || "Não foi possível salvar a situação."); return; }
     replaceRow(data);
+    void loadCompletionLogs(appointments.map((row) => row.dbId === dbId ? fromRow(data) : row));
+  }
+
+  async function updateDeadline() {
+    if (!selected || deadlineSaving || deadlineDraft === (selected.currentDeadline ?? "")) return;
+    const blocked = editBlockReason(selected, currentUser.role);
+    if (blocked) { setMessage(blocked); return; }
+    setDeadlineSaving(true);
+    const { data, error } = await supabase.from("appointments")
+      .update({ current_deadline: deadlineDraft || null }).eq("id", selected.dbId).select(rowColumns).single();
+    setDeadlineSaving(false);
+    if (error || !data) { setMessage(error?.message || "Não foi possível salvar o prazo."); return; }
+    replaceRow(data);
+    if (data.status === "Finalizado") void loadCompletionLogs(appointments.map((row) => row.dbId === data.id ? fromRow(data) : row));
   }
 
   async function grantExtraEdit(item: Appointment) {
