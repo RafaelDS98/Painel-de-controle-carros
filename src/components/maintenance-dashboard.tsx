@@ -50,6 +50,7 @@ import { AppointmentForm, columnForField, emptyFields, type AppointmentFields } 
 import { ReworkForm, type ReworkFields } from "@/components/rework-form";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
+import { batchChanges, batchColumns, batchIdHeader, batchValidation, type BatchRecord } from "@/lib/bulk-appointments";
 
 type Appointment = {
   dbId: string;
@@ -288,8 +289,11 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<{ key: keyof Appointment; asc: boolean }>({ key: "date", asc: true });
   const [message, setMessage] = useState("");
+  const [batchBusy, setBatchBusy] = useState(false);
+  const [batchResult, setBatchResult] = useState<{ updated: number; unchanged: number; errors: { line: number; plate: string; reason: string }[] } | null>(null);
   const [dark, setDark] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const batchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const refreshToday = () => setToday(dateInBrazil(new Date()));
@@ -367,12 +371,16 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     setHistoryKey((k) => k + 1);
   }
 
+  function updateAppointmentRow(id: string, update: TablesUpdate<"appointments">) {
+    return supabase.from("appointments").update(update).eq("id", id).select(rowColumns).single();
+  }
+
   async function updateStatus(dbId: string, status: ServiceStatus) {
     const item = appointments.find((a) => a.dbId === dbId);
     if (!item) return;
     const blocked = editBlockReason(item, currentUser.role);
     if (blocked) { setMessage(blocked); return; }
-    const { data, error } = await supabase.from("appointments").update({ status }).eq("id", dbId).select(rowColumns).single();
+    const { data, error } = await updateAppointmentRow(dbId, { status });
     if (error || !data) { setMessage(error?.message || "Não foi possível salvar a situação."); return; }
     replaceRow(data);
     void loadCompletionLogs(appointments.map((row) => row.dbId === dbId ? fromRow(data) : row));
@@ -388,7 +396,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
       else Object.assign(update, { [columnForField[key as keyof AppointmentFields]]: value });
     }
     if (!Object.keys(update).length) return true;
-    const { data, error } = await supabase.from("appointments").update(update).eq("id", selected.dbId).select(rowColumns).single();
+    const { data, error } = await updateAppointmentRow(selected.dbId, update);
     if (error || !data) { setMessage(error?.message || "Não foi possível salvar as alterações."); return false; }
     replaceRow(data);
     if (data.status === "Finalizado") void loadCompletionLogs(appointments.map((row) => row.dbId === data.id ? fromRow(data) : row));
@@ -504,6 +512,80 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     });
   }
 
+  async function exportBatch() {
+    try {
+      const XLSX = await import("xlsx");
+      const rows = sorted.map((item) => {
+        const record: Record<string, string> = { [batchIdHeader]: item.dbId };
+        const values: BatchRecord = {
+          date: item.date, time: item.time, plate: item.plate, status: item.status,
+          model: item.model, contact: item.contact, workshop: item.workshop,
+          issue: item.issue, note: item.note, operator: item.operator,
+          external_order: item.externalOrder, current_deadline: item.currentDeadline,
+        };
+        for (const [column, header] of batchColumns) record[header] = values[column] ?? "";
+        return record;
+      });
+      const sheet = XLSX.utils.json_to_sheet(rows, { header: [batchIdHeader, ...batchColumns.map(([, header]) => header)] });
+      sheet["!cols"] = [{ wch: 43 }, ...batchColumns.map(() => ({ wch: 22 }))];
+      const book = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(book, sheet, "Edição em lote");
+      XLSX.writeFile(book, `agenda-lote-${dateInBrazil(new Date())}.xlsx`);
+    } catch { setMessage("Não foi possível exportar a planilha de edição em lote."); }
+  }
+
+  async function importBatch(file?: File) {
+    if (!file || batchBusy) return;
+    setBatchResult(null);
+    setBatchBusy(true);
+    try {
+      const XLSX = await import("xlsx");
+      const book = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true });
+      const sheet = book.Sheets[book.SheetNames[0] ?? ""];
+      if (!sheet) throw new Error("A planilha não possui abas.");
+      const grid = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: "", blankrows: true });
+      const headers = (grid[0] ?? []).map((value) => String(value).trim());
+      if (!headers.includes(batchIdHeader)) throw new Error(`Coluna "${batchIdHeader}" ausente. Use o arquivo gerado por "Exportar para edição em lote".`);
+      const missing = batchColumns.map(([, header]) => header).filter((header) => !headers.includes(header));
+      if (missing.length) throw new Error(`Colunas ausentes: ${missing.join(", ")}. Use o arquivo gerado por "Exportar para edição em lote".`);
+      if (new Set(headers).size !== headers.length) throw new Error("A planilha contém colunas repetidas. Use o arquivo original de edição em lote.");
+      const result = { updated: 0, unchanged: 0, errors: [] as { line: number; plate: string; reason: string }[] };
+      const seen = new Set<string>();
+      const startRow = sheet["!ref"] ? XLSX.utils.decode_range(sheet["!ref"]).s.r : 0;
+      for (const [index, cells] of grid.entries()) {
+        if (index === 0 || !cells.some((value) => String(value ?? "").trim())) continue;
+        const row = Object.fromEntries(headers.map((header, column) => [header, cells[column] ?? ""]));
+        const line = startRow + index + 1;
+        const id = String(row[batchIdHeader] ?? "").trim();
+        const plate = String(row["Placa"] ?? "").trim() || "—";
+        if (!id) { result.errors.push({ line, plate, reason: "ID do sistema vazio — use Importar agenda para registros novos." }); continue; }
+        if (seen.has(id)) { result.errors.push({ line, plate, reason: "ID repetido nesta planilha." }); continue; }
+        seen.add(id);
+        try {
+          const { data: current, error: readError } = await supabase.from("appointments").select(rowColumns).eq("id", id).maybeSingle();
+          if (readError) throw new Error(readError.message);
+          if (!current) { result.errors.push({ line, plate, reason: "ID não encontrado — use Importar agenda para registros novos." }); continue; }
+          const changes = batchChanges(row, current);
+          if (!Object.keys(changes).length) { result.unchanged++; continue; }
+          const validation = batchValidation(changes);
+          if (validation) { result.errors.push({ line, plate, reason: validation }); continue; }
+          const { error: updateError } = await updateAppointmentRow(id, changes);
+          if (updateError) throw new Error(updateError.message);
+          result.updated++;
+        } catch (error) {
+          result.errors.push({ line, plate, reason: error instanceof Error ? error.message : "Não foi possível atualizar esta linha." });
+        }
+      }
+      await loadAppointments();
+      setBatchResult(result);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Não foi possível ler o arquivo de edição em lote.");
+    } finally {
+      setBatchBusy(false);
+      if (batchInputRef.current) batchInputRef.current.value = "";
+    }
+  }
+
   const kpis = [
     { label: "Agendamentos", value: filtered.length, detail: "no período", icon: CalendarDays },
     { label: "Retrabalhos no período", value: filtered.filter((item) => item.reworkOf).length, detail: "agendamentos de retorno", icon: RotateCcw },
@@ -542,6 +624,11 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
         </div>
 
         {message && <div className="flex items-center justify-between rounded-md border border-accent bg-accent/30 px-4 py-3 text-sm"><span>{message}</span><Button variant="ghost" size="icon" onClick={() => setMessage("")}><X /></Button></div>}
+        {batchResult && <section aria-label="Resultado da atualização em lote" className="space-y-2 border-y py-4 text-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-semibold">Atualização em lote concluída</h2><Button variant="ghost" size="icon" aria-label="Fechar resultado" onClick={() => setBatchResult(null)}><X /></Button></div>
+          <p>{batchResult.updated} atualizado(s) · {batchResult.unchanged} sem mudança · {batchResult.errors.length} erro(s)</p>
+          {batchResult.errors.length > 0 && <ul className="max-h-64 list-disc space-y-1 overflow-y-auto pl-5 text-destructive">{batchResult.errors.map((error) => <li key={`${error.line}-${error.plate}`}>Linha {error.line} · {error.plate}: {error.reason}</li>)}</ul>}
+        </section>}
 
         <section className="rounded-lg border bg-card p-4 shadow-sm">
           <div className="flex flex-col gap-3 xl:flex-row">
@@ -582,7 +669,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
         </div></section>
 
         <section className="rounded-lg border bg-card shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4"><div><h2 className="font-semibold">Agenda detalhada</h2><p className="text-xs text-muted-foreground">{sorted.length} registros encontrados</p></div><div className="flex gap-2"><Button variant="outline" size="sm" onClick={() => exportFile("csv")}><Download /> CSV</Button><Button variant="outline" size="sm" onClick={() => exportFile("xlsx")}><Download /> Excel</Button></div></div>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4"><div><h2 className="font-semibold">Agenda detalhada</h2><p className="text-xs text-muted-foreground">{sorted.length} registros encontrados</p></div><div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" onClick={exportBatch}><Download /> Exportar para edição em lote</Button><Button variant="outline" size="sm" disabled={batchBusy} onClick={() => batchInputRef.current?.click()}><Upload /> {batchBusy ? "Atualizando…" : "Atualizar agenda em lote"}</Button><input ref={batchInputRef} type="file" accept=".xlsx" className="hidden" aria-label="Arquivo de atualização em lote" onChange={(event) => void importBatch(event.target.files?.[0])} /><Button variant="outline" size="sm" onClick={() => exportFile("csv")}><Download /> CSV</Button><Button variant="outline" size="sm" onClick={() => exportFile("xlsx")}><Download /> Excel</Button></div></div>
            <div className="overflow-x-auto"><table className="w-full min-w-[1400px] text-sm"><thead className="bg-muted/60 text-left text-xs text-muted-foreground"><tr>{[["id","ID"],["date","Atendimento"],["time","Hora"],["plate","Placa"],["status","Situação"],["currentDeadline","Prazo"],["model","Modelo"],["contact","Contato"],["workshop","Local/Oficina"],["issue","Problema relatado"],["note","Observação"],["operator","Operador"]].map(([key,label]) => <th key={key} className="px-4 py-3 font-medium"><Button variant="ghost" size="sm" className="h-auto p-0" onClick={() => changeSort(key as keyof Appointment)}>{label}<ArrowDownAZ className="size-3" /></Button></th>)}</tr></thead><tbody>{pageRows.map((item) => <tr key={item.dbId} onClick={() => setSelected(item)} className="cursor-pointer border-t hover:bg-muted/40"><td className="px-4 py-3 font-mono text-xs">#{item.id}</td><td className="whitespace-nowrap px-4 py-3">{fullDate.format(localDate(item.date))}</td><td className="px-4 py-3 font-semibold">{item.time}</td><td className="px-4 py-3 font-bold">{item.plate}{item.reworkOf && <span className="mt-1 block"><ReworkBadge /></span>}</td><td className="px-4 py-3"><span className={cn("whitespace-nowrap rounded border px-2 py-1 text-xs font-semibold", statusClasses(item.status))}>{item.status || "Não atualizada"}</span></td><td className="whitespace-nowrap px-4 py-3"><DeadlineBadge item={item} completedAt={completedAtById[item.dbId]} today={today} /></td><td className="max-w-48 truncate px-4 py-3">{item.model}</td><td className="px-4 py-3">{item.contact}</td><td className="max-w-52 truncate px-4 py-3">{item.workshop || "—"}</td><td className="max-w-72 truncate px-4 py-3 text-muted-foreground">{item.issue}</td><td className="max-w-36 truncate px-4 py-3">{item.note || "—"}</td><td className="whitespace-nowrap px-4 py-3 capitalize">{item.operator}</td></tr>)}</tbody></table></div>
           <div className="flex items-center justify-between border-t p-4"><p className="text-xs text-muted-foreground">Página {Math.min(page, pages)} de {pages}</p><div className="flex gap-2"><Button variant="outline" size="icon" disabled={page === 1} onClick={() => setPage((value) => Math.max(1,value-1))} aria-label="Página anterior"><ArrowLeft /></Button><Button variant="outline" size="icon" disabled={page === pages} onClick={() => setPage((value) => Math.min(pages,value+1))} aria-label="Próxima página"><ArrowRight /></Button></div></div>
         </section>
