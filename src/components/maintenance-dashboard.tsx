@@ -561,6 +561,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
         if (!id) { result.errors.push({ line, plate, reason: "ID do sistema vazio — use Importar agenda para registros novos." }); continue; }
         if (seen.has(id)) { result.errors.push({ line, plate, reason: "ID repetido nesta planilha." }); continue; }
         seen.add(id);
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) { result.errors.push({ line, plate, reason: "ID não encontrado — use Importar agenda para registros novos." }); continue; }
         try {
           const { data: current, error: readError } = await supabase.from("appointments").select(rowColumns).eq("id", id).maybeSingle();
           if (readError) throw new Error(readError.message);
