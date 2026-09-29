@@ -17,7 +17,7 @@ export function periodRange(preset: Exclude<PeriodPreset, "custom">, today = sao
   if (preset === "today") return { start: today, end: today };
   if (preset === "month") {
     const [year, month] = today.split("-").map(Number);
-    return { start: `${today.slice(0, 7)}-01`, end: `${today.slice(0, 7)}-${String(new Date(Date.UTC(year, month, 0)).getUTCDate()).padStart(2, "0")}` };
+    return { start: `${today.slice(0, 7)}-01`, end: `${today.slice(0, 7)}-${String(new Date(Date.UTC(year ?? 2000, month ?? 1, 0)).getUTCDate()).padStart(2, "0")}` };
   }
   const day = new Date(`${today}T12:00:00Z`).getUTCDay();
   const monday = shiftDate(today, -(day === 0 ? 6 : day - 1));
