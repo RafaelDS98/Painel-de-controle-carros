@@ -10,3 +10,6 @@
 - [x] Exportar agendamentos filtrados para edição em lote com ID real e campos editáveis.
 - [x] Reimportar alterações por ID, sem criar registros, preservando permissões e histórico.
 - [x] Mostrar resumo e erros por linha; validar reimportação sem alterações e edição parcial.
+- [x] Abrir detalhes dos indicadores calculados sobre os agendamentos filtrados.
+- [x] Aplicar atalhos de período e mostrar entregas pendentes hoje e nesta semana.
+- [x] Registrar e listar contatos na ficha; verificar os três fluxos no painel.
