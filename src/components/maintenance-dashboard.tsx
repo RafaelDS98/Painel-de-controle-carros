@@ -51,6 +51,8 @@ import { ReworkForm, type ReworkFields } from "@/components/rework-form";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 import { batchChanges, batchColumns, batchIdHeader, batchValidation, type BatchRecord } from "@/lib/bulk-appointments";
+import { periodRange, weekRange, pendingDeliveries, type PeriodPreset } from "@/lib/agenda-period";
+import { ContactRegister } from "@/components/contact-register";
 
 type Appointment = {
   dbId: string;
@@ -285,6 +287,8 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const [operator, setOperator] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [periodPreset, setPeriodPreset] = useState<PeriodPreset>("week");
+  const [kpiOpen, setKpiOpen] = useState<string | null>(null);
   const [selected, setSelected] = useState<Appointment | null>(null);
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<{ key: keyof Appointment; asc: boolean }>({ key: "date", asc: true });
@@ -300,6 +304,12 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     const interval = window.setInterval(refreshToday, 60_000);
     return () => window.clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (periodPreset === "custom") return;
+    const range = periodRange(periodPreset, today);
+    setStartDate(range.start); setEndDate(range.end); setPage(1);
+  }, [periodPreset, today]);
 
   async function loadCompletionLogs(rows: Appointment[]) {
     const ids = rows.filter((item) => item.status === "Finalizado" && item.currentDeadline).map((item) => item.dbId);
@@ -345,6 +355,10 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const pageRows = sorted.slice((page - 1) * pageSize, page * pageSize);
 
   const daily = days.map((name, index) => ({ name: name.slice(0, 3), value: filtered.filter((item) => localDate(item.date).getDay() === index + 1).length }));
+  const visibleWeek = weekRange(today);
+  const weeklyRows = filtered.filter((item) => item.date >= visibleWeek.start && item.date <= visibleWeek.end);
+  const pendingToday = pendingDeliveries(appointments, today, today);
+  const pendingWeek = pendingDeliveries(appointments, visibleWeek.start, visibleWeek.end);
   const hourly = countBy(filtered, (item) => item.time).sort((a, b) => a.name.localeCompare(b.name));
   const workshops = countBy(filtered, (item) => item.workshop).slice(0, 6);
   const contacts = countBy(filtered, (item) => item.contact).slice(0, 7);
@@ -357,7 +371,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const average = usedDays ? filtered.length / usedDays : 0;
 
   function resetFilters() {
-    setSearch(""); setContact(""); setWorkshop(""); setModel(""); setOperator(""); setStartDate(""); setEndDate(""); setReworksOnly(false); setPage(1);
+    setSearch(""); setContact(""); setWorkshop(""); setModel(""); setOperator(""); setPeriodPreset("week"); const range = periodRange("week", today); setStartDate(range.start); setEndDate(range.end); setReworksOnly(false); setPage(1);
   }
 
   function changeSort(key: keyof Appointment) {
@@ -600,6 +614,20 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const lastDate = orderedDates.at(-1);
   const loadedPeriod = firstDate && lastDate ? `${fullDate.format(localDate(firstDate))} — ${fullDate.format(localDate(lastDate))}` : "Sem dados";
   const selectedOriginal = selected?.reworkOf ? appointments.find((item) => item.dbId === selected.reworkOf) : undefined;
+  const kpiDetails = (() => {
+    if (kpiOpen === "Agendamentos") return sorted.map((item) => ({ key: item.dbId, title: item.plate || "Sem placa", detail: `${item.date ? fullDate.format(localDate(item.date)) : "Sem data"} · ${item.status || "Não atualizada"}` }));
+    if (kpiOpen === "Retrabalhos no período") return sorted.filter((item) => item.reworkOf).map((item) => ({ key: item.dbId, title: item.plate || "Sem placa", detail: `${item.date ? fullDate.format(localDate(item.date)) : "Sem data"} · ${item.status || "Não atualizada"}` }));
+    if (kpiOpen === "Veículos únicos") return countBy(filtered, (item) => item.plate).map((row) => ({ key: row.name, title: row.name, detail: `${row.value} agendamento(s)` }));
+    if (kpiOpen === "Clientes atendidos") {
+      return [...new Set(filtered.map((item) => item.contact))].sort().map((contact) => {
+        const rows = filtered.filter((item) => item.contact === contact);
+        return { key: contact, title: contact || "Não informado", detail: `${rows.length} agendamento(s) · ${new Set(rows.map((item) => item.plate)).size} veículo(s)` };
+      });
+    }
+    if (kpiOpen === "Oficinas acionadas") return countBy(filtered.filter((item) => item.workshop), (item) => item.workshop).map((row) => ({ key: row.name, title: row.name, detail: `${row.value} agendamento(s)` }));
+    if (kpiOpen === "Média por dia") return countBy(filtered.filter((item) => item.date), (item) => item.date).sort((a, b) => a.name.localeCompare(b.name)).map((row) => ({ key: row.name, title: fullDate.format(localDate(row.name)), detail: `${row.value} agendamento(s)` }));
+    return [];
+  })();
 
   return (
     <div className={cn("min-h-screen bg-background text-foreground", dark && "dark")}>
@@ -634,7 +662,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
         <section className="rounded-lg border bg-card p-4 shadow-sm">
           <div className="flex flex-col gap-3 xl:flex-row">
             <label className="relative min-w-64 flex-[1.4]"><Search className="absolute left-3 top-3 size-4 text-muted-foreground" /><Input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Buscar placa, contato ou serviço" className="pl-9" /></label>
-            <div className="flex min-w-64 flex-1 gap-2"><Input type="date" aria-label="Data inicial" value={startDate} onChange={(e) => setStartDate(e.target.value)} /><Input type="date" aria-label="Data final" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></div>
+            <div className="flex min-w-64 flex-1 gap-2"><Input type="date" aria-label="Data inicial" value={startDate} onChange={(e) => { setStartDate(e.target.value); setPeriodPreset("custom"); setPage(1); }} /><Input type="date" aria-label="Data final" value={endDate} onChange={(e) => { setEndDate(e.target.value); setPeriodPreset("custom"); setPage(1); }} /></div>
             <FilterSelect label="Todos os contatos" value={contact} options={option("contact")} onChange={setContact} />
             <FilterSelect label="Todas as oficinas" value={workshop} options={option("workshop")} onChange={setWorkshop} />
           </div>
@@ -644,17 +672,19 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
             <label className="flex min-h-10 items-center gap-2 text-sm text-foreground"><Checkbox checked={reworksOnly} onCheckedChange={(checked) => { setReworksOnly(checked === true); setPage(1); }} aria-label="Mostrar somente retrabalhos" />Mostrar somente retrabalhos</label>
             <Button variant="outline" onClick={resetFilters}><RotateCcw /> Limpar filtros</Button>
           </div>
+          <div className="mt-3 flex flex-wrap gap-1" role="group" aria-label="Período da agenda">{([ ["today", "Hoje"], ["week", "Esta semana"], ["month", "Este mês"], ["custom", "Personalizado"] ] as const).map(([key, label]) => <Button key={key} size="sm" variant={periodPreset === key ? "default" : "outline"} aria-pressed={periodPreset === key} onClick={() => { setPeriodPreset(key); setPage(1); }}>{label}</Button>)}</div>
         </section>
 
+        <section aria-label="Entregas pendentes" className="flex flex-wrap gap-x-8 gap-y-2 border-y py-4 text-sm"><p><span className="font-semibold">Hoje:</span> {pendingToday} veículo(s) a entregar</p><p><span className="font-semibold">Esta semana:</span> {pendingWeek} veículo(s) a entregar</p></section>
         <section className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
-          {kpis.map(({ label, value, detail, icon: Icon }) => <article key={label} className="rounded-lg border bg-card p-4 shadow-sm"><div className="mb-4 flex items-center justify-between"><p className="text-xs font-medium text-muted-foreground">{label}</p><Icon className="size-4 text-accent-foreground" /></div><p className="text-3xl font-bold tabular-nums">{value}</p><p className="mt-1 text-xs text-muted-foreground">{detail}</p></article>)}
+          {kpis.map(({ label, value, detail, icon: Icon }) => <Button key={label} variant="outline" onClick={() => setKpiOpen(label)} className="h-auto min-h-28 min-w-0 flex-col items-stretch justify-start whitespace-normal rounded-md bg-card p-4 text-left shadow-sm"><span className="mb-4 flex w-full items-center justify-between gap-2"><span className="text-xs font-medium text-muted-foreground">{label}</span><Icon className="size-4 shrink-0 text-accent-foreground" /></span><span className="text-3xl font-bold tabular-nums">{value}</span><span className="mt-1 text-xs font-normal text-muted-foreground">{detail}</span></Button>)}
         </section>
 
         <section>
-          <div className="mb-3 flex items-end justify-between"><div><h2 className="text-lg font-semibold">Grade semanal</h2><p className="text-sm text-muted-foreground">Clique em um veículo para abrir a ficha.</p></div></div>
+          <div className="mb-3 flex items-end justify-between"><div><h2 className="text-lg font-semibold">Grade semanal</h2><p className="text-sm text-muted-foreground">{periodPreset === "month" || (startDate && endDate && (new Date(`${endDate}T12:00:00Z`).getTime() - new Date(`${startDate}T12:00:00Z`).getTime()) > 6 * 86400000) ? "Semana atual no período; consulte a agenda detalhada para todos os dias." : "Clique em um veículo para abrir a ficha."}</p></div></div>
           <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
             {days.map((day, index) => {
-              const rows = filtered.filter((item) => localDate(item.date).getDay() === index + 1).sort((a,b) => a.time.localeCompare(b.time));
+              const rows = weeklyRows.filter((item) => localDate(item.date).getDay() === index + 1).sort((a,b) => a.time.localeCompare(b.time));
                return <div key={day} className="min-h-48 rounded-lg border bg-muted/30 p-3"><div className="mb-3 flex items-center justify-between"><div><h3 className="text-sm font-semibold">{day}</h3><p className="text-xs text-muted-foreground">{rows[0] ? dayMonth.format(localDate(rows[0].date)) : "—"}</p></div><span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-semibold">{rows.length}</span></div><div className="space-y-2">{rows.map((item) => <article key={item.dbId} className="overflow-hidden rounded-md border bg-card shadow-sm transition hover:-translate-y-0.5 hover:border-accent"><Button variant="ghost" onClick={() => setSelected(item)} className="h-auto w-full justify-start rounded-none p-3 text-left hover:bg-transparent"><span className="min-w-0 flex-1"><span className="flex items-center justify-between"><span className="text-xs font-bold text-accent-foreground">{item.time}</span><span className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold", serviceCategory(item.issue) === "Revisão" ? "bg-service-review text-service-review-foreground" : "bg-service-repair text-service-repair-foreground")}>{serviceCategory(item.issue)}</span></span><span className="mt-2 block font-bold tracking-wide">{item.plate}</span><span className="block truncate text-xs font-normal text-muted-foreground">{item.model}</span><span className="mt-2 block truncate text-xs font-medium">{item.contact}</span><span className="mt-1 line-clamp-2 whitespace-normal text-[11px] font-normal leading-4 text-muted-foreground">{item.issue}</span><span className="mt-2 flex flex-wrap gap-1">{item.reworkOf && <ReworkBadge />}<DeadlineBadge item={item} completedAt={completedAtById[item.dbId]} today={today} /></span></span></Button><label className="relative block border-t"><span className="sr-only">Situação de {item.plate}</span><select value={item.status} disabled={Boolean(editBlockReason(item, currentUser.role))} title={editBlockReason(item, currentUser.role) ?? undefined} onChange={(event) => updateStatus(item.dbId, event.target.value as ServiceStatus)} className={cn("disabled:cursor-not-allowed disabled:opacity-70 h-9 w-full appearance-none border-0 px-3 pr-8 text-xs font-semibold outline-none focus:ring-2 focus:ring-inset focus:ring-ring", statusClasses(item.status))}><option value="">Atualizar situação</option>{serviceStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select><ChevronDown className="pointer-events-none absolute right-3 top-2.5 size-4 opacity-70" /></label></article>)}</div></div>;
             })}
           </div>
@@ -675,6 +705,12 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
           <div className="flex items-center justify-between border-t p-4"><p className="text-xs text-muted-foreground">Página {Math.min(page, pages)} de {pages}</p><div className="flex gap-2"><Button variant="outline" size="icon" disabled={page === 1} onClick={() => setPage((value) => Math.max(1,value-1))} aria-label="Página anterior"><ArrowLeft /></Button><Button variant="outline" size="icon" disabled={page === pages} onClick={() => setPage((value) => Math.min(pages,value+1))} aria-label="Próxima página"><ArrowRight /></Button></div></div>
         </section>
       </main>
+
+      <Dialog open={Boolean(kpiOpen)} onOpenChange={(open) => { if (!open) setKpiOpen(null); }}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl"><DialogHeader><DialogTitle>{kpiOpen}</DialogTitle><DialogDescription>Agendamentos no período filtrado</DialogDescription></DialogHeader>
+          {kpiDetails.length ? <ul className="divide-y">{kpiDetails.map((entry) => <li key={entry.key} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 text-sm"><span className="font-medium">{entry.title}</span><span className="text-muted-foreground">{entry.detail}</span></li>)}</ul> : <p className="text-sm text-muted-foreground">Nenhum registro no período.</p>}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={newOpen} onOpenChange={setNewOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
@@ -717,6 +753,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
             <AppointmentForm key={`${selected.dbId}-${historyKey}`} initial={fieldsFromAppointment(selected)} editing blocked={editBlockReason(selected, currentUser.role)} onSave={saveAppointment} />
             <div className="border-t pt-4"><Button variant="outline" onClick={() => openRework(selected)}><RotateCcw /> Registrar retrabalho</Button></div>
             <Detail label="Data de cadastro" value={selected.registeredAt ? fullDate.format(localDate(selected.registeredAt)) : ""} />
+            <ContactRegister key={selected.dbId} appointmentId={selected.dbId} userId={currentUser.id} />
             <AppointmentHistory appointmentId={selected.dbId} refreshKey={historyKey} />
           </>}
         </DialogContent>
