@@ -4,3 +4,6 @@
 - [x] Criar agendamento manualmente com data, hora e placa obrigatórias.
 - [x] Editar os campos da ficha com a trava existente e salvar somente alterações reais.
 - [x] Validar criação e edição reais com uma conta master autorizada; remover o agendamento temporário.
+- [x] Registrar retrabalho como novo agendamento vinculado, sem editar o original.
+- [x] Exibir vínculo, motivo, badge, filtro e indicador de retrabalhos.
+- [x] Verificar criação e filtro no painel; remover os registros temporários.

@@ -47,6 +47,8 @@ import { cn } from "@/lib/utils";
 import { AppointmentHistory, ChangeLogDialog } from "@/components/edit-history";
 import { History, Unlock } from "lucide-react";
 import { AppointmentForm, columnForField, emptyFields, type AppointmentFields } from "@/components/appointment-form";
+import { ReworkForm, type ReworkFields } from "@/components/rework-form";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 type Appointment = {
@@ -70,6 +72,8 @@ type Appointment = {
   editsUsed: number;
   editsAllowed: number;
   managerEditUsed: boolean;
+  reworkOf: string | null;
+  reworkReason: string | null;
 };
 
 export type AppRole = "atendimento" | "gerente" | "master";
@@ -91,6 +95,7 @@ type AppointmentRow = {
   model: string; contact: string; workshop: string; issue: string; note: string; operator: string; external_order: string; status: string;
   creator_edits_used: number; creator_edits_allowed: number; manager_edit_used: boolean;
   original_deadline: string | null; current_deadline: string | null;
+  rework_of: string | null; rework_reason: string | null;
 };
 
 function fromRow(row: AppointmentRow): Appointment {
@@ -101,6 +106,7 @@ function fromRow(row: AppointmentRow): Appointment {
     operator: row.operator, externalOrder: row.external_order, status,
     originalDeadline: row.original_deadline, currentDeadline: row.current_deadline,
     editsUsed: row.creator_edits_used, editsAllowed: row.creator_edits_allowed, managerEditUsed: row.manager_edit_used,
+    reworkOf: row.rework_of, reworkReason: row.rework_reason,
   };
 }
 
@@ -256,8 +262,11 @@ function DeadlineBadge({ item, completedAt, today }: { item: Appointment; comple
   const state = deadlineState(item, completedAt, today);
   return state ? <span className={cn("inline-flex w-fit items-center whitespace-nowrap rounded border px-2 py-0.5 text-[11px] font-semibold", deadlineClasses[state])}>{deadlineLabels[state]}</span> : null;
 }
+function ReworkBadge() {
+  return <span className="inline-flex w-fit items-center rounded border border-accent bg-accent/30 px-2 py-0.5 text-[11px] font-semibold text-accent-foreground">Retrabalho</span>;
+}
 
-const rowColumns = "id, sheet_id, registered_at, date, time, plate, store, model, contact, workshop, issue, note, operator, external_order, status, original_deadline, current_deadline, creator_edits_used, creator_edits_allowed, manager_edit_used";
+const rowColumns = "id, sheet_id, registered_at, date, time, plate, store, model, contact, workshop, issue, note, operator, external_order, status, original_deadline, current_deadline, creator_edits_used, creator_edits_allowed, manager_edit_used, rework_of, rework_reason";
 
 export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: () => void; currentUser: CurrentUser }) {
   const [logOpen, setLogOpen] = useState(false);
@@ -265,6 +274,8 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [completedAtById, setCompletedAtById] = useState<Record<string, string>>({});
   const [newOpen, setNewOpen] = useState(false);
+  const [reworkSource, setReworkSource] = useState<Appointment | null>(null);
+  const [reworksOnly, setReworksOnly] = useState(false);
   const [today, setToday] = useState(() => dateInBrazil(new Date()));
   const [search, setSearch] = useState("");
   const [contact, setContact] = useState("");
@@ -317,8 +328,8 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const filtered = useMemo(() => appointments.filter((item) => {
     const q = search.toLocaleLowerCase("pt-BR");
     const hit = !q || [item.plate, item.contact, item.issue, item.model].some((value) => value.toLocaleLowerCase("pt-BR").includes(q));
-    return hit && (!contact || item.contact === contact) && (!workshop || item.workshop === workshop) && (!model || item.model === model) && (!operator || item.operator === operator) && (!startDate || item.date >= startDate) && (!endDate || item.date <= endDate);
-  }), [appointments, contact, endDate, model, operator, search, startDate, workshop]);
+    return hit && (!contact || item.contact === contact) && (!workshop || item.workshop === workshop) && (!model || item.model === model) && (!operator || item.operator === operator) && (!startDate || item.date >= startDate) && (!endDate || item.date <= endDate) && (!reworksOnly || Boolean(item.reworkOf));
+  }), [appointments, contact, endDate, model, operator, reworksOnly, search, startDate, workshop]);
 
   const sorted = useMemo(() => [...filtered].sort((a, b) => {
     const first = sort.key === "date" ? `${a.date}${a.time}` : String(a[sort.key]);
@@ -342,7 +353,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const average = usedDays ? filtered.length / usedDays : 0;
 
   function resetFilters() {
-    setSearch(""); setContact(""); setWorkshop(""); setModel(""); setOperator(""); setStartDate(""); setEndDate(""); setPage(1);
+    setSearch(""); setContact(""); setWorkshop(""); setModel(""); setOperator(""); setStartDate(""); setEndDate(""); setReworksOnly(false); setPage(1);
   }
 
   function changeSort(key: keyof Appointment) {
@@ -408,6 +419,39 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     return true;
   }
 
+  async function createRework(fields: ReworkFields): Promise<boolean> {
+    if (!reworkSource) return false;
+    const date = fields.date.trim();
+    const time = fields.time.trim();
+    const plate = fields.plate.trim();
+    const reason = fields.reason.trim();
+    if (!date || !time || !plate || !reason) { setMessage("Informe data, hora, placa e motivo do retorno."); return false; }
+    const values: TablesInsert<"appointments"> = {
+      date, time, plate, model: fields.model.trim(), contact: fields.contact.trim(),
+      workshop: fields.workshop.trim(), operator: fields.operator.trim(),
+      rework_of: reworkSource.dbId, rework_reason: reason,
+      created_by: currentUser.id, status: "", sheet_id: "",
+    };
+    const { data, error } = await supabase.from("appointments").insert(values).select(rowColumns).single();
+    if (error || !data) { setMessage(error?.message || "Não foi possível registrar o retrabalho."); return false; }
+    setReworkSource(null);
+    resetFilters();
+    await loadAppointments();
+    setSelected(fromRow(data));
+    setMessage(`Retrabalho de ${plate} registrado com sucesso.`);
+    return true;
+  }
+
+  function openRework(item: Appointment) {
+    setSelected(null);
+    setReworkSource(item);
+  }
+
+  function openLinked(item: Appointment) {
+    setSelected(item);
+    setHistoryKey((key) => key + 1);
+  }
+
   async function grantExtraEdit(item: Appointment) {
     const { data, error } = await supabase.from("appointments").update({ creator_edits_allowed: item.editsAllowed + 1 }).eq("id", item.dbId).select(rowColumns).single();
     if (error || !data) { setMessage(error?.message || "Não foi possível liberar a edição extra."); return; }
@@ -462,6 +506,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
 
   const kpis = [
     { label: "Agendamentos", value: filtered.length, detail: "no período", icon: CalendarDays },
+    { label: "Retrabalhos no período", value: filtered.filter((item) => item.reworkOf).length, detail: "agendamentos de retorno", icon: RotateCcw },
     { label: "Veículos únicos", value: uniqueVehicles, detail: "placas distintas", icon: CarFront },
     { label: "Clientes atendidos", value: uniqueContacts, detail: "órgãos e secretarias", icon: Users },
     { label: "Oficinas acionadas", value: uniqueWorkshops, detail: "prestadores", icon: Building2 },
@@ -471,6 +516,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const firstDate = orderedDates[0];
   const lastDate = orderedDates.at(-1);
   const loadedPeriod = firstDate && lastDate ? `${fullDate.format(localDate(firstDate))} — ${fullDate.format(localDate(lastDate))}` : "Sem dados";
+  const selectedOriginal = selected?.reworkOf ? appointments.find((item) => item.dbId === selected.reworkOf) : undefined;
 
   return (
     <div className={cn("min-h-screen bg-background text-foreground", dark && "dark")}>
@@ -507,11 +553,12 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
           <div className="mt-3 flex flex-col gap-3 md:flex-row">
             <FilterSelect label="Todos os modelos" value={model} options={option("model")} onChange={setModel} />
             <FilterSelect label="Todos os operadores" value={operator} options={option("operator")} onChange={setOperator} />
+            <label className="flex min-h-10 items-center gap-2 text-sm text-foreground"><Checkbox checked={reworksOnly} onCheckedChange={(checked) => { setReworksOnly(checked === true); setPage(1); }} aria-label="Mostrar somente retrabalhos" />Mostrar somente retrabalhos</label>
             <Button variant="outline" onClick={resetFilters}><RotateCcw /> Limpar filtros</Button>
           </div>
         </section>
 
-        <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <section className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
           {kpis.map(({ label, value, detail, icon: Icon }) => <article key={label} className="rounded-lg border bg-card p-4 shadow-sm"><div className="mb-4 flex items-center justify-between"><p className="text-xs font-medium text-muted-foreground">{label}</p><Icon className="size-4 text-accent-foreground" /></div><p className="text-3xl font-bold tabular-nums">{value}</p><p className="mt-1 text-xs text-muted-foreground">{detail}</p></article>)}
         </section>
 
@@ -520,7 +567,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
           <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
             {days.map((day, index) => {
               const rows = filtered.filter((item) => localDate(item.date).getDay() === index + 1).sort((a,b) => a.time.localeCompare(b.time));
-              return <div key={day} className="min-h-48 rounded-lg border bg-muted/30 p-3"><div className="mb-3 flex items-center justify-between"><div><h3 className="text-sm font-semibold">{day}</h3><p className="text-xs text-muted-foreground">{rows[0] ? dayMonth.format(localDate(rows[0].date)) : "—"}</p></div><span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-semibold">{rows.length}</span></div><div className="space-y-2">{rows.map((item) => <article key={item.dbId} className="overflow-hidden rounded-md border bg-card shadow-sm transition hover:-translate-y-0.5 hover:border-accent"><Button variant="ghost" onClick={() => setSelected(item)} className="h-auto w-full justify-start rounded-none p-3 text-left hover:bg-transparent"><span className="min-w-0 flex-1"><span className="flex items-center justify-between"><span className="text-xs font-bold text-accent-foreground">{item.time}</span><span className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold", serviceCategory(item.issue) === "Revisão" ? "bg-service-review text-service-review-foreground" : "bg-service-repair text-service-repair-foreground")}>{serviceCategory(item.issue)}</span></span><span className="mt-2 block font-bold tracking-wide">{item.plate}</span><span className="block truncate text-xs font-normal text-muted-foreground">{item.model}</span><span className="mt-2 block truncate text-xs font-medium">{item.contact}</span><span className="mt-1 line-clamp-2 whitespace-normal text-[11px] font-normal leading-4 text-muted-foreground">{item.issue}</span><span className="mt-2 block"><DeadlineBadge item={item} completedAt={completedAtById[item.dbId]} today={today} /></span></span></Button><label className="relative block border-t"><span className="sr-only">Situação de {item.plate}</span><select value={item.status} disabled={Boolean(editBlockReason(item, currentUser.role))} title={editBlockReason(item, currentUser.role) ?? undefined} onChange={(event) => updateStatus(item.dbId, event.target.value as ServiceStatus)} className={cn("disabled:cursor-not-allowed disabled:opacity-70 h-9 w-full appearance-none border-0 px-3 pr-8 text-xs font-semibold outline-none focus:ring-2 focus:ring-inset focus:ring-ring", statusClasses(item.status))}><option value="">Atualizar situação</option>{serviceStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select><ChevronDown className="pointer-events-none absolute right-3 top-2.5 size-4 opacity-70" /></label></article>)}</div></div>;
+               return <div key={day} className="min-h-48 rounded-lg border bg-muted/30 p-3"><div className="mb-3 flex items-center justify-between"><div><h3 className="text-sm font-semibold">{day}</h3><p className="text-xs text-muted-foreground">{rows[0] ? dayMonth.format(localDate(rows[0].date)) : "—"}</p></div><span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-semibold">{rows.length}</span></div><div className="space-y-2">{rows.map((item) => <article key={item.dbId} className="overflow-hidden rounded-md border bg-card shadow-sm transition hover:-translate-y-0.5 hover:border-accent"><Button variant="ghost" onClick={() => setSelected(item)} className="h-auto w-full justify-start rounded-none p-3 text-left hover:bg-transparent"><span className="min-w-0 flex-1"><span className="flex items-center justify-between"><span className="text-xs font-bold text-accent-foreground">{item.time}</span><span className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold", serviceCategory(item.issue) === "Revisão" ? "bg-service-review text-service-review-foreground" : "bg-service-repair text-service-repair-foreground")}>{serviceCategory(item.issue)}</span></span><span className="mt-2 block font-bold tracking-wide">{item.plate}</span><span className="block truncate text-xs font-normal text-muted-foreground">{item.model}</span><span className="mt-2 block truncate text-xs font-medium">{item.contact}</span><span className="mt-1 line-clamp-2 whitespace-normal text-[11px] font-normal leading-4 text-muted-foreground">{item.issue}</span><span className="mt-2 flex flex-wrap gap-1">{item.reworkOf && <ReworkBadge />}<DeadlineBadge item={item} completedAt={completedAtById[item.dbId]} today={today} /></span></span></Button><label className="relative block border-t"><span className="sr-only">Situação de {item.plate}</span><select value={item.status} disabled={Boolean(editBlockReason(item, currentUser.role))} title={editBlockReason(item, currentUser.role) ?? undefined} onChange={(event) => updateStatus(item.dbId, event.target.value as ServiceStatus)} className={cn("disabled:cursor-not-allowed disabled:opacity-70 h-9 w-full appearance-none border-0 px-3 pr-8 text-xs font-semibold outline-none focus:ring-2 focus:ring-inset focus:ring-ring", statusClasses(item.status))}><option value="">Atualizar situação</option>{serviceStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select><ChevronDown className="pointer-events-none absolute right-3 top-2.5 size-4 opacity-70" /></label></article>)}</div></div>;
             })}
           </div>
         </section>
@@ -536,7 +583,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
 
         <section className="rounded-lg border bg-card shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4"><div><h2 className="font-semibold">Agenda detalhada</h2><p className="text-xs text-muted-foreground">{sorted.length} registros encontrados</p></div><div className="flex gap-2"><Button variant="outline" size="sm" onClick={() => exportFile("csv")}><Download /> CSV</Button><Button variant="outline" size="sm" onClick={() => exportFile("xlsx")}><Download /> Excel</Button></div></div>
-          <div className="overflow-x-auto"><table className="w-full min-w-[1400px] text-sm"><thead className="bg-muted/60 text-left text-xs text-muted-foreground"><tr>{[["id","ID"],["date","Atendimento"],["time","Hora"],["plate","Placa"],["status","Situação"],["currentDeadline","Prazo"],["model","Modelo"],["contact","Contato"],["workshop","Local/Oficina"],["issue","Problema relatado"],["note","Observação"],["operator","Operador"]].map(([key,label]) => <th key={key} className="px-4 py-3 font-medium"><button className="inline-flex items-center gap-1 hover:text-foreground" onClick={() => changeSort(key as keyof Appointment)}>{label}<ArrowDownAZ className="size-3" /></button></th>)}</tr></thead><tbody>{pageRows.map((item) => <tr key={item.dbId} onClick={() => setSelected(item)} className="cursor-pointer border-t hover:bg-muted/40"><td className="px-4 py-3 font-mono text-xs">#{item.id}</td><td className="whitespace-nowrap px-4 py-3">{fullDate.format(localDate(item.date))}</td><td className="px-4 py-3 font-semibold">{item.time}</td><td className="px-4 py-3 font-bold">{item.plate}</td><td className="px-4 py-3"><span className={cn("whitespace-nowrap rounded border px-2 py-1 text-xs font-semibold", statusClasses(item.status))}>{item.status || "Não atualizada"}</span></td><td className="whitespace-nowrap px-4 py-3"><DeadlineBadge item={item} completedAt={completedAtById[item.dbId]} today={today} /></td><td className="max-w-48 truncate px-4 py-3">{item.model}</td><td className="px-4 py-3">{item.contact}</td><td className="max-w-52 truncate px-4 py-3">{item.workshop || "—"}</td><td className="max-w-72 truncate px-4 py-3 text-muted-foreground">{item.issue}</td><td className="max-w-36 truncate px-4 py-3">{item.note || "—"}</td><td className="whitespace-nowrap px-4 py-3 capitalize">{item.operator}</td></tr>)}</tbody></table></div>
+           <div className="overflow-x-auto"><table className="w-full min-w-[1400px] text-sm"><thead className="bg-muted/60 text-left text-xs text-muted-foreground"><tr>{[["id","ID"],["date","Atendimento"],["time","Hora"],["plate","Placa"],["status","Situação"],["currentDeadline","Prazo"],["model","Modelo"],["contact","Contato"],["workshop","Local/Oficina"],["issue","Problema relatado"],["note","Observação"],["operator","Operador"]].map(([key,label]) => <th key={key} className="px-4 py-3 font-medium"><Button variant="ghost" size="sm" className="h-auto p-0" onClick={() => changeSort(key as keyof Appointment)}>{label}<ArrowDownAZ className="size-3" /></Button></th>)}</tr></thead><tbody>{pageRows.map((item) => <tr key={item.dbId} onClick={() => setSelected(item)} className="cursor-pointer border-t hover:bg-muted/40"><td className="px-4 py-3 font-mono text-xs">#{item.id}</td><td className="whitespace-nowrap px-4 py-3">{fullDate.format(localDate(item.date))}</td><td className="px-4 py-3 font-semibold">{item.time}</td><td className="px-4 py-3 font-bold">{item.plate}{item.reworkOf && <span className="mt-1 block"><ReworkBadge /></span>}</td><td className="px-4 py-3"><span className={cn("whitespace-nowrap rounded border px-2 py-1 text-xs font-semibold", statusClasses(item.status))}>{item.status || "Não atualizada"}</span></td><td className="whitespace-nowrap px-4 py-3"><DeadlineBadge item={item} completedAt={completedAtById[item.dbId]} today={today} /></td><td className="max-w-48 truncate px-4 py-3">{item.model}</td><td className="px-4 py-3">{item.contact}</td><td className="max-w-52 truncate px-4 py-3">{item.workshop || "—"}</td><td className="max-w-72 truncate px-4 py-3 text-muted-foreground">{item.issue}</td><td className="max-w-36 truncate px-4 py-3">{item.note || "—"}</td><td className="whitespace-nowrap px-4 py-3 capitalize">{item.operator}</td></tr>)}</tbody></table></div>
           <div className="flex items-center justify-between border-t p-4"><p className="text-xs text-muted-foreground">Página {Math.min(page, pages)} de {pages}</p><div className="flex gap-2"><Button variant="outline" size="icon" disabled={page === 1} onClick={() => setPage((value) => Math.max(1,value-1))} aria-label="Página anterior"><ArrowLeft /></Button><Button variant="outline" size="icon" disabled={page === pages} onClick={() => setPage((value) => Math.min(pages,value+1))} aria-label="Próxima página"><ArrowRight /></Button></div></div>
         </section>
       </main>
@@ -547,13 +594,24 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
           {newOpen && <AppointmentForm initial={emptyFields} onSave={createAppointment} />}
         </DialogContent>
       </Dialog>
+      <Dialog open={Boolean(reworkSource)} onOpenChange={(open) => { if (!open) setReworkSource(null); }}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader><DialogTitle>Registrar retrabalho</DialogTitle><DialogDescription>{reworkSource ? `Retorno de ${reworkSource.plate} • ${reworkSource.date ? fullDate.format(localDate(reworkSource.date)) : "Sem data"}` : ""}</DialogDescription></DialogHeader>
+          {reworkSource && <ReworkForm key={reworkSource.dbId} initial={{ date: "", time: "", plate: reworkSource.plate, model: reworkSource.model, contact: reworkSource.contact, workshop: reworkSource.workshop, operator: reworkSource.operator, reason: "" }} onSave={createRework} />}
+        </DialogContent>
+      </Dialog>
       <Dialog open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           {selected && <>
             <DialogHeader>
-              <DialogTitle className="flex flex-wrap items-center gap-3"><span className="rounded-md bg-primary px-2 py-1 text-primary-foreground">{selected.plate}</span>{selected.model}</DialogTitle>
+              <DialogTitle className="flex flex-wrap items-center gap-3"><span className="rounded-md bg-primary px-2 py-1 text-primary-foreground">{selected.plate}</span>{selected.model}{selected.reworkOf && <ReworkBadge />}</DialogTitle>
               <DialogDescription>{selected.id ? `Agendamento #${selected.id} • ` : ""}{selected.date ? fullDate.format(localDate(selected.date)) : "Sem data"} às {selected.time}</DialogDescription>
             </DialogHeader>
+            {selected.reworkOf && <div className="space-y-2 border-b pb-4">
+              <Detail label="Motivo do retorno" value={selected.reworkReason ?? ""} />
+              {selectedOriginal ? <Button variant="link" className="h-auto p-0 text-left whitespace-normal" onClick={() => openLinked(selectedOriginal)}>Agendamento original: {selectedOriginal.plate} • {selectedOriginal.date ? fullDate.format(localDate(selectedOriginal.date)) : "Sem data"}</Button> : <p className="text-sm text-muted-foreground">Agendamento original indisponível</p>}
+            </div>}
+            {appointments.filter((item) => item.reworkOf === selected.dbId).map((child) => <div key={child.dbId} className="border-b pb-3"><Button variant="link" className="h-auto p-0 text-left whitespace-normal" onClick={() => openLinked(child)}>Gerou retrabalho em {child.date ? fullDate.format(localDate(child.date)) : "data não informada"} • {child.plate}</Button></div>)}
             <div className="space-y-3 border-b pb-4">
               <DeadlineBadge item={selected} completedAt={completedAtById[selected.dbId]} today={today} />
               <div className="grid gap-3 sm:grid-cols-2">
@@ -569,6 +627,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
             {editBlockReason(selected, currentUser.role) && <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{editBlockReason(selected, currentUser.role)}</p>}
             {currentUser.role !== "atendimento" && <div className="flex flex-wrap items-center gap-3"><Button variant="outline" disabled={selected.editsAllowed > 1} onClick={() => grantExtraEdit(selected)}><Unlock /> Liberar edição extra</Button><span className="text-xs text-muted-foreground">Atendimento: {selected.editsUsed} de {selected.editsAllowed} edição(ões) usada(s){selected.editsAllowed > 1 ? " • edição extra já liberada" : ""}</span></div>}
             <AppointmentForm key={`${selected.dbId}-${historyKey}`} initial={fieldsFromAppointment(selected)} editing blocked={editBlockReason(selected, currentUser.role)} onSave={saveAppointment} />
+            <div className="border-t pt-4"><Button variant="outline" onClick={() => openRework(selected)}><RotateCcw /> Registrar retrabalho</Button></div>
             <Detail label="Data de cadastro" value={selected.registeredAt ? fullDate.format(localDate(selected.registeredAt)) : ""} />
             <AppointmentHistory appointmentId={selected.dbId} refreshKey={historyKey} />
           </>}
