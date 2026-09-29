@@ -19,7 +19,7 @@ function excelDate(value: unknown): string {
   const raw = String(value ?? "").trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
   const match = raw.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
-  return match ? `${match[3]}-${match[2].padStart(2, "0")}-${match[1].padStart(2, "0")}` : raw;
+  return match?.[1] && match[2] && match[3] ? `${match[3]}-${match[2].padStart(2, "0")}-${match[1].padStart(2, "0")}` : raw;
 }
 
 function excelTime(value: unknown): string {
@@ -30,7 +30,7 @@ function excelTime(value: unknown): string {
   }
   const raw = String(value ?? "").trim();
   const match = raw.match(/^(\d{1,2}):(\d{2})(?::00)?$/);
-  return match ? `${match[1].padStart(2, "0")}:${match[2]}` : raw;
+  return match?.[1] && match[2] ? `${match[1].padStart(2, "0")}:${match[2]}` : raw;
 }
 
 export function batchValue(column: BatchColumn, value: unknown): string | null {
