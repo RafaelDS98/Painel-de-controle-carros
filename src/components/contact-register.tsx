@@ -9,10 +9,11 @@ type ContactRow = {
   profiles: { full_name: string | null } | null;
 };
 
-const dateTime = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" });
+const dateTime = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" });
 function localInputDate(date: Date) {
-  const offset = date.getTimezoneOffset() * 60_000;
-  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(date);
+  const part = (type: string) => parts.find((item) => item.type === type)?.value ?? "";
+  return `${part("year")}-${part("month")}-${part("day")}T${part("hour")}:${part("minute")}`;
 }
 
 export function ContactRegister({ appointmentId, userId }: { appointmentId: string; userId: string }) {
@@ -37,7 +38,7 @@ export function ContactRegister({ appointmentId, userId }: { appointmentId: stri
   async function save(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (saving || !at) return;
-    const timestamp = new Date(at);
+    const timestamp = new Date(`${at}:00-03:00`);
     if (Number.isNaN(timestamp.getTime())) { setError("Informe uma data e hora válidas."); return; }
     setSaving(true); setError("");
     const { error: writeError } = await supabase.from("contact_log").insert({
