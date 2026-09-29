@@ -17,3 +17,4 @@
 - Prazos usam datas de calendário em America/Sao_Paulo e a última mudança de situação para Finalizado no edit_log — evita comparar horários UTC como dias locais e mantém a entrega auditável.
 - A ficha de agendamento compartilha os campos da criação manual e envia somente colunas alteradas no UPDATE — mantém o trigger de permissões e o histórico como fonte das regras.
 - Retrabalhos são novos agendamentos ligados por `rework_of` e `rework_reason`, nunca atualizações do original — preserva seus limites de edição e histórico.
+- A edição em lote usa o UUID exportado, compara cada campo com a linha atual do banco e usa o mesmo UPDATE da ficha — evita duplicação e preserva as travas e o histórico.

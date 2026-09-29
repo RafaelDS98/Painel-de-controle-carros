@@ -7,3 +7,6 @@
 - [x] Registrar retrabalho como novo agendamento vinculado, sem editar o original.
 - [x] Exibir vínculo, motivo, badge, filtro e indicador de retrabalhos.
 - [x] Verificar criação e filtro no painel; remover os registros temporários.
+- [ ] Exportar agendamentos filtrados para edição em lote com ID real e campos editáveis.
+- [ ] Reimportar alterações por ID, sem criar registros, preservando permissões e histórico.
+- [ ] Mostrar resumo e erros por linha; validar reimportação sem alterações e edição parcial.
