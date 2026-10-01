@@ -22,6 +22,7 @@ export type Database = {
           creator_edits_allowed: number
           creator_edits_used: number
           current_deadline: string | null
+          custom_fields: Json
           date: string | null
           external_order: string
           id: string
@@ -50,6 +51,7 @@ export type Database = {
           creator_edits_allowed?: number
           creator_edits_used?: number
           current_deadline?: string | null
+          custom_fields?: Json
           date?: string | null
           external_order?: string
           id?: string
@@ -78,6 +80,7 @@ export type Database = {
           creator_edits_allowed?: number
           creator_edits_used?: number
           current_deadline?: string | null
+          custom_fields?: Json
           date?: string | null
           external_order?: string
           id?: string
@@ -158,6 +161,48 @@ export type Database = {
           },
         ]
       }
+      custom_field_definitions: {
+        Row: {
+          created_at: string
+          field_key: string
+          field_type: string
+          id: string
+          label: string
+          required: boolean
+          select_options: Json | null
+          sort_order: number
+          storage: string
+          updated_at: string
+          visible: boolean
+        }
+        Insert: {
+          created_at?: string
+          field_key: string
+          field_type?: string
+          id?: string
+          label: string
+          required?: boolean
+          select_options?: Json | null
+          sort_order?: number
+          storage: string
+          updated_at?: string
+          visible?: boolean
+        }
+        Update: {
+          created_at?: string
+          field_key?: string
+          field_type?: string
+          id?: string
+          label?: string
+          required?: boolean
+          select_options?: Json | null
+          sort_order?: number
+          storage?: string
+          updated_at?: string
+          visible?: boolean
+        }
+        Relationships: []
+      }
       edit_log: {
         Row: {
           appointment_id: string
@@ -221,6 +266,36 @@ export type Database = {
           full_name?: string | null
           id?: string
           role?: Database["public"]["Enums"]["app_role"] | null
+        }
+        Relationships: []
+      }
+      status_options: {
+        Row: {
+          color_token: string
+          created_at: string
+          id: string
+          is_completion: boolean
+          label: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          color_token: string
+          created_at?: string
+          id?: string
+          is_completion?: boolean
+          label: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          color_token?: string
+          created_at?: string
+          id?: string
+          is_completion?: boolean
+          label?: string
+          sort_order?: number
+          updated_at?: string
         }
         Relationships: []
       }
