@@ -72,6 +72,18 @@
   --color-status-part-foreground: var(--status-part-foreground);
   --color-status-finished: var(--status-finished);
   --color-status-finished-foreground: var(--status-finished-foreground);
+  --color-status-blue: var(--status-blue);
+  --color-status-blue-foreground: var(--status-blue-foreground);
+  --color-status-amber: var(--status-amber);
+  --color-status-amber-foreground: var(--status-amber-foreground);
+  --color-status-orange: var(--status-orange);
+  --color-status-orange-foreground: var(--status-orange-foreground);
+  --color-status-green: var(--status-green);
+  --color-status-green-foreground: var(--status-green-foreground);
+  --color-status-purple: var(--status-purple);
+  --color-status-purple-foreground: var(--status-purple-foreground);
+  --color-status-gray: var(--status-gray);
+  --color-status-gray-foreground: var(--status-gray-foreground);
 }
 
 :root {
@@ -112,6 +124,18 @@
   --status-part-foreground: oklch(0.4 0.12 32);
   --status-finished: oklch(0.91 0.08 153);
   --status-finished-foreground: oklch(0.34 0.1 154);
+  --status-blue: var(--status-received);
+  --status-blue-foreground: var(--status-received-foreground);
+  --status-amber: var(--status-progress);
+  --status-amber-foreground: var(--status-progress-foreground);
+  --status-orange: var(--status-part);
+  --status-orange-foreground: var(--status-part-foreground);
+  --status-green: var(--status-finished);
+  --status-green-foreground: var(--status-finished-foreground);
+  --status-purple: oklch(0.92 0.06 310);
+  --status-purple-foreground: oklch(0.36 0.11 310);
+  --status-gray: oklch(0.91 0.01 255);
+  --status-gray-foreground: oklch(0.36 0.02 255);
   --sidebar: oklch(0.984 0.003 247.858);
   --sidebar-foreground: oklch(0.129 0.042 264.695);
   --sidebar-primary: oklch(0.208 0.042 265.755);
@@ -159,6 +183,18 @@
   --status-part-foreground: oklch(0.92 0.07 50);
   --status-finished: oklch(0.31 0.09 154);
   --status-finished-foreground: oklch(0.92 0.07 153);
+  --status-blue: var(--status-received);
+  --status-blue-foreground: var(--status-received-foreground);
+  --status-amber: var(--status-progress);
+  --status-amber-foreground: var(--status-progress-foreground);
+  --status-orange: var(--status-part);
+  --status-orange-foreground: var(--status-part-foreground);
+  --status-green: var(--status-finished);
+  --status-green-foreground: var(--status-finished-foreground);
+  --status-purple: oklch(0.32 0.09 310);
+  --status-purple-foreground: oklch(0.92 0.06 310);
+  --status-gray: oklch(0.32 0.02 255);
+  --status-gray-foreground: oklch(0.91 0.01 255);
   --sidebar: oklch(0.208 0.042 265.755);
   --sidebar-foreground: oklch(0.984 0.003 247.858);
   --sidebar-primary: oklch(0.488 0.243 264.376);

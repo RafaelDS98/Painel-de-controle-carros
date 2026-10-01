@@ -28,6 +28,6 @@ export function weekRange(today = saoPauloDate(new Date())) {
   return periodRange("week", today);
 }
 
-export function pendingDeliveries<T extends { date: string; status: string }>(items: T[], start: string, end: string) {
-  return items.filter((item) => item.status !== "Finalizado" && item.date >= start && item.date <= end).length;
+export function pendingDeliveries<T extends { date: string; status: string }>(items: T[], start: string, end: string, completion = "Finalizado") {
+  return items.filter((item) => item.status !== completion && item.date >= start && item.date <= end).length;
 }
