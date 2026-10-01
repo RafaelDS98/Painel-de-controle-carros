@@ -27,6 +27,7 @@ import {
   Plus,
   RotateCcw,
   Search,
+  Settings,
   Sun,
   Upload,
   Users,
@@ -53,6 +54,8 @@ import type { TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 import { batchChanges, batchColumns, batchIdHeader, batchValidation, type BatchRecord } from "@/lib/bulk-appointments";
 import { periodRange, weekRange, pendingDeliveries, type PeriodPreset } from "@/lib/agenda-period";
 import { ContactRegister } from "@/components/contact-register";
+import { AgendaSettings } from "@/components/agenda-settings";
+import { customValues, statusColors, type FieldDefinition, type StatusOption, type CustomValues } from "@/lib/agenda-config";
 
 type Appointment = {
   dbId: string;
@@ -77,6 +80,7 @@ type Appointment = {
   managerEditUsed: boolean;
   reworkOf: string | null;
   reworkReason: string | null;
+  customFields: CustomValues;
 };
 
 export type AppRole = "atendimento" | "gerente" | "master";
@@ -89,27 +93,24 @@ function editBlockReason(item: Appointment, role: AppRole): string | null {
   return item.editsUsed >= item.editsAllowed ? `Limite de ${item.editsAllowed} edição(ões) já foi usado pelo atendimento neste agendamento.` : null;
 }
 
-type ServiceStatus = "" | "Recebido" | "Em execução" | "Peça" | "Finalizado";
-
-const serviceStatuses: Exclude<ServiceStatus, "">[] = ["Recebido", "Em execução", "Peça", "Finalizado"];
+type ServiceStatus = string;
 
 type AppointmentRow = {
   id: string; sheet_id: string; registered_at: string | null; date: string | null; time: string; plate: string; store: string;
   model: string; contact: string; workshop: string; issue: string; note: string; operator: string; external_order: string; status: string;
   creator_edits_used: number; creator_edits_allowed: number; manager_edit_used: boolean;
   original_deadline: string | null; current_deadline: string | null;
-  rework_of: string | null; rework_reason: string | null;
+  rework_of: string | null; rework_reason: string | null; custom_fields: unknown;
 };
 
 function fromRow(row: AppointmentRow): Appointment {
-  const status = (serviceStatuses as string[]).includes(row.status) ? (row.status as ServiceStatus) : "";
   return {
     dbId: row.id, id: row.sheet_id, registeredAt: row.registered_at ?? "", date: row.date ?? "", time: row.time, plate: row.plate,
     store: row.store, model: row.model, contact: row.contact, workshop: row.workshop, issue: row.issue, note: row.note,
-    operator: row.operator, externalOrder: row.external_order, status,
+    operator: row.operator, externalOrder: row.external_order, status: row.status,
     originalDeadline: row.original_deadline, currentDeadline: row.current_deadline,
     editsUsed: row.creator_edits_used, editsAllowed: row.creator_edits_allowed, managerEditUsed: row.manager_edit_used,
-    reworkOf: row.rework_of, reworkReason: row.rework_reason,
+    reworkOf: row.rework_of, reworkReason: row.rework_reason, customFields: customValues(row.custom_fields),
   };
 }
 
@@ -118,7 +119,7 @@ function fieldsFromAppointment(item: Appointment): AppointmentFields {
     date: item.date, time: item.time, plate: item.plate, store: item.store,
     model: item.model, contact: item.contact, workshop: item.workshop,
     issue: item.issue, note: item.note, operator: item.operator,
-    externalOrder: item.externalOrder, currentDeadline: item.currentDeadline ?? "",
+    externalOrder: item.externalOrder, currentDeadline: item.currentDeadline ?? "", customFields: item.customFields,
   };
 }
 
@@ -222,15 +223,9 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
   return <div className="rounded-md border bg-popover px-3 py-2 text-xs shadow-lg"><p className="font-medium text-popover-foreground">{label || payload[0]?.payload?.name}</p><p className="mt-1 text-muted-foreground">{payload[0]?.value} agendamento(s)</p></div>;
 }
 
-function statusClasses(status: ServiceStatus) {
-  const classes: Record<ServiceStatus, string> = {
-    "": "border-input bg-background text-muted-foreground",
-    Recebido: "border-status-received/40 bg-status-received text-status-received-foreground",
-    "Em execução": "border-status-progress/40 bg-status-progress text-status-progress-foreground",
-    Peça: "border-status-part/40 bg-status-part text-status-part-foreground",
-    Finalizado: "border-status-finished/40 bg-status-finished text-status-finished-foreground",
-  };
-  return classes[status];
+function statusClasses(status: ServiceStatus, statuses: StatusOption[]) {
+  if (!status) return "border-input bg-background text-muted-foreground";
+  return statusColors[statuses.find((option) => option.label === status)?.color_token ?? ""] ?? "border-input bg-muted text-foreground";
 }
 
 type DeadlineState = "overdue" | "today" | "onTime" | "deliveredOnTime" | "deliveredLate";
@@ -251,9 +246,9 @@ function dateInBrazil(date: Date) {
   const value = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
   return `${value("year")}-${value("month")}-${value("day")}`;
 }
-export function deadlineState(item: Pick<Appointment, "status" | "currentDeadline">, completedAt?: string, today = dateInBrazil(new Date())): DeadlineState | null {
+export function deadlineState(item: Pick<Appointment, "status" | "currentDeadline">, completedAt?: string, today = dateInBrazil(new Date()), completion = "Finalizado"): DeadlineState | null {
   if (!item.currentDeadline) return null;
-  if (item.status === "Finalizado") {
+  if (item.status === completion) {
     if (!completedAt) return null;
     return dateInBrazil(new Date(completedAt)) <= item.currentDeadline ? "deliveredOnTime" : "deliveredLate";
   }
@@ -261,18 +256,23 @@ export function deadlineState(item: Pick<Appointment, "status" | "currentDeadlin
   if (item.currentDeadline === today) return "today";
   return "onTime";
 }
-function DeadlineBadge({ item, completedAt, today }: { item: Appointment; completedAt: string | undefined; today: string }) {
-  const state = deadlineState(item, completedAt, today);
+function DeadlineBadge({ item, completedAt, today, completion }: { item: Appointment; completedAt: string | undefined; today: string; completion: string }) {
+  const state = deadlineState(item, completedAt, today, completion);
   return state ? <span className={cn("inline-flex w-fit items-center whitespace-nowrap rounded border px-2 py-0.5 text-[11px] font-semibold", deadlineClasses[state])}>{deadlineLabels[state]}</span> : null;
 }
 function ReworkBadge() {
   return <span className="inline-flex w-fit items-center rounded border border-accent bg-accent/30 px-2 py-0.5 text-[11px] font-semibold text-accent-foreground">Retrabalho</span>;
 }
 
-const rowColumns = "id, sheet_id, registered_at, date, time, plate, store, model, contact, workshop, issue, note, operator, external_order, status, original_deadline, current_deadline, creator_edits_used, creator_edits_allowed, manager_edit_used, rework_of, rework_reason";
+const rowColumns = "id, sheet_id, registered_at, date, time, plate, store, model, contact, workshop, issue, note, operator, external_order, status, original_deadline, current_deadline, creator_edits_used, creator_edits_allowed, manager_edit_used, rework_of, rework_reason, custom_fields";
 
 export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: () => void; currentUser: CurrentUser }) {
   const [logOpen, setLogOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [statuses, setStatuses] = useState<StatusOption[]>([]);
+  const [fieldDefinitions, setFieldDefinitions] = useState<FieldDefinition[]>([]);
+  const completion = statuses.find((option) => option.is_completion)?.label ?? "";
+  const serviceStatuses = statuses.map((option) => option.label);
   const [historyKey, setHistoryKey] = useState(0);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [completedAtById, setCompletedAtById] = useState<Record<string, string>>({});
@@ -312,14 +312,14 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   }, [periodPreset, today]);
 
   async function loadCompletionLogs(rows: Appointment[]) {
-    const ids = rows.filter((item) => item.status === "Finalizado" && item.currentDeadline).map((item) => item.dbId);
+    const ids = rows.filter((item) => completion && item.status === completion && item.currentDeadline).map((item) => item.dbId);
     if (!ids.length) { setCompletedAtById({}); return; }
     const latest: Record<string, string> = {};
     // Page through the filtered log so a busy agenda never loses older completion records.
     for (let offset = 0; ; offset += 500) {
       const { data, error } = await supabase.from("edit_log")
         .select("appointment_id, changed_at")
-        .in("appointment_id", ids).eq("field_changed", "status").eq("new_value", "Finalizado")
+        .in("appointment_id", ids).eq("field_changed", "status").eq("new_value", completion)
         .order("changed_at", { ascending: false }).range(offset, offset + 499);
       if (error) { setMessage("Não foi possível verificar os prazos de entrega."); return; }
       for (const log of data ?? []) latest[log.appointment_id] ??= log.changed_at;
@@ -336,14 +336,24 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     void loadCompletionLogs(rows);
   }
 
-  useEffect(() => { void loadAppointments(); }, []);
+  async function loadConfig() {
+    const [statusResult, fieldResult] = await Promise.all([
+      supabase.from("status_options").select("*").order("sort_order").order("created_at"),
+      supabase.from("custom_field_definitions").select("*").order("sort_order").order("created_at"),
+    ]);
+    if (statusResult.error || fieldResult.error) { setMessage("Não foi possível carregar as configurações da agenda."); return; }
+    setStatuses(statusResult.data ?? []);
+    setFieldDefinitions(fieldResult.data ?? []);
+  }
+  useEffect(() => { void loadConfig(); void loadAppointments(); }, []);
+  useEffect(() => { if (statuses.length) void loadCompletionLogs(appointments); }, [completion]);
 
   const option = (key: keyof Appointment) => [...new Set(appointments.map((item) => String(item[key])).filter(Boolean))].sort();
   const filtered = useMemo(() => appointments.filter((item) => {
     const q = search.toLocaleLowerCase("pt-BR");
-    const hit = !q || [item.plate, item.contact, item.issue, item.model].some((value) => value.toLocaleLowerCase("pt-BR").includes(q));
+    const hit = !q || [item.plate, item.contact, item.issue, item.model, ...fieldDefinitions.filter((field) => field.storage === "custom" && ["text", "textarea"].includes(field.field_type)).map((field) => item.customFields[field.field_key] ?? "")].some((value) => value.toLocaleLowerCase("pt-BR").includes(q));
     return hit && (!contact || item.contact === contact) && (!workshop || item.workshop === workshop) && (!model || item.model === model) && (!operator || item.operator === operator) && (!startDate || item.date >= startDate) && (!endDate || item.date <= endDate) && (!reworksOnly || Boolean(item.reworkOf));
-  }), [appointments, contact, endDate, model, operator, reworksOnly, search, startDate, workshop]);
+  }), [appointments, contact, endDate, model, operator, reworksOnly, search, startDate, workshop, fieldDefinitions]);
 
   const sorted = useMemo(() => [...filtered].sort((a, b) => {
     const first = sort.key === "date" ? `${a.date}${a.time}` : String(a[sort.key]);
@@ -358,8 +368,8 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const selectedWeek = startDate && endDate && (new Date(`${endDate}T12:00:00Z`).getTime() - new Date(`${startDate}T12:00:00Z`).getTime()) <= 6 * 86400000 ? weekRange(startDate) : visibleWeek;
   const weeklyRows = filtered.filter((item) => item.date >= selectedWeek.start && item.date <= selectedWeek.end);
   const daily = days.map((name, index) => ({ name: name.slice(0, 3), value: weeklyRows.filter((item) => localDate(item.date).getDay() === index + 1).length }));
-  const pendingToday = pendingDeliveries(appointments, today, today);
-  const pendingWeek = pendingDeliveries(appointments, visibleWeek.start, visibleWeek.end);
+  const pendingToday = pendingDeliveries(appointments, today, today, completion);
+  const pendingWeek = pendingDeliveries(appointments, visibleWeek.start, visibleWeek.end, completion);
   const hourly = countBy(filtered, (item) => item.time).sort((a, b) => a.name.localeCompare(b.name));
   const workshops = countBy(filtered, (item) => item.workshop).slice(0, 6);
   const contacts = countBy(filtered, (item) => item.contact).slice(0, 7);
@@ -395,6 +405,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     if (!item) return;
     const blocked = editBlockReason(item, currentUser.role);
     if (blocked) { setMessage(blocked); return; }
+    if (status && !serviceStatuses.includes(status)) return;
     const { data, error } = await updateAppointmentRow(dbId, { status });
     if (error || !data) { setMessage(error?.message || "Não foi possível salvar a situação."); return; }
     replaceRow(data);
@@ -407,6 +418,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     if (blocked) { setMessage(blocked); return false; }
     const update: TablesUpdate<"appointments"> = {};
     for (const [key, value] of Object.entries(changes)) {
+      if (key === "customFields") { update.custom_fields = { ...selected.customFields, ...(value as CustomValues) }; continue; }
       if (key === "currentDeadline") update.current_deadline = value || null;
       else Object.assign(update, { [columnForField[key as keyof AppointmentFields]]: value });
     }
@@ -414,7 +426,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     const { data, error } = await updateAppointmentRow(selected.dbId, update);
     if (error || !data) { setMessage(error?.message || "Não foi possível salvar as alterações."); return false; }
     replaceRow(data);
-    if (data.status === "Finalizado") void loadCompletionLogs(appointments.map((row) => row.dbId === data.id ? fromRow(data) : row));
+    if (data.status === completion) void loadCompletionLogs(appointments.map((row) => row.dbId === data.id ? fromRow(data) : row));
     setMessage("Alterações salvas.");
     return true;
   }
@@ -429,8 +441,9 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
       original_deadline: fields.currentDeadline || null,
       current_deadline: fields.currentDeadline || null,
     };
+    values.custom_fields = fields.customFields ?? {};
     for (const [key, value] of Object.entries(fields)) {
-      if (key !== "currentDeadline" && key !== "date" && key !== "time" && key !== "plate")
+      if (key !== "customFields" && key !== "currentDeadline" && key !== "date" && key !== "time" && key !== "plate")
         Object.assign(values, { [columnForField[key as keyof AppointmentFields]]: value?.trim() ?? "" });
     }
     const { data, error } = await supabase.from("appointments").insert(values).select(rowColumns).single();
@@ -583,7 +596,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
           if (!current) { result.errors.push({ line, plate, reason: "ID não encontrado — use Importar agenda para registros novos." }); continue; }
           const changes = batchChanges(row, current);
           if (!Object.keys(changes).length) { result.unchanged++; continue; }
-          const validation = batchValidation(changes);
+          const validation = batchValidation(changes, serviceStatuses);
           if (validation) { result.errors.push({ line, plate, reason: validation }); continue; }
           const { error: updateError } = await updateAppointmentRow(id, changes);
           if (updateError) throw new Error(updateError.message);
@@ -639,6 +652,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
             <div className="mr-2 hidden text-right text-sm sm:block"><p className="font-semibold">{currentUser.name}</p><p className="text-xs text-primary-foreground/70">{roleLabels[currentUser.role]}</p></div>
             <Button variant="secondary" onClick={() => setLogOpen(true)}><History /> Log de alterações</Button>
             <Button variant="secondary" onClick={() => setNewOpen(true)}><Plus /> Novo agendamento</Button>
+             {currentUser.role === "master" && <Button variant="secondary" onClick={() => setSettingsOpen(true)}><Settings /> Configurações</Button>}
             <Button variant="secondary" onClick={() => inputRef.current?.click()}><Upload /> Importar agenda</Button>
             <input ref={inputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(event) => importFile(event.target.files?.[0])} />
             <Button variant="ghost" size="icon" onClick={() => setDark((value) => !value)} className="text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground" aria-label="Alternar tema">{dark ? <Sun /> : <Moon />}</Button>
@@ -686,7 +700,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
           <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
             {days.map((day, index) => {
               const rows = weeklyRows.filter((item) => localDate(item.date).getDay() === index + 1).sort((a,b) => a.time.localeCompare(b.time));
-               return <div key={day} className="min-h-48 rounded-lg border bg-muted/30 p-3"><div className="mb-3 flex items-center justify-between"><div><h3 className="text-sm font-semibold">{day}</h3><p className="text-xs text-muted-foreground">{dayMonth.format(localDate(new Date(new Date(`${selectedWeek.start}T12:00:00Z`).getTime() + index * 86400000).toISOString().slice(0, 10)))}</p></div><span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-semibold">{rows.length}</span></div><div className="space-y-2">{rows.map((item) => <article key={item.dbId} className="overflow-hidden rounded-md border bg-card shadow-sm transition hover:-translate-y-0.5 hover:border-accent"><Button variant="ghost" onClick={() => setSelected(item)} className="h-auto w-full justify-start rounded-none p-3 text-left hover:bg-transparent"><span className="min-w-0 flex-1"><span className="flex items-center justify-between"><span className="text-xs font-bold text-accent-foreground">{item.time}</span><span className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold", serviceCategory(item.issue) === "Revisão" ? "bg-service-review text-service-review-foreground" : "bg-service-repair text-service-repair-foreground")}>{serviceCategory(item.issue)}</span></span><span className="mt-2 block font-bold tracking-wide">{item.plate}</span><span className="block truncate text-xs font-normal text-muted-foreground">{item.model}</span><span className="mt-2 block truncate text-xs font-medium">{item.contact}</span><span className="mt-1 line-clamp-2 whitespace-normal text-[11px] font-normal leading-4 text-muted-foreground">{item.issue}</span><span className="mt-2 flex flex-wrap gap-1">{item.reworkOf && <ReworkBadge />}<DeadlineBadge item={item} completedAt={completedAtById[item.dbId]} today={today} /></span></span></Button><label className="relative block border-t"><span className="sr-only">Situação de {item.plate}</span><select value={item.status} disabled={Boolean(editBlockReason(item, currentUser.role))} title={editBlockReason(item, currentUser.role) ?? undefined} onChange={(event) => updateStatus(item.dbId, event.target.value as ServiceStatus)} className={cn("disabled:cursor-not-allowed disabled:opacity-70 h-9 w-full appearance-none border-0 px-3 pr-8 text-xs font-semibold outline-none focus:ring-2 focus:ring-inset focus:ring-ring", statusClasses(item.status))}><option value="">Atualizar situação</option>{serviceStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select><ChevronDown className="pointer-events-none absolute right-3 top-2.5 size-4 opacity-70" /></label></article>)}</div></div>;
+               return <div key={day} className="min-h-48 rounded-lg border bg-muted/30 p-3"><div className="mb-3 flex items-center justify-between"><div><h3 className="text-sm font-semibold">{day}</h3><p className="text-xs text-muted-foreground">{dayMonth.format(localDate(new Date(new Date(`${selectedWeek.start}T12:00:00Z`).getTime() + index * 86400000).toISOString().slice(0, 10)))}</p></div><span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-semibold">{rows.length}</span></div><div className="space-y-2">{rows.map((item) => <article key={item.dbId} className="overflow-hidden rounded-md border bg-card shadow-sm transition hover:-translate-y-0.5 hover:border-accent"><Button variant="ghost" onClick={() => setSelected(item)} className="h-auto w-full justify-start rounded-none p-3 text-left hover:bg-transparent"><span className="min-w-0 flex-1"><span className="flex items-center justify-between"><span className="text-xs font-bold text-accent-foreground">{item.time}</span><span className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold", serviceCategory(item.issue) === "Revisão" ? "bg-service-review text-service-review-foreground" : "bg-service-repair text-service-repair-foreground")}>{serviceCategory(item.issue)}</span></span><span className="mt-2 block font-bold tracking-wide">{item.plate}</span><span className="block truncate text-xs font-normal text-muted-foreground">{item.model}</span><span className="mt-2 block truncate text-xs font-medium">{item.contact}</span><span className="mt-1 line-clamp-2 whitespace-normal text-[11px] font-normal leading-4 text-muted-foreground">{item.issue}</span><span className="mt-2 flex flex-wrap gap-1">{item.reworkOf && <ReworkBadge />}<DeadlineBadge item={item} completedAt={completedAtById[item.dbId]} today={today} completion={completion} /></span></span></Button><label className="relative block border-t"><span className="sr-only">Situação de {item.plate}</span><select value={item.status} disabled={Boolean(editBlockReason(item, currentUser.role))} title={editBlockReason(item, currentUser.role) ?? undefined} onChange={(event) => updateStatus(item.dbId, event.target.value as ServiceStatus)} className={cn("disabled:cursor-not-allowed disabled:opacity-70 h-9 w-full appearance-none border-0 px-3 pr-8 text-xs font-semibold outline-none focus:ring-2 focus:ring-inset focus:ring-ring", statusClasses(item.status, statuses))}><option value="">Atualizar situação</option>{serviceStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select><ChevronDown className="pointer-events-none absolute right-3 top-2.5 size-4 opacity-70" /></label></article>)}</div></div>;
             })}
           </div>
         </section>
@@ -702,7 +716,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
 
         <section className="rounded-lg border bg-card shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4"><div><h2 className="font-semibold">Agenda detalhada</h2><p className="text-xs text-muted-foreground">{sorted.length} registros encontrados</p></div><div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" onClick={exportBatch}><Download /> Exportar para edição em lote</Button><Button variant="outline" size="sm" disabled={batchBusy} onClick={() => batchInputRef.current?.click()}><Upload /> {batchBusy ? "Atualizando…" : "Atualizar agenda em lote"}</Button><input ref={batchInputRef} type="file" accept=".xlsx" className="hidden" aria-label="Arquivo de atualização em lote" onChange={(event) => void importBatch(event.target.files?.[0])} /><Button variant="outline" size="sm" onClick={() => exportFile("csv")}><Download /> CSV</Button><Button variant="outline" size="sm" onClick={() => exportFile("xlsx")}><Download /> Excel</Button></div></div>
-           <div className="overflow-x-auto"><table className="w-full min-w-[1400px] text-sm"><thead className="bg-muted/60 text-left text-xs text-muted-foreground"><tr>{[["id","ID"],["date","Atendimento"],["time","Hora"],["plate","Placa"],["status","Situação"],["currentDeadline","Prazo"],["model","Modelo"],["contact","Contato"],["workshop","Local/Oficina"],["issue","Problema relatado"],["note","Observação"],["operator","Operador"]].map(([key,label]) => <th key={key} className="px-4 py-3 font-medium"><Button variant="ghost" size="sm" className="h-auto p-0" onClick={() => changeSort(key as keyof Appointment)}>{label}<ArrowDownAZ className="size-3" /></Button></th>)}</tr></thead><tbody>{pageRows.map((item) => <tr key={item.dbId} onClick={() => setSelected(item)} className="cursor-pointer border-t hover:bg-muted/40"><td className="px-4 py-3 font-mono text-xs">#{item.id}</td><td className="whitespace-nowrap px-4 py-3">{fullDate.format(localDate(item.date))}</td><td className="px-4 py-3 font-semibold">{item.time}</td><td className="px-4 py-3 font-bold">{item.plate}{item.reworkOf && <span className="mt-1 block"><ReworkBadge /></span>}</td><td className="px-4 py-3"><span className={cn("whitespace-nowrap rounded border px-2 py-1 text-xs font-semibold", statusClasses(item.status))}>{item.status || "Não atualizada"}</span></td><td className="whitespace-nowrap px-4 py-3"><DeadlineBadge item={item} completedAt={completedAtById[item.dbId]} today={today} /></td><td className="max-w-48 truncate px-4 py-3">{item.model}</td><td className="px-4 py-3">{item.contact}</td><td className="max-w-52 truncate px-4 py-3">{item.workshop || "—"}</td><td className="max-w-72 truncate px-4 py-3 text-muted-foreground">{item.issue}</td><td className="max-w-36 truncate px-4 py-3">{item.note || "—"}</td><td className="whitespace-nowrap px-4 py-3 capitalize">{item.operator}</td></tr>)}</tbody></table></div>
+           <div className="overflow-x-auto"><table className="w-full min-w-[1400px] text-sm"><thead className="bg-muted/60 text-left text-xs text-muted-foreground"><tr>{[["id","ID"],["date","Atendimento"],["time","Hora"],["plate","Placa"],["status","Situação"],["currentDeadline","Prazo"],["model","Modelo"],["contact","Contato"],["workshop","Local/Oficina"],["issue","Problema relatado"],["note","Observação"],["operator","Operador"]].map(([key,label]) => <th key={key} className="px-4 py-3 font-medium"><Button variant="ghost" size="sm" className="h-auto p-0" onClick={() => changeSort(key as keyof Appointment)}>{label}<ArrowDownAZ className="size-3" /></Button></th>)}</tr></thead><tbody>{pageRows.map((item) => <tr key={item.dbId} onClick={() => setSelected(item)} className="cursor-pointer border-t hover:bg-muted/40"><td className="px-4 py-3 font-mono text-xs">#{item.id}</td><td className="whitespace-nowrap px-4 py-3">{fullDate.format(localDate(item.date))}</td><td className="px-4 py-3 font-semibold">{item.time}</td><td className="px-4 py-3 font-bold">{item.plate}{item.reworkOf && <span className="mt-1 block"><ReworkBadge /></span>}</td><td className="px-4 py-3"><span className={cn("whitespace-nowrap rounded border px-2 py-1 text-xs font-semibold", statusClasses(item.status, statuses))}>{item.status || "Não atualizada"}</span></td><td className="whitespace-nowrap px-4 py-3"><DeadlineBadge item={item} completedAt={completedAtById[item.dbId]} today={today} completion={completion} /></td><td className="max-w-48 truncate px-4 py-3">{item.model}</td><td className="px-4 py-3">{item.contact}</td><td className="max-w-52 truncate px-4 py-3">{item.workshop || "—"}</td><td className="max-w-72 truncate px-4 py-3 text-muted-foreground">{item.issue}</td><td className="max-w-36 truncate px-4 py-3">{item.note || "—"}</td><td className="whitespace-nowrap px-4 py-3 capitalize">{item.operator}</td></tr>)}</tbody></table></div>
           <div className="flex items-center justify-between border-t p-4"><p className="text-xs text-muted-foreground">Página {Math.min(page, pages)} de {pages}</p><div className="flex gap-2"><Button variant="outline" size="icon" disabled={page === 1} onClick={() => setPage((value) => Math.max(1,value-1))} aria-label="Página anterior"><ArrowLeft /></Button><Button variant="outline" size="icon" disabled={page === pages} onClick={() => setPage((value) => Math.min(pages,value+1))} aria-label="Próxima página"><ArrowRight /></Button></div></div>
         </section>
       </main>
@@ -716,7 +730,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
       <Dialog open={newOpen} onOpenChange={setNewOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader><DialogTitle>Novo agendamento</DialogTitle><DialogDescription>Dados do atendimento</DialogDescription></DialogHeader>
-          {newOpen && <AppointmentForm initial={emptyFields} onSave={createAppointment} />}
+          {newOpen && <AppointmentForm initial={emptyFields} definitions={fieldDefinitions} onSave={createAppointment} />}
         </DialogContent>
       </Dialog>
       <Dialog open={Boolean(reworkSource)} onOpenChange={(open) => { if (!open) setReworkSource(null); }}>
@@ -738,28 +752,29 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
             </div>}
             {appointments.filter((item) => item.reworkOf === selected.dbId).map((child) => <div key={child.dbId} className="border-b pb-3"><Button variant="link" className="h-auto p-0 text-left whitespace-normal" onClick={() => openLinked(child)}>Gerou retrabalho em {child.date ? fullDate.format(localDate(child.date)) : "data não informada"} • {child.plate}</Button></div>)}
             <div className="space-y-3 border-b pb-4">
-              <DeadlineBadge item={selected} completedAt={completedAtById[selected.dbId]} today={today} />
+              <DeadlineBadge item={selected} completedAt={completedAtById[selected.dbId]} today={today} completion={completion} />
               <div className="grid gap-3 sm:grid-cols-2">
                 {selected.originalDeadline && selected.originalDeadline !== selected.currentDeadline && <Detail label="Prazo original" value={fullDate.format(localDate(selected.originalDeadline))} />}
                 {selected.currentDeadline ? <Detail label={selected.originalDeadline === selected.currentDeadline ? "Previsão de entrega" : "Prazo atual"} value={fullDate.format(localDate(selected.currentDeadline))} /> : <Detail label={selected.originalDeadline ? "Prazo atual" : "Previsão de entrega"} value="" />}
               </div>
             </div>
             <label><span className="mb-1.5 block text-xs font-medium uppercase text-muted-foreground">Situação do veículo</span>
-              <select value={selected.status} disabled={Boolean(editBlockReason(selected, currentUser.role))} onChange={(event) => updateStatus(selected.dbId, event.target.value as ServiceStatus)} className={cn("disabled:cursor-not-allowed disabled:opacity-70 h-10 w-full rounded-md border px-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-ring", statusClasses(selected.status))}>
+              <select value={selected.status} disabled={Boolean(editBlockReason(selected, currentUser.role))} onChange={(event) => updateStatus(selected.dbId, event.target.value as ServiceStatus)} className={cn("disabled:cursor-not-allowed disabled:opacity-70 h-10 w-full rounded-md border px-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-ring", statusClasses(selected.status, statuses))}>
                 <option value="">Não atualizada</option>{serviceStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
               </select>
             </label>
             {editBlockReason(selected, currentUser.role) && <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{editBlockReason(selected, currentUser.role)}</p>}
             {currentUser.role !== "atendimento" && <div className="flex flex-wrap items-center gap-3"><Button variant="outline" disabled={selected.editsAllowed > 1} onClick={() => grantExtraEdit(selected)}><Unlock /> Liberar edição extra</Button><span className="text-xs text-muted-foreground">Atendimento: {selected.editsUsed} de {selected.editsAllowed} edição(ões) usada(s){selected.editsAllowed > 1 ? " • edição extra já liberada" : ""}</span></div>}
-            <AppointmentForm key={`${selected.dbId}-${historyKey}`} initial={fieldsFromAppointment(selected)} editing blocked={editBlockReason(selected, currentUser.role)} onSave={saveAppointment} />
+            <AppointmentForm key={`${selected.dbId}-${historyKey}`} initial={fieldsFromAppointment(selected)} definitions={fieldDefinitions} editing blocked={editBlockReason(selected, currentUser.role)} onSave={saveAppointment} />
             <div className="border-t pt-4"><Button variant="outline" onClick={() => openRework(selected)}><RotateCcw /> Registrar retrabalho</Button></div>
             <Detail label="Data de cadastro" value={selected.registeredAt ? fullDate.format(localDate(selected.registeredAt)) : ""} />
             <ContactRegister key={selected.dbId} appointmentId={selected.dbId} userId={currentUser.id} />
-            <AppointmentHistory appointmentId={selected.dbId} refreshKey={historyKey} />
+            <AppointmentHistory appointmentId={selected.dbId} refreshKey={historyKey} customLabels={Object.fromEntries(fieldDefinitions.map((field) => [field.field_key, field.label]))} />
           </>}
         </DialogContent>
       </Dialog>
       <ChangeLogDialog open={logOpen} onOpenChange={setLogOpen} />
+      {currentUser.role === "master" && <AgendaSettings open={settingsOpen} onOpenChange={setSettingsOpen} statuses={statuses} fields={fieldDefinitions} onRefresh={async () => { await loadConfig(); await loadAppointments(); }} />}
     </div>
   );
 }
