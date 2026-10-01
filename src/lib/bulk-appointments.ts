@@ -56,10 +56,10 @@ export function batchChanges(row: Record<string, unknown>, current: BatchRecord)
   return changes;
 }
 
-export function batchValidation(changes: TablesUpdate<"appointments">): string | null {
+export function batchValidation(changes: TablesUpdate<"appointments">, statuses: string[] = ["Recebido", "Em execução", "Peça", "Finalizado"]): string | null {
   if (changes.date !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(changes.date ?? "")) return "Data Atendimento inválida.";
   if (changes.current_deadline && !/^\d{4}-\d{2}-\d{2}$/.test(changes.current_deadline)) return "Previsão de Entrega inválida.";
   if (changes.time !== undefined && !/^([01]\d|2[0-3]):[0-5]\d$/.test(changes.time ?? "")) return "Hora inválida.";
-  if (changes.status !== undefined && !["", "Recebido", "Em execução", "Peça", "Finalizado"].includes(changes.status ?? "")) return "Situação inválida.";
+  if (changes.status !== undefined && !["", ...statuses].includes(changes.status ?? "")) return "Situação inválida.";
   return null;
 }

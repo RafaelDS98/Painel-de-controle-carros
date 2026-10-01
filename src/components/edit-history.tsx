@@ -33,7 +33,7 @@ function LogLine({ row, withPlate }: { row: LogRow; withPlate?: boolean }) {
   );
 }
 
-export function AppointmentHistory({ appointmentId, refreshKey }: { appointmentId: string; refreshKey: number }) {
+export function AppointmentHistory({ appointmentId, refreshKey, customLabels = {} }: { appointmentId: string; refreshKey: number; customLabels?: Record<string, string> }) {
   const [rows, setRows] = useState<LogRow[] | null>(null);
   useEffect(() => {
     let active = true;
@@ -46,7 +46,7 @@ export function AppointmentHistory({ appointmentId, refreshKey }: { appointmentI
       <h3 className="mb-3 text-sm font-semibold">Histórico de alterações</h3>
       {rows === null ? <p className="text-sm text-muted-foreground">Carregando…</p>
         : rows.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma alteração registrada.</p>
-        : <ul className="space-y-2">{rows.map((row) => <LogLine key={row.id} row={row} />)}</ul>}
+        : <ul className="space-y-2">{rows.map((row) => <LogLine key={row.id} row={{ ...row, field_changed: customLabels[row.field_changed] ?? row.field_changed }} />)}</ul>}
     </section>
   );
 }
