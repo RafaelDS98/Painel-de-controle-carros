@@ -13,3 +13,6 @@
 - [x] Abrir detalhes dos indicadores calculados sobre os agendamentos filtrados.
 - [x] Aplicar atalhos de período e mostrar entregas pendentes hoje e nesta semana.
 - [x] Registrar e listar contatos na ficha; verificar os três fluxos no painel.
+- [ ] Configurar situações e campos exclusivamente pelo master com regras protegidas no banco.
+- [ ] Aplicar campos e situações dinâmicos à ficha, busca, prazos e atualização em lote.
+- [ ] Verificar migração de mecânicos e fluxos reais sem deixar dados de teste.
