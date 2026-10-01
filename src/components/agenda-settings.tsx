@@ -22,7 +22,7 @@ export function AgendaSettings({ open, onOpenChange, statuses, fields, onRefresh
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<{ type: "status" | "field"; id: string; label: string } | null>(null);
-  async function perform(action: () => Promise<{ error: { message: string } | null }>) {
+  async function perform(action: () => PromiseLike<{ error: { message: string } | null }>) {
     setBusy(true); setError("");
     try {
       const result = await action();

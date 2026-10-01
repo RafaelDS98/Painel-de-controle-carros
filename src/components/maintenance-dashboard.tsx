@@ -419,8 +419,8 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     const update: TablesUpdate<"appointments"> = {};
     for (const [key, value] of Object.entries(changes)) {
       if (key === "customFields") { update.custom_fields = { ...selected.customFields, ...(value as CustomValues) }; continue; }
-      if (key === "currentDeadline") update.current_deadline = value || null;
-      else Object.assign(update, { [columnForField[key as keyof AppointmentFields]]: value });
+      if (key === "currentDeadline") update.current_deadline = String(value || "") || null;
+      else Object.assign(update, { [columnForField[key as keyof typeof columnForField]]: value });
     }
     if (!Object.keys(update).length) return true;
     const { data, error } = await updateAppointmentRow(selected.dbId, update);
@@ -444,7 +444,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     values.custom_fields = fields.customFields ?? {};
     for (const [key, value] of Object.entries(fields)) {
       if (key !== "customFields" && key !== "currentDeadline" && key !== "date" && key !== "time" && key !== "plate")
-        Object.assign(values, { [columnForField[key as keyof AppointmentFields]]: value?.trim() ?? "" });
+        Object.assign(values, { [columnForField[key as keyof typeof columnForField]]: typeof value === "string" ? value.trim() : "" });
     }
     const { data, error } = await supabase.from("appointments").insert(values).select(rowColumns).single();
     if (error || !data) { setMessage(error?.message || "Não foi possível criar o agendamento."); return false; }
