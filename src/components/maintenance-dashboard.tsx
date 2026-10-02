@@ -805,7 +805,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
         </DialogContent>
       </Dialog>
       <ChangeLogDialog open={logOpen} onOpenChange={setLogOpen} />
-      {currentUser.role === "master" && <AgendaSettings open={settingsOpen} onOpenChange={setSettingsOpen} statuses={statuses} fields={fieldDefinitions} onRefresh={async () => { await loadConfig(); await loadAppointments(); }} />}
+      {currentUser.role === "master" && <AgendaSettings open={settingsOpen} onOpenChange={setSettingsOpen} statuses={statuses} fields={fieldDefinitions} currentUserId={currentUser.id} onRefresh={async () => { await loadConfig(); await loadAppointments(); }} />}
     </div>
   );
 }
