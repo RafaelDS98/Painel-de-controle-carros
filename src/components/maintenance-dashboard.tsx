@@ -46,7 +46,7 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { AppointmentHistory, ChangeLogDialog } from "@/components/edit-history";
-import { History, Unlock } from "lucide-react";
+import { AlertTriangle, History, Unlock } from "lucide-react";
 import { AppointmentForm, columnForField, emptyFields, type AppointmentFields } from "@/components/appointment-form";
 import { ReworkForm, type ReworkFields } from "@/components/rework-form";
 import { Checkbox } from "@/components/ui/checkbox";
