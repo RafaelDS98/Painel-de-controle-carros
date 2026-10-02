@@ -18,3 +18,19 @@ describe("avisos de prazo", () => {
     expect(deadlineState(finished, undefined, today)).toBeNull();
   });
 });
+import { comparePriority } from "./maintenance-dashboard";
+describe("ordenação por prioridade", () => {
+  it("coloca urgentes e atrasados antes dos demais", () => {
+    const base = { status: "", priorityUrgent: false, date: "2026-09-28", time: "09:00" };
+    const rows = [
+      { ...base, plate: "SEM", currentDeadline: null },
+      { ...base, plate: "FUT", currentDeadline: "2026-10-05" },
+      { ...base, plate: "HOJE", currentDeadline: "2026-09-28" },
+      { ...base, plate: "ATR", currentDeadline: "2026-09-20" },
+      { ...base, plate: "URG", currentDeadline: null, priorityUrgent: true },
+      { ...base, plate: "URGFIM", currentDeadline: null, priorityUrgent: true, status: "Finalizado" },
+    ];
+    const order = [...rows].sort((a, b) => comparePriority(a, b, "2026-09-28", "Finalizado")).map((r) => r.plate);
+    expect(order).toEqual(["URG", "ATR", "HOJE", "FUT", "SEM", "URGFIM"]);
+  });
+});

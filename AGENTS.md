@@ -21,3 +21,4 @@
 - Atalhos de período usam datas de calendário em America/Sao_Paulo e a grade mostra apenas a semana atual no intervalo selecionado — evita misturar dias homônimos de semanas diferentes.
 - Contatos são inseridos na tabela existente `contact_log` com o usuário autenticado e lidos por agendamento via RLS — preserva a autoria sem criar estrutura paralela.
 - Situações e campos opcionais vêm das tabelas de configuração; campos originais continuam em colunas e novos campos ficam em `custom_fields` — permite personalizar sem perder dados ou histórico.
+- Urgência só é alterada por gerente/master: o trigger de edição descarta a mudança de `priority_urgent` vinda de atendimento sem bloquear o resto — a tela apenas espelha. A ordenação por prioridade é calculada no navegador a partir da situação de conclusão configurada.

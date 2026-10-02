@@ -16,3 +16,4 @@
 - [x] Configurar situações e campos exclusivamente pelo master com regras protegidas no banco.
 - [x] Aplicar campos e situações dinâmicos à ficha, busca, prazos e atualização em lote.
 - [x] Verificar migração de mecânicos e fluxos reais sem deixar dados de teste.
+- [x] Prioridade: atendimento não altera urgência (banco), toggle na ficha, ordenação "Prioridade" padrão e selo Urgente.
