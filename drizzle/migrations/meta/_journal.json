@@ -15,6 +15,13 @@
       "when": 1790949821311,
       "tag": "0001_master_user_roles_admin",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790951102809,
+      "tag": "0002_atendimento_priority_lock_explicit",
+      "breakpoints": true
     }
   ]
 }
