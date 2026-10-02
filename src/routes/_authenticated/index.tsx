@@ -25,9 +25,13 @@ function Index() {
   const profile = useQuery({
     queryKey: ["profile", user.id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("profiles").select("role, full_name").eq("id", user.id).maybeSingle();
-      if (error) throw error;
-      return data;
+      const [profileResult, roleResult] = await Promise.all([
+        supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
+        supabase.from("user_roles").select("role").eq("user_id", user.id).maybeSingle(),
+      ]);
+      if (profileResult.error) throw profileResult.error;
+      if (roleResult.error) throw roleResult.error;
+      return { full_name: profileResult.data?.full_name ?? null, role: roleResult.data?.role ?? null };
     },
   });
 
