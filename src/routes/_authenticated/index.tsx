@@ -66,7 +66,7 @@ function Index() {
     );
   }
 
-  if (user.user_metadata?.must_change_password === true && !passwordChanged) {
+  if (user.user_metadata?.['must_change_password'] === true && !passwordChanged) {
     return <FirstPasswordScreen email={user.email ?? ""} onDone={() => setPasswordChanged(true)} onSignOut={signOut} />;
   }
 
