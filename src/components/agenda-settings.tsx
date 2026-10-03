@@ -64,7 +64,7 @@ export function AgendaSettings({ open, onOpenChange, statuses, fields, onRefresh
   }
   return <Dialog open={open} onOpenChange={(value) => { onOpenChange(value); setError(""); setStatusDraft(null); setFieldDraft(null); setConfirmDelete(null); }}>
     <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
-      <DialogHeader><DialogTitle>Configurações</DialogTitle><DialogDescription>Agenda ANPEX</DialogDescription></DialogHeader>
+      <DialogHeader><DialogTitle>Configurações</DialogTitle><DialogDescription>Agenda ANPEXC</DialogDescription></DialogHeader>
       <div className="flex gap-2 border-b pb-3" role="tablist" aria-label="Configurações">
         <Button role="tab" aria-selected={tab === "statuses"} variant={tab === "statuses" ? "default" : "outline"} onClick={() => { setTab("statuses"); setError(""); setFieldDraft(null); }}>Situações</Button>
         <Button role="tab" aria-selected={tab === "fields"} variant={tab === "fields" ? "default" : "outline"} onClick={() => { setTab("fields"); setError(""); setStatusDraft(null); }}>Campos do formulário</Button>

@@ -1,10 +1,10 @@
-# ANPEX — Guia do Projeto
+# ANPEXC — Guia do Projeto
 
-Este documento orienta pessoas e assistentes de IA que precisam entender, manter ou ampliar o painel de agendamentos de manutenção da ANPEX.
+Este documento orienta pessoas e assistentes de IA que precisam entender, manter ou ampliar o painel de agendamentos de manutenção da ANPEXC.
 
 ## 1. Objetivo do sistema
 
-O projeto é um painel operacional, em português do Brasil, para acompanhar a agenda semanal de manutenção da frota ANPEX. A tela principal reúne:
+O projeto é um painel operacional, em português do Brasil, para acompanhar a agenda semanal de manutenção da frota ANPEXC. A tela principal reúne:
 
 - importação e substituição da agenda por planilha;
 - filtros e busca instantânea;
@@ -259,7 +259,7 @@ Até essa implementação existir, não use `localStorage` como substituto de ba
 - O modal abre pelo card e pela linha da tabela.
 - Não há elementos interativos aninhados nem erros no console.
 - A interface foi conferida em desktop e tablet.
-- Metadados da rota continuam específicos da ANPEX.
+- Metadados da rota continuam específicos da ANPEXC.
 
 ## 13. Contexto do repositório
 

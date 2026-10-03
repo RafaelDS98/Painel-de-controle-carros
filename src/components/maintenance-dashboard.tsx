@@ -677,7 +677,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     <div className={cn("min-h-screen bg-background text-foreground", dark && "dark")}>
       <header className="border-b bg-primary text-primary-foreground">
         <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-4 px-5 py-4 lg:px-8">
-          <div className="flex items-center gap-3"><div className="grid size-10 place-items-center rounded-md bg-primary-foreground text-primary"><Wrench className="size-5" /></div><div><p className="text-xl font-bold">ANPEX</p><p className="text-xs text-primary-foreground/70">Gestão de Agendamentos</p></div></div>
+          <div className="flex items-center gap-3"><div className="grid size-10 place-items-center rounded-md bg-primary-foreground text-primary"><Wrench className="size-5" /></div><div><p className="text-xl font-bold">ANPEXC</p><p className="text-xs text-primary-foreground/70">Gestão de Agendamentos</p></div></div>
           <div className="flex items-center gap-2">
             <div className="mr-2 hidden text-right text-sm sm:block"><p className="font-semibold">{currentUser.name}</p><p className="text-xs text-primary-foreground/70">{roleLabels[currentUser.role]}</p></div>
             <Button variant="secondary" onClick={() => setLogOpen(true)}><History /> Log de alterações</Button>
