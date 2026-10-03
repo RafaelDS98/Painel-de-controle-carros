@@ -1,3 +1,4 @@
+import { formatDateTimeBR } from "@/lib/agenda-safety";
 import { useEffect, useState } from "react";
 import { MessageSquarePlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,7 +10,6 @@ type ContactRow = {
   profiles: { full_name: string | null } | null;
 };
 
-const dateTime = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" });
 function localInputDate(date: Date) {
   const parts = new Intl.DateTimeFormat("en-US", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(date);
   const part = (type: string) => parts.find((item) => item.type === type)?.value ?? "";
@@ -65,6 +65,6 @@ export function ContactRegister({ appointmentId, userId }: { appointmentId: stri
       <div className="sm:col-span-2"><Button type="submit" disabled={saving}>{saving ? "Salvando…" : "Salvar contato"}</Button></div>
     </form>}
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-    {rows === null ? <p className="text-sm text-muted-foreground">Carregando contatos…</p> : rows.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum contato registrado.</p> : <ul className="divide-y">{rows.map((row) => <li key={row.id} className="py-3 text-sm"><div className="flex flex-wrap gap-x-2 font-medium"><span className="capitalize">{row.contact_type}</span><span>· {dateTime.format(new Date(row.contact_at))}</span><span className="text-muted-foreground">· {row.profiles?.full_name || "Usuário sem nome"}</span></div>{row.note && <p className="mt-1 whitespace-pre-wrap text-muted-foreground">{row.note}</p>}</li>)}</ul>}
+    {rows === null ? <p className="text-sm text-muted-foreground">Carregando contatos…</p> : rows.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum contato registrado.</p> : <ul className="divide-y">{rows.map((row) => <li key={row.id} className="py-3 text-sm"><div className="flex flex-wrap gap-x-2 font-medium"><span className="capitalize">{row.contact_type}</span><span>· {formatDateTimeBR(row.contact_at)}</span><span className="text-muted-foreground">· {row.profiles?.full_name || "Usuário sem nome"}</span></div>{row.note && <p className="mt-1 whitespace-pre-wrap text-muted-foreground">{row.note}</p>}</li>)}</ul>}
   </section>;
 }
