@@ -78,8 +78,9 @@ export const connectSglocAccount = createServerFn({ method: "POST" })
       try {
         res = await sglocFetch({ baseUrl, timeoutSeconds: settings.request_timeout_seconds, method: "POST", path: "api/login", json: { EMAIL: data.email, PASSWORD: data.password } });
       } catch (e) {
+        const { composeLoginError, SglocError } = await import("./core");
         if (e instanceof SglocError && (e.kind === "unauthorized" || e.kind === "validation" || e.kind === "not_found"))
-          throw new SglocError(e.kind, e.kind === "not_found" ? e.message : `E-mail ou senha do SGLOC recusados${e.status ? ` (${e.status})` : ""}. ${e.kind === "validation" ? e.message : ""}`.trim());
+          throw new SglocError(e.kind, composeLoginError(e));
         throw e;
       }
       const login = readLogin(res.body);
