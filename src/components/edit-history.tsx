@@ -26,7 +26,7 @@ type LogRow = {
 const show = (value: string | null) => (value === null || value.trim() === "" ? "—" : value);
 const select = "id, changed_by, field_changed, old_value, new_value, changed_at, profiles(full_name), appointments(plate)";
 
-function LogLine({ row, withPlate, onPlateClick }: { row: LogRow; withPlate?: boolean; onPlateClick?: (plate: string) => void }) {
+function LogLine({ row, withPlate, onPlateClick }: { row: LogRow; withPlate?: boolean; onPlateClick?: ((plate: string) => void) | undefined }) {
   return (
     <li className="rounded-md border bg-muted/30 p-3 text-sm">
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">

@@ -7,7 +7,7 @@ import { normalizePlate, normalizeTime } from "@/lib/normalize";
 
 export type IndicatorAppointment = {
   dbId: string; plate: string; date: string; time: string; status: string; workshop: string;
-  reworkReason?: string | null; original?: string;
+  reworkReason?: string | null; original?: string | undefined;
 };
 export type IndicatorGroup = { key: string; label: string; rows: IndicatorAppointment[]; filter?: () => void };
 
