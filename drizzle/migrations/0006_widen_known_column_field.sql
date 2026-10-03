@@ -1,0 +1,2 @@
+ALTER TABLE public.custom_field_definitions DROP CONSTRAINT known_column_field;
+ALTER TABLE public.custom_field_definitions ADD CONSTRAINT known_column_field CHECK (storage <> 'column' OR field_key = ANY (ARRAY['store','model','contact','workshop','issue','note','operator','external_order','current_deadline','brand','contact_number','km_scheduled','os_number']));

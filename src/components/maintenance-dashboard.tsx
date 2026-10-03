@@ -55,6 +55,7 @@ import { batchChanges, batchColumns, batchIdHeader, batchValidation, type BatchR
 import { periodRange, weekRange, pendingDeliveries, type PeriodPreset } from "@/lib/agenda-period";
 import { ContactRegister } from "@/components/contact-register";
 import { AgendaSettings } from "@/components/agenda-settings";
+import { importRowSkipReason, isEmergency, normalizeDate, normalizePlate, normalizeTime, parseKm, safeText, sglocExtras, sglocStateLabels, stripHtml } from "@/lib/normalize";
 import { customValues, statusColors, type FieldDefinition, type StatusOption, type CustomValues } from "@/lib/agenda-config";
 
 type Appointment = {
@@ -82,6 +83,13 @@ type Appointment = {
   reworkOf: string | null;
   reworkReason: string | null;
   customFields: CustomValues;
+  brand: string;
+  contactNumber: string;
+  kmScheduled: number | null;
+  osNumber: number | null;
+  scheduleType: string;
+  sglocReference: string;
+  sglocSyncState: string;
 };
 
 export type AppRole = "atendimento" | "gerente" | "master";
@@ -102,16 +110,21 @@ type AppointmentRow = {
   creator_edits_used: number; creator_edits_allowed: number; manager_edit_used: boolean; priority_urgent: boolean;
   original_deadline: string | null; current_deadline: string | null;
   rework_of: string | null; rework_reason: string | null; custom_fields: unknown;
+  brand?: string | null; contact_number?: string | null; km_scheduled?: number | null; os_number?: number | null;
+  schedule_type?: string | null; sgloc_reference?: string | null; sgloc_sync_state?: string | null;
 };
 
 function fromRow(row: AppointmentRow): Appointment {
   return {
-    dbId: row.id, id: row.sheet_id, registeredAt: row.registered_at ?? "", date: row.date ?? "", time: row.time, plate: row.plate,
+    dbId: row.id, id: row.sheet_id, registeredAt: row.registered_at ?? "", date: row.date ?? "", time: safeText(row.time), plate: normalizePlate(row.plate),
     store: row.store, model: row.model, contact: row.contact, workshop: row.workshop, issue: row.issue, note: row.note,
     operator: row.operator, externalOrder: row.external_order, status: row.status,
     originalDeadline: row.original_deadline, currentDeadline: row.current_deadline,
     editsUsed: row.creator_edits_used, editsAllowed: row.creator_edits_allowed, managerEditUsed: row.manager_edit_used, priorityUrgent: row.priority_urgent,
     reworkOf: row.rework_of, reworkReason: row.rework_reason, customFields: customValues(row.custom_fields),
+    brand: safeText(row.brand), contactNumber: safeText(row.contact_number), kmScheduled: row.km_scheduled ?? null,
+    osNumber: row.os_number ?? null, scheduleType: safeText(row.schedule_type) || "N", sglocReference: safeText(row.sgloc_reference),
+    sglocSyncState: safeText(row.sgloc_sync_state) || "local_only",
   };
 }
 
@@ -121,6 +134,7 @@ function fieldsFromAppointment(item: Appointment): AppointmentFields {
     model: item.model, contact: item.contact, workshop: item.workshop,
     issue: item.issue, note: item.note, operator: item.operator,
     externalOrder: item.externalOrder, currentDeadline: item.currentDeadline ?? "", customFields: item.customFields,
+    brand: item.brand, contactNumber: item.contactNumber, kmScheduled: item.kmScheduled === null ? "" : String(item.kmScheduled),
   };
 }
 
@@ -154,29 +168,11 @@ function localDate(value: string) {
 }
 
 function parseExcelDate(value: unknown): string {
-  if (value instanceof Date) return value.toISOString().slice(0, 10);
-  if (typeof value === "number") {
-    const d = new Date(Math.round((value - 25569) * 86400 * 1000));
-    return d.toISOString().slice(0, 10);
-  }
-  const raw = String(value ?? "").trim();
-  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0, 10);
-  const parts = raw.split(/[\/\-]/);
-  const [day, month, year] = parts;
-  if (day && month && year) return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-  return raw;
+  return normalizeDate(value) ?? "";
 }
 
 function parseTime(value: unknown): string {
-  if (typeof value === "number") {
-    const minutes = Math.round(value * 24 * 60);
-    return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
-  }
-  const raw = String(value ?? "");
-  const match = raw.match(/(\d{1,2}):(\d{2})/);
-  const hour = match?.[1];
-  const minute = match?.[2];
-  return hour && minute ? `${hour.padStart(2, "0")}:${minute}` : raw;
+  return normalizeTime(value);
 }
 
 function serviceCategory(issue: string) {
@@ -280,11 +276,14 @@ export function comparePriority(a: Pick<Appointment, "status" | "currentDeadline
   if (priorityLevel(a, today, completion) === 3 && a.currentDeadline !== b.currentDeadline) return (a.currentDeadline ?? "").localeCompare(b.currentDeadline ?? "");
   return `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`);
 }
+function EmergencyBadge() {
+  return <span className="inline-flex w-fit items-center rounded border border-status-orange/40 bg-status-orange px-2 py-0.5 text-[11px] font-semibold text-status-orange-foreground">Emergencial</span>;
+}
 function UrgentBadge() {
   return <span className="inline-flex w-fit items-center gap-1 rounded border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-[11px] font-semibold text-destructive"><AlertTriangle className="size-3" />Urgente</span>;
 }
 
-const rowColumns = "id, sheet_id, registered_at, date, time, plate, store, model, contact, workshop, issue, note, operator, external_order, status, original_deadline, current_deadline, creator_edits_used, creator_edits_allowed, manager_edit_used, priority_urgent, rework_of, rework_reason, custom_fields";
+const rowColumns = "id, sheet_id, registered_at, date, time, plate, store, model, contact, workshop, issue, note, operator, external_order, status, original_deadline, current_deadline, creator_edits_used, creator_edits_allowed, manager_edit_used, priority_urgent, rework_of, rework_reason, custom_fields, brand, contact_number, km_scheduled, os_number, schedule_type, sgloc_reference, sgloc_sync_state";
 
 export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: () => void; currentUser: CurrentUser }) {
   const [logOpen, setLogOpen] = useState(false);
@@ -314,7 +313,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const [sort, setSort] = useState<{ key: keyof Appointment | "priority"; asc: boolean }>({ key: "priority", asc: true });
   const [message, setMessage] = useState("");
   const [batchBusy, setBatchBusy] = useState(false);
-  const [batchResult, setBatchResult] = useState<{ updated: number; unchanged: number; errors: { line: number; plate: string; reason: string }[] } | null>(null);
+  const [batchResult, setBatchResult] = useState<{ updated: number; unchanged: number; skipped: number; errors: { line: number; plate: string; reason: string }[] } | null>(null);
   const [dark, setDark] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const batchInputRef = useRef<HTMLInputElement>(null);
@@ -371,7 +370,8 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const option = (key: keyof Appointment) => [...new Set(appointments.map((item) => String(item[key])).filter(Boolean))].sort();
   const filtered = useMemo(() => appointments.filter((item) => {
     const q = search.toLocaleLowerCase("pt-BR");
-    const hit = !q || [item.plate, item.contact, item.issue, item.model, ...fieldDefinitions.filter((field) => field.storage === "custom" && ["text", "textarea"].includes(field.field_type)).map((field) => item.customFields[field.field_key] ?? "")].some((value) => value.toLocaleLowerCase("pt-BR").includes(q));
+    const qPlate = normalizePlate(search);
+    const hit = !q || (qPlate !== "" && item.plate.includes(qPlate)) || [item.plate, item.brand, item.contactNumber, item.contact, item.issue, item.model, ...fieldDefinitions.filter((field) => field.storage === "custom" && ["text", "textarea"].includes(field.field_type)).map((field) => item.customFields[field.field_key] ?? "")].some((value) => value.toLocaleLowerCase("pt-BR").includes(q));
     return hit && (!contact || item.contact === contact) && (!workshop || item.workshop === workshop) && (!model || item.model === model) && (!operator || item.operator === operator) && (!startDate || item.date >= startDate) && (!endDate || item.date <= endDate) && (!reworksOnly || Boolean(item.reworkOf));
   }), [appointments, contact, endDate, model, operator, reworksOnly, search, startDate, workshop, fieldDefinitions]);
 
@@ -450,6 +450,9 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     for (const [key, value] of Object.entries(changes)) {
       if (key === "customFields") { update.custom_fields = { ...selected.customFields, ...(value as CustomValues) }; continue; }
       if (key === "currentDeadline") update.current_deadline = String(value || "") || null;
+      else if (key === "kmScheduled") update.km_scheduled = parseKm(value) ?? null;
+      else if (key === "plate") update.plate = normalizePlate(value);
+      else if (typeof value === "string") Object.assign(update, { [columnForField[key as keyof typeof columnForField]]: value.trim() });
       else Object.assign(update, { [columnForField[key as keyof typeof columnForField]]: value });
     }
     if (!Object.keys(update).length) return true;
@@ -462,10 +465,11 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   }
 
   const [newUrgent, setNewUrgent] = useState(false);
+  const [extraColumns, setExtraColumns] = useState(false);
   async function createAppointment(fields: Partial<AppointmentFields>): Promise<boolean> {
     const date = fields.date?.trim();
     const time = fields.time?.trim();
-    const plate = fields.plate?.trim();
+    const plate = normalizePlate(fields.plate);
     if (!date || !time || !plate) { setMessage("Informe data, hora e placa."); return false; }
     const values: TablesInsert<"appointments"> = {
       date, time, plate, created_by: currentUser.id, status: "", sheet_id: "",
@@ -475,6 +479,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     };
     values.custom_fields = fields.customFields ?? {};
     for (const [key, value] of Object.entries(fields)) {
+      if (key === "kmScheduled") { values.km_scheduled = parseKm(value) ?? null; continue; }
       if (key !== "customFields" && key !== "currentDeadline" && key !== "date" && key !== "time" && key !== "plate")
         Object.assign(values, { [columnForField[key as keyof typeof columnForField]]: typeof value === "string" ? value.trim() : "" });
     }
@@ -492,7 +497,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     if (!reworkSource) return false;
     const date = fields.date.trim();
     const time = fields.time.trim();
-    const plate = fields.plate.trim();
+    const plate = normalizePlate(fields.plate);
     const reason = fields.reason.trim();
     if (!date || !time || !plate || !reason) { setMessage("Informe data, hora, placa e motivo do retorno."); return false; }
     const values: TablesInsert<"appointments"> = {
@@ -544,19 +549,42 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
       const hasDeadline = columns.includes("Previsão de Entrega");
       const { data: userData } = await supabase.auth.getUser();
       const createdBy = userData.user?.id ?? null;
-      const records = rows.map((row) => {
-        const deadline = hasDeadline && String(row["Previsão de Entrega"] ?? "").trim() !== "" ? isoOrNull(parseExcelDate(row["Previsão de Entrega"])) : null;
-        return {
-          sheet_id: String(row["ID"] ?? ""), registered_at: isoOrNull(parseExcelDate(row["Data Cadastro"])), date: isoOrNull(parseExcelDate(row["Data Atendimento"])),
-          time: parseTime(row["Hora"]), plate: String(row["Placa"] ?? ""), store: String(row["Loja"] ?? ""), model: String(row["Modelo"] ?? ""),
-          contact: String(row["Contato"] ?? ""), workshop: String(row["Local/Oficina"] ?? ""), issue: String(row["Problemas Relatado"] ?? ""),
-          note: String(row["Observação"] ?? ""), operator: String(row["Operador"] ?? ""), external_order: String(row["O.S Externa"] ?? ""),
+      const cell = (row: Record<string, unknown>, column: string) => stripHtml(row[column]);
+      let skippedEmpty = 0;
+      let skippedExisting = 0;
+      const candidates: TablesInsert<"appointments">[] = [];
+      for (const row of rows) {
+        if (importRowSkipReason(row)) { skippedEmpty++; continue; }
+        const deadline = hasDeadline ? normalizeDate(row["Previsão de Entrega"]) : null;
+        const extras = sglocExtras(row);
+        candidates.push({
+          sheet_id: cell(row, "ID"), registered_at: normalizeDate(row["Data Cadastro"]), date: normalizeDate(row["Data Atendimento"]),
+          time: normalizeTime(row["Hora"]), plate: normalizePlate(cell(row, "Placa")), store: cell(row, "Loja"), model: cell(row, "Modelo"),
+          contact: cell(row, "Contato"), workshop: cell(row, "Local/Oficina"), issue: cell(row, "Problemas Relatado"),
+          note: cell(row, "Observação"), operator: cell(row, "Operador"), external_order: cell(row, "O.S Externa"),
           status: "", created_by: createdBy, original_deadline: deadline, current_deadline: deadline,
-        };
+          os_number: extras.os_number, schedule_type: extras.schedule_type, sgloc_reference: extras.sgloc_reference,
+        });
+      }
+      const refs = [...new Set(candidates.map((item) => item.sgloc_reference).filter((ref): ref is string => Boolean(ref)))];
+      const existing = new Set<string>();
+      for (let start = 0; start < refs.length; start += 200) {
+        const { data, error } = await supabase.from("appointments").select("sgloc_reference").in("sgloc_reference", refs.slice(start, start + 200));
+        if (error) throw new Error("Não foi possível conferir os IDs do SGLOC já cadastrados.");
+        for (const item of data ?? []) if (item.sgloc_reference) existing.add(item.sgloc_reference);
+      }
+      const records = candidates.filter((item) => {
+        if (!item.sgloc_reference) return true;
+        if (existing.has(item.sgloc_reference)) { skippedExisting++; return false; }
+        existing.add(item.sgloc_reference);
+        return true;
       });
-      const { error } = await supabase.from("appointments").insert(records);
-      if (error) throw new Error("Não foi possível gravar a agenda importada no banco.");
-      await loadAppointments(); resetFilters(); setMessage(`${records.length} agendamentos importados com sucesso.`);
+      if (records.length) {
+        const { error } = await supabase.from("appointments").insert(records);
+        if (error) throw new Error(error.code === "23505" ? "Outro usuário cadastrou um ID do SGLOC desta planilha ao mesmo tempo. Importe novamente." : "Não foi possível gravar a agenda importada no banco.");
+      }
+      await loadAppointments(); resetFilters();
+      setMessage(`${records.length} agendamento(s) importado(s) • ${skippedEmpty} linha(s) ignorada(s) (sem placa ou vazias) • ${skippedExisting} ignorada(s) por ID do SGLOC já existente.`);
     } catch (error) { setMessage(error instanceof Error ? error.message : "Não foi possível ler o arquivo."); }
   }
 
@@ -610,7 +638,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
       const missing = batchColumns.map(([, header]) => header).filter((header) => !headers.includes(header));
       if (missing.length) throw new Error(`Colunas ausentes: ${missing.join(", ")}. Use o arquivo gerado por "Exportar para edição em lote".`);
       if (new Set(headers).size !== headers.length) throw new Error("A planilha contém colunas repetidas. Use o arquivo original de edição em lote.");
-      const result = { updated: 0, unchanged: 0, errors: [] as { line: number; plate: string; reason: string }[] };
+      const result = { updated: 0, unchanged: 0, skipped: 0, errors: [] as { line: number; plate: string; reason: string }[] };
       const seen = new Set<string>();
       const startRow = sheet["!ref"] ? XLSX.utils.decode_range(sheet["!ref"]).s.r : 0;
       for (const [index, cells] of grid.entries()) {
@@ -618,7 +646,8 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
         const row = Object.fromEntries(headers.map((header, column) => [header, cells[column] ?? ""]));
         const line = startRow + index + 1;
         const id = String(row[batchIdHeader] ?? "").trim();
-        const plate = String(row["Placa"] ?? "").trim() || "—";
+        if (/registro\(s\)/i.test(stripHtml(row[batchIdHeader])) || !normalizePlate(stripHtml(row["Placa"]))) { result.skipped++; continue; }
+        const plate = normalizePlate(stripHtml(row["Placa"]));
         if (!id) { result.errors.push({ line, plate, reason: "ID do sistema vazio — use Importar agenda para registros novos." }); continue; }
         if (seen.has(id)) { result.errors.push({ line, plate, reason: "ID repetido nesta planilha." }); continue; }
         seen.add(id);
@@ -703,7 +732,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
         {message && <div className="flex items-center justify-between rounded-md border border-accent bg-accent/30 px-4 py-3 text-sm"><span>{message}</span><Button variant="ghost" size="icon" onClick={() => setMessage("")}><X /></Button></div>}
         {batchResult && <section aria-label="Resultado da atualização em lote" className="space-y-2 border-y py-4 text-sm">
           <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-semibold">Atualização em lote concluída</h2><Button variant="ghost" size="icon" aria-label="Fechar resultado" onClick={() => setBatchResult(null)}><X /></Button></div>
-          <p>{batchResult.updated} atualizado(s) · {batchResult.unchanged} sem mudança · {batchResult.errors.length} erro(s)</p>
+          <p>{batchResult.updated} atualizado(s) · {batchResult.unchanged} sem mudança · {batchResult.skipped} ignorada(s) (sem placa ou linha de total) · {batchResult.errors.length} erro(s)</p>
           {batchResult.errors.length > 0 && <ul className="max-h-64 list-disc space-y-1 overflow-y-auto pl-5 text-destructive">{batchResult.errors.map((error) => <li key={`${error.line}-${error.plate}`}>Linha {error.line} · {error.plate}: {error.reason}</li>)}</ul>}
         </section>}
 
@@ -733,7 +762,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
           <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
             {days.map((day, index) => {
               const rows = weeklyRows.filter((item) => localDate(item.date).getDay() === index + 1).sort((a,b) => comparePriority(a, b, today, completion));
-               return <div key={day} className="min-h-48 rounded-lg border bg-muted/30 p-3"><div className="mb-3 flex items-center justify-between"><div><h3 className="text-sm font-semibold">{day}</h3><p className="text-xs text-muted-foreground">{dayMonth.format(localDate(new Date(new Date(`${selectedWeek.start}T12:00:00Z`).getTime() + index * 86400000).toISOString().slice(0, 10)))}</p></div><span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-semibold">{rows.length}</span></div><div className="space-y-2">{rows.map((item) => <article key={item.dbId} className="overflow-hidden rounded-md border bg-card shadow-sm transition hover:-translate-y-0.5 hover:border-accent"><Button variant="ghost" onClick={() => setSelected(item)} className="h-auto w-full justify-start rounded-none p-3 text-left hover:bg-transparent"><span className="min-w-0 flex-1"><span className="flex items-center justify-between"><span className="text-xs font-bold text-accent-foreground">{item.time}</span><span className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold", serviceCategory(item.issue) === "Revisão" ? "bg-service-review text-service-review-foreground" : "bg-service-repair text-service-repair-foreground")}>{serviceCategory(item.issue)}</span></span><span className="mt-2 block font-bold tracking-wide">{item.plate}</span><span className="block truncate text-xs font-normal text-muted-foreground">{item.model}</span><span className="mt-2 block truncate text-xs font-medium">{item.contact}</span><span className="mt-1 line-clamp-2 whitespace-normal text-[11px] font-normal leading-4 text-muted-foreground">{item.issue}</span><span className="mt-2 flex flex-wrap gap-1">{item.priorityUrgent && item.status !== completion && <UrgentBadge />}{item.reworkOf && <ReworkBadge />}<DeadlineBadge item={item} completedAt={completedAtById[item.dbId]} today={today} completion={completion} /></span></span></Button><label className="relative block border-t"><span className="sr-only">Situação de {item.plate}</span><select value={item.status} disabled={Boolean(editBlockReason(item, currentUser.role))} title={editBlockReason(item, currentUser.role) ?? undefined} onChange={(event) => updateStatus(item.dbId, event.target.value as ServiceStatus)} className={cn("disabled:cursor-not-allowed disabled:opacity-70 h-9 w-full appearance-none border-0 px-3 pr-8 text-xs font-semibold outline-none focus:ring-2 focus:ring-inset focus:ring-ring", statusClasses(item.status, statuses))}><option value="">Atualizar situação</option>{serviceStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select><ChevronDown className="pointer-events-none absolute right-3 top-2.5 size-4 opacity-70" /></label></article>)}</div></div>;
+               return <div key={day} className="min-h-48 rounded-lg border bg-muted/30 p-3"><div className="mb-3 flex items-center justify-between"><div><h3 className="text-sm font-semibold">{day}</h3><p className="text-xs text-muted-foreground">{dayMonth.format(localDate(new Date(new Date(`${selectedWeek.start}T12:00:00Z`).getTime() + index * 86400000).toISOString().slice(0, 10)))}</p></div><span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-semibold">{rows.length}</span></div><div className="space-y-2">{rows.map((item) => <article key={item.dbId} className="overflow-hidden rounded-md border bg-card shadow-sm transition hover:-translate-y-0.5 hover:border-accent"><Button variant="ghost" onClick={() => setSelected(item)} className="h-auto w-full justify-start rounded-none p-3 text-left hover:bg-transparent"><span className="min-w-0 flex-1"><span className="flex items-center justify-between"><span className="text-xs font-bold text-accent-foreground">{item.time}</span><span className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold", serviceCategory(item.issue) === "Revisão" ? "bg-service-review text-service-review-foreground" : "bg-service-repair text-service-repair-foreground")}>{serviceCategory(item.issue)}</span></span><span className="mt-2 block font-bold tracking-wide">{item.plate}</span><span className="block truncate text-xs font-normal text-muted-foreground">{item.model}</span><span className="mt-2 block truncate text-xs font-medium">{item.contact}</span><span className="mt-1 line-clamp-2 whitespace-normal text-[11px] font-normal leading-4 text-muted-foreground">{item.issue}</span><span className="mt-2 flex flex-wrap gap-1">{item.priorityUrgent && item.status !== completion && <UrgentBadge />}{item.reworkOf && <ReworkBadge />}{isEmergency(item.scheduleType) && <EmergencyBadge />}<DeadlineBadge item={item} completedAt={completedAtById[item.dbId]} today={today} completion={completion} /></span></span></Button><label className="relative block border-t"><span className="sr-only">Situação de {item.plate}</span><select value={item.status} disabled={Boolean(editBlockReason(item, currentUser.role))} title={editBlockReason(item, currentUser.role) ?? undefined} onChange={(event) => updateStatus(item.dbId, event.target.value as ServiceStatus)} className={cn("disabled:cursor-not-allowed disabled:opacity-70 h-9 w-full appearance-none border-0 px-3 pr-8 text-xs font-semibold outline-none focus:ring-2 focus:ring-inset focus:ring-ring", statusClasses(item.status, statuses))}><option value="">Atualizar situação</option>{serviceStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select><ChevronDown className="pointer-events-none absolute right-3 top-2.5 size-4 opacity-70" /></label></article>)}</div></div>;
             })}
           </div>
         </section>
@@ -748,8 +777,8 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
         </div></section>
 
         <section className="rounded-lg border bg-card shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4"><div><h2 className="font-semibold">Agenda detalhada</h2><p className="text-xs text-muted-foreground">{sorted.length} registros encontrados</p></div><div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" onClick={exportBatch}><Download /> Exportar para edição em lote</Button><Button variant="outline" size="sm" disabled={batchBusy} onClick={() => batchInputRef.current?.click()}><Upload /> {batchBusy ? "Atualizando…" : "Atualizar agenda em lote"}</Button><input ref={batchInputRef} type="file" accept=".xlsx" className="hidden" aria-label="Arquivo de atualização em lote" onChange={(event) => void importBatch(event.target.files?.[0])} /><Button variant="outline" size="sm" onClick={() => exportFile("csv")}><Download /> CSV</Button><Button variant="outline" size="sm" onClick={() => exportFile("xlsx")}><Download /> Excel</Button></div></div>
-           <div className="overflow-x-auto"><table className="w-full min-w-[1400px] text-sm"><thead className="bg-muted/60 text-left text-xs text-muted-foreground"><tr>{[["priority","Prioridade"],["id","ID"],["date","Atendimento"],["time","Hora"],["plate","Placa"],["status","Situação"],["currentDeadline","Prazo"],["model","Modelo"],["contact","Contato"],["workshop","Local/Oficina"],["issue","Problema relatado"],["note","Observação"],["operator","Operador"]].map(([key,label]) => <th key={key} className="px-4 py-3 font-medium"><Button variant="ghost" size="sm" className="h-auto p-0" onClick={() => changeSort(key as keyof Appointment | "priority")}>{label}<ArrowDownAZ className="size-3" /></Button></th>)}</tr></thead><tbody>{pageRows.map((item) => <tr key={item.dbId} onClick={() => setSelected(item)} className="cursor-pointer border-t hover:bg-muted/40"><td className="px-4 py-3">{item.priorityUrgent && item.status !== completion ? <UrgentBadge /> : <span className="text-xs text-muted-foreground">{["Urgente","Atrasado","Hoje","Futuro","Sem prazo"][priorityLevel(item, today, completion)]}</span>}</td><td className="px-4 py-3 font-mono text-xs">#{item.id}</td><td className="whitespace-nowrap px-4 py-3">{fullDate.format(localDate(item.date))}</td><td className="px-4 py-3 font-semibold">{item.time}</td><td className="px-4 py-3 font-bold">{item.plate}{item.reworkOf && <span className="mt-1 block"><ReworkBadge /></span>}</td><td className="px-4 py-3"><span className={cn("whitespace-nowrap rounded border px-2 py-1 text-xs font-semibold", statusClasses(item.status, statuses))}>{item.status || "Não atualizada"}</span></td><td className="whitespace-nowrap px-4 py-3"><DeadlineBadge item={item} completedAt={completedAtById[item.dbId]} today={today} completion={completion} /></td><td className="max-w-48 truncate px-4 py-3">{item.model}</td><td className="px-4 py-3">{item.contact}</td><td className="max-w-52 truncate px-4 py-3">{item.workshop || "—"}</td><td className="max-w-72 truncate px-4 py-3 text-muted-foreground">{item.issue}</td><td className="max-w-36 truncate px-4 py-3">{item.note || "—"}</td><td className="whitespace-nowrap px-4 py-3 capitalize">{item.operator}</td></tr>)}</tbody></table></div>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4"><div><h2 className="font-semibold">Agenda detalhada</h2><p className="text-xs text-muted-foreground">{sorted.length} registros encontrados</p></div><div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" aria-pressed={extraColumns} onClick={() => setExtraColumns((value) => !value)}>{extraColumns ? "Ocultar colunas extras" : "Mostrar colunas extras"}</Button><Button variant="outline" size="sm" onClick={exportBatch}><Download /> Exportar para edição em lote</Button><Button variant="outline" size="sm" disabled={batchBusy} onClick={() => batchInputRef.current?.click()}><Upload /> {batchBusy ? "Atualizando…" : "Atualizar agenda em lote"}</Button><input ref={batchInputRef} type="file" accept=".xlsx" className="hidden" aria-label="Arquivo de atualização em lote" onChange={(event) => void importBatch(event.target.files?.[0])} /><Button variant="outline" size="sm" onClick={() => exportFile("csv")}><Download /> CSV</Button><Button variant="outline" size="sm" onClick={() => exportFile("xlsx")}><Download /> Excel</Button></div></div>
+           <div className="overflow-x-auto"><table className="w-full min-w-[1400px] text-sm"><thead className="bg-muted/60 text-left text-xs text-muted-foreground"><tr>{[["priority","Prioridade"],["id","ID"],["date","Atendimento"],["time","Hora"],["plate","Placa"],["status","Situação"],["currentDeadline","Prazo"],["model","Modelo"],["contact","Contato"],["workshop","Local/Oficina"],["issue","Problema relatado"],["note","Observação"],["operator","Operador"], ...(extraColumns ? [["brand","Marca"],["kmScheduled","KM"],["contactNumber","Telefone"],["osNumber","O.S Fornecedor"]] : [])].map(([key,label]) => <th key={key} className="px-4 py-3 font-medium"><Button variant="ghost" size="sm" className="h-auto p-0" onClick={() => changeSort(key as keyof Appointment | "priority")}>{label}<ArrowDownAZ className="size-3" /></Button></th>)}</tr></thead><tbody>{pageRows.map((item) => <tr key={item.dbId} onClick={() => setSelected(item)} className="cursor-pointer border-t hover:bg-muted/40"><td className="px-4 py-3">{item.priorityUrgent && item.status !== completion ? <UrgentBadge /> : <span className="text-xs text-muted-foreground">{["Urgente","Atrasado","Hoje","Futuro","Sem prazo"][priorityLevel(item, today, completion)]}</span>}</td><td className="px-4 py-3 font-mono text-xs">#{item.id}</td><td className="whitespace-nowrap px-4 py-3">{fullDate.format(localDate(item.date))}</td><td className="px-4 py-3 font-semibold">{item.time}</td><td className="px-4 py-3 font-bold">{item.plate}{item.reworkOf && <span className="mt-1 block"><ReworkBadge /></span>}{isEmergency(item.scheduleType) && <span className="mt-1 block"><EmergencyBadge /></span>}</td><td className="px-4 py-3"><span className={cn("whitespace-nowrap rounded border px-2 py-1 text-xs font-semibold", statusClasses(item.status, statuses))}>{item.status || "Não atualizada"}</span></td><td className="whitespace-nowrap px-4 py-3"><DeadlineBadge item={item} completedAt={completedAtById[item.dbId]} today={today} completion={completion} /></td><td className="max-w-48 truncate px-4 py-3">{item.model}</td><td className="px-4 py-3">{item.contact}</td><td className="max-w-52 truncate px-4 py-3">{item.workshop || "—"}</td><td className="max-w-72 truncate px-4 py-3 text-muted-foreground">{item.issue}</td><td className="max-w-36 truncate px-4 py-3">{item.note || "—"}</td><td className="whitespace-nowrap px-4 py-3 capitalize">{item.operator}</td>{extraColumns && <><td className="max-w-36 truncate px-4 py-3">{item.brand || "—"}</td><td className="whitespace-nowrap px-4 py-3">{item.kmScheduled ?? "—"}</td><td className="whitespace-nowrap px-4 py-3">{item.contactNumber || "—"}</td><td className="whitespace-nowrap px-4 py-3">{item.osNumber ?? "—"}</td></>}</tr>)}</tbody></table></div>
           <div className="flex items-center justify-between border-t p-4"><p className="text-xs text-muted-foreground">Página {Math.min(page, pages)} de {pages}</p><div className="flex gap-2"><Button variant="outline" size="icon" disabled={page === 1} onClick={() => setPage((value) => Math.max(1,value-1))} aria-label="Página anterior"><ArrowLeft /></Button><Button variant="outline" size="icon" disabled={page === pages} onClick={() => setPage((value) => Math.min(pages,value+1))} aria-label="Próxima página"><ArrowRight /></Button></div></div>
         </section>
       </main>
@@ -777,7 +806,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           {selected && <>
             <DialogHeader>
-              <DialogTitle className="flex flex-wrap items-center gap-3"><span className="rounded-md bg-primary px-2 py-1 text-primary-foreground">{selected.plate}</span>{selected.model}{selected.priorityUrgent && selected.status !== completion && <UrgentBadge />}{selected.reworkOf && <ReworkBadge />}</DialogTitle>
+              <DialogTitle className="flex flex-wrap items-center gap-3"><span className="rounded-md bg-primary px-2 py-1 text-primary-foreground">{selected.plate}</span>{selected.model}{selected.priorityUrgent && selected.status !== completion && <UrgentBadge />}{selected.reworkOf && <ReworkBadge />}{isEmergency(selected.scheduleType) && <EmergencyBadge />}{(selected.sglocReference || selected.sglocSyncState !== "local_only") && <span className="inline-flex w-fit items-center rounded border bg-secondary px-2 py-0.5 text-[11px] font-semibold text-secondary-foreground">SGLOC: {sglocStateLabels[selected.sglocSyncState] ?? selected.sglocSyncState}</span>}</DialogTitle>
               <DialogDescription>{selected.id ? `Agendamento #${selected.id} • ` : ""}{selected.date ? fullDate.format(localDate(selected.date)) : "Sem data"} às {selected.time}</DialogDescription>
             </DialogHeader>
             {selected.reworkOf && <div className="space-y-2 border-b pb-4">
@@ -802,6 +831,10 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
             {currentUser.role !== "atendimento" && <div className="flex flex-wrap items-center gap-3"><Button variant="outline" disabled={selected.editsAllowed > 1} onClick={() => grantExtraEdit(selected)}><Unlock /> Liberar edição extra</Button><span className="text-xs text-muted-foreground">Atendimento: {selected.editsUsed} de {selected.editsAllowed} edição(ões) usada(s){selected.editsAllowed > 1 ? " • edição extra já liberada" : ""}</span></div>}
             <AppointmentForm key={`${selected.dbId}-${historyKey}`} initial={fieldsFromAppointment(selected)} definitions={fieldDefinitions} editing blocked={editBlockReason(selected, currentUser.role)} onSave={saveAppointment} />
             <div className="border-t pt-4"><Button variant="outline" onClick={() => openRework(selected)}><RotateCcw /> Registrar retrabalho</Button></div>
+            {(selected.osNumber !== null && fieldDefinitions.find((field) => field.field_key === "os_number")?.visible !== false) || selected.sglocReference ? <div className="grid gap-3 sm:grid-cols-2">
+              {selected.osNumber !== null && fieldDefinitions.find((field) => field.field_key === "os_number")?.visible !== false && <Detail label="O.S Fornecedor" value={String(selected.osNumber)} />}
+              {selected.sglocReference && <Detail label="ID SGLOC" value={selected.sglocReference} />}
+            </div> : null}
             <Detail label="Data de cadastro" value={selected.registeredAt ? fullDate.format(localDate(selected.registeredAt)) : ""} />
             <ContactRegister key={selected.dbId} appointmentId={selected.dbId} userId={currentUser.id} />
             <AppointmentHistory appointmentId={selected.dbId} refreshKey={historyKey} customLabels={Object.fromEntries(fieldDefinitions.map((field) => [field.field_key, field.label]))} />

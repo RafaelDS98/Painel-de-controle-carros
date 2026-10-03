@@ -2,29 +2,33 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { authorLabel } from "@/lib/normalize";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export const fieldLabels: Record<string, string> = {
   status: "Situação", date: "Data de atendimento", time: "Hora", plate: "Placa", store: "Loja", model: "Modelo",
   contact: "Contato", workshop: "Local/Oficina", issue: "Problema relatado", note: "Observação", operator: "Operador",
   external_order: "O.S Externa", original_deadline: "Previsão original", current_deadline: "Previsão atual",
-  priority_urgent: "Urgente", rework_of: "Retrabalho de", rework_reason: "Motivo do retrabalho", sgloc_reference: "Referência SGLOC",
+  priority_urgent: "Urgente", rework_of: "Retrabalho de", rework_reason: "Motivo do retrabalho", sgloc_reference: "ID SGLOC",
+  store_id: "Loja (código)", brand: "Marca", contact_number: "Telefone do contato", operator_id: "Operador (código)",
+  schedule_type: "Tipo", os_number: "O.S Fornecedor", supplier_id: "Fornecedor (código)", km_scheduled: "KM do agendamento",
+  client_id: "Cliente (código)", sgloc_performed: "Realizado no SGLOC", sgloc_confirmed: "Confirmado no SGLOC",
 };
 
 type LogRow = {
-  id: string; field_changed: string; old_value: string | null; new_value: string | null; changed_at: string;
+  id: string; changed_by: string | null; field_changed: string; old_value: string | null; new_value: string | null; changed_at: string;
   profiles: { full_name: string | null } | null; appointments: { plate: string } | null;
 };
 
 const dateTime = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" });
 const show = (value: string | null) => (value === null || value === "" ? "vazio" : value);
-const select = "id, field_changed, old_value, new_value, changed_at, profiles(full_name), appointments(plate)";
+const select = "id, changed_by, field_changed, old_value, new_value, changed_at, profiles(full_name), appointments(plate)";
 
 function LogLine({ row, withPlate }: { row: LogRow; withPlate?: boolean }) {
   return (
     <li className="rounded-md border bg-muted/30 p-3 text-sm">
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-        <span>{row.profiles?.full_name || "Usuário sem nome"} • {dateTime.format(new Date(row.changed_at))}</span>
+        <span>{authorLabel(row.changed_by, row.profiles?.full_name)} • {dateTime.format(new Date(row.changed_at))}</span>
         {withPlate && <span className="rounded bg-primary px-1.5 py-0.5 font-semibold text-primary-foreground">{row.appointments?.plate || "—"}</span>}
       </div>
       <p className="mt-1"><span className="font-semibold">{fieldLabels[row.field_changed] ?? row.field_changed}:</span>{" "}
