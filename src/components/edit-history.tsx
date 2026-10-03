@@ -21,8 +21,7 @@ type LogRow = {
   profiles: { full_name: string | null } | null; appointments: { plate: string } | null;
 };
 
-const dateTime = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" });
-const show = (value: string | null) => (value === null || value === "" ? "vazio" : value);
+const show = (value: string | null) => (value === null || value.trim() === "" ? "—" : value);
 const select = "id, changed_by, field_changed, old_value, new_value, changed_at, profiles(full_name), appointments(plate)";
 
 function LogLine({ row, withPlate }: { row: LogRow; withPlate?: boolean }) {
