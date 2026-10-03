@@ -46,7 +46,7 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { AppointmentHistory, ChangeLogDialog } from "@/components/edit-history";
-import { AlertTriangle, ChevronLeft, ChevronRight, History, Unlock, UserCircle } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, History, Trash2, Unlock, UserCircle } from "lucide-react";
 import { MyAccountDialog } from "@/components/my-account";
 import { useQueryClient } from "@tanstack/react-query";
 import { AppointmentForm, columnForField, emptyFields, type AppointmentFields } from "@/components/appointment-form";
