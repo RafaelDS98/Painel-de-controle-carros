@@ -273,6 +273,7 @@ Até essa implementação existir, não use `localStorage` como substituto de ba
 - Textos longos: uma linha com dica na tabela, até duas linhas no cartão, quebras preservadas na ficha.
 - Exportação CSV/Excel: escapa aspas, vírgulas, ponto e vírgula e quebras de linha; nulos viram vazio; textos começando com =, +, - ou @ recebem apóstrofo; colunas técnicas nunca entram.
 - Falha ao carregar mostra mensagem com "Tentar de novo"; grade, gráficos, tabela e ficha têm proteção própria para um erro não derrubar o painel.
+- Planilhas exportadas pelo SGLOC declaram dimensão errada (ex.: A1:C1 com 129 linhas x 16 colunas); sempre recalcular o !ref antes de ler (`fixSheetRange`), na importação manual e na edição em lote.
 - O fixture sintético `src/lib/sgloc-fixture.ts` cobre os casos estranhos do export e é usado nos testes.
 
 ## 13. Checklist antes de concluir uma mudança

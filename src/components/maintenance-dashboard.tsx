@@ -57,6 +57,7 @@ import { ContactRegister } from "@/components/contact-register";
 import { AgendaSettings } from "@/components/agenda-settings";
 import { isEmergency, normalizeDate, normalizePlate, normalizeTime, parseKm, safeText, sglocStateLabels, stripHtml } from "@/lib/normalize";
 import { DASH, EMPTY_OPTION, NO_DATE_GROUP, clampPage, compareDateTime, compareText, countBy, dash, exportHeaders, exportRows, foldedOptions, formatDateBR, groupWeek, inPeriod, matchesFilter, safeAverage, serviceCategory, textMatches, toCsv, buildImportRecords, dropExistingReferences } from "@/lib/agenda-safety";
+import { fixSheetRange } from "@/lib/sheet-range";
 import { SectionBoundary } from "@/components/section-boundary";
 import { customValues, statusColors, type FieldDefinition, type StatusOption, type CustomValues } from "@/lib/agenda-config";
 
@@ -515,6 +516,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
       if (!sheetName) throw new Error("A planilha não possui abas.");
       const sheet = book.Sheets[sheetName];
       if (!sheet) throw new Error("A primeira aba está vazia.");
+      fixSheetRange(sheet, XLSX.utils);
       const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
       const firstRow = rows[0];
       const columns = firstRow ? Object.keys(firstRow) : [];
@@ -585,6 +587,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
       const book = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true });
       const sheet = book.Sheets[book.SheetNames[0] ?? ""];
       if (!sheet) throw new Error("A planilha não possui abas.");
+      fixSheetRange(sheet, XLSX.utils);
       const grid = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: "", blankrows: true });
       const headers = (grid[0] ?? []).map((value) => String(value).trim());
       if (!headers.includes(batchIdHeader)) throw new Error(`Coluna "${batchIdHeader}" ausente. Use o arquivo gerado por "Exportar para edição em lote".`);
