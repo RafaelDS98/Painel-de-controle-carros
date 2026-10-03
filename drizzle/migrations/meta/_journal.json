@@ -50,6 +50,13 @@
       "when": 1791031030620,
       "tag": "0006_widen_known_column_field",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791034718745,
+      "tag": "0007_user_admin_log",
+      "breakpoints": true
     }
   ]
 }

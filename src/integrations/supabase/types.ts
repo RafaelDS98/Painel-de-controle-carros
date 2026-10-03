@@ -482,6 +482,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_admin_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          changed_at: string
+          detail: string
+          id: string
+          target_id: string | null
+          target_label: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          changed_at?: string
+          detail?: string
+          id?: string
+          target_id?: string | null
+          target_label?: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          changed_at?: string
+          detail?: string
+          id?: string
+          target_id?: string | null
+          target_label?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -537,6 +567,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      revoke_user_sessions: { Args: { _user_id: string }; Returns: undefined }
       set_user_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
