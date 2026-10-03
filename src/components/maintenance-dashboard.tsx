@@ -82,6 +82,13 @@ type Appointment = {
   reworkOf: string | null;
   reworkReason: string | null;
   customFields: CustomValues;
+  brand: string;
+  contactNumber: string;
+  kmScheduled: number | null;
+  osNumber: number | null;
+  scheduleType: string;
+  sglocReference: string;
+  sglocSyncState: string;
 };
 
 export type AppRole = "atendimento" | "gerente" | "master";
@@ -102,16 +109,21 @@ type AppointmentRow = {
   creator_edits_used: number; creator_edits_allowed: number; manager_edit_used: boolean; priority_urgent: boolean;
   original_deadline: string | null; current_deadline: string | null;
   rework_of: string | null; rework_reason: string | null; custom_fields: unknown;
+  brand?: string | null; contact_number?: string | null; km_scheduled?: number | null; os_number?: number | null;
+  schedule_type?: string | null; sgloc_reference?: string | null; sgloc_sync_state?: string | null;
 };
 
 function fromRow(row: AppointmentRow): Appointment {
   return {
-    dbId: row.id, id: row.sheet_id, registeredAt: row.registered_at ?? "", date: row.date ?? "", time: row.time, plate: row.plate,
+    dbId: row.id, id: row.sheet_id, registeredAt: row.registered_at ?? "", date: row.date ?? "", time: safeText(row.time), plate: normalizePlate(row.plate),
     store: row.store, model: row.model, contact: row.contact, workshop: row.workshop, issue: row.issue, note: row.note,
     operator: row.operator, externalOrder: row.external_order, status: row.status,
     originalDeadline: row.original_deadline, currentDeadline: row.current_deadline,
     editsUsed: row.creator_edits_used, editsAllowed: row.creator_edits_allowed, managerEditUsed: row.manager_edit_used, priorityUrgent: row.priority_urgent,
     reworkOf: row.rework_of, reworkReason: row.rework_reason, customFields: customValues(row.custom_fields),
+    brand: safeText(row.brand), contactNumber: safeText(row.contact_number), kmScheduled: row.km_scheduled ?? null,
+    osNumber: row.os_number ?? null, scheduleType: safeText(row.schedule_type) || "N", sglocReference: safeText(row.sgloc_reference),
+    sglocSyncState: safeText(row.sgloc_sync_state) || "local_only",
   };
 }
 
@@ -121,6 +133,7 @@ function fieldsFromAppointment(item: Appointment): AppointmentFields {
     model: item.model, contact: item.contact, workshop: item.workshop,
     issue: item.issue, note: item.note, operator: item.operator,
     externalOrder: item.externalOrder, currentDeadline: item.currentDeadline ?? "", customFields: item.customFields,
+    brand: item.brand, contactNumber: item.contactNumber, kmScheduled: item.kmScheduled === null ? "" : String(item.kmScheduled),
   };
 }
 
@@ -154,29 +167,11 @@ function localDate(value: string) {
 }
 
 function parseExcelDate(value: unknown): string {
-  if (value instanceof Date) return value.toISOString().slice(0, 10);
-  if (typeof value === "number") {
-    const d = new Date(Math.round((value - 25569) * 86400 * 1000));
-    return d.toISOString().slice(0, 10);
-  }
-  const raw = String(value ?? "").trim();
-  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0, 10);
-  const parts = raw.split(/[\/\-]/);
-  const [day, month, year] = parts;
-  if (day && month && year) return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-  return raw;
+  return normalizeDate(value) ?? "";
 }
 
 function parseTime(value: unknown): string {
-  if (typeof value === "number") {
-    const minutes = Math.round(value * 24 * 60);
-    return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
-  }
-  const raw = String(value ?? "");
-  const match = raw.match(/(\d{1,2}):(\d{2})/);
-  const hour = match?.[1];
-  const minute = match?.[2];
-  return hour && minute ? `${hour.padStart(2, "0")}:${minute}` : raw;
+  return normalizeTime(value);
 }
 
 function serviceCategory(issue: string) {
@@ -280,11 +275,14 @@ export function comparePriority(a: Pick<Appointment, "status" | "currentDeadline
   if (priorityLevel(a, today, completion) === 3 && a.currentDeadline !== b.currentDeadline) return (a.currentDeadline ?? "").localeCompare(b.currentDeadline ?? "");
   return `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`);
 }
+function EmergencyBadge() {
+  return <span className="inline-flex w-fit items-center rounded border border-status-orange/40 bg-status-orange px-2 py-0.5 text-[11px] font-semibold text-status-orange-foreground">Emergencial</span>;
+}
 function UrgentBadge() {
   return <span className="inline-flex w-fit items-center gap-1 rounded border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-[11px] font-semibold text-destructive"><AlertTriangle className="size-3" />Urgente</span>;
 }
 
-const rowColumns = "id, sheet_id, registered_at, date, time, plate, store, model, contact, workshop, issue, note, operator, external_order, status, original_deadline, current_deadline, creator_edits_used, creator_edits_allowed, manager_edit_used, priority_urgent, rework_of, rework_reason, custom_fields";
+const rowColumns = "id, sheet_id, registered_at, date, time, plate, store, model, contact, workshop, issue, note, operator, external_order, status, original_deadline, current_deadline, creator_edits_used, creator_edits_allowed, manager_edit_used, priority_urgent, rework_of, rework_reason, custom_fields, brand, contact_number, km_scheduled, os_number, schedule_type, sgloc_reference, sgloc_sync_state";
 
 export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: () => void; currentUser: CurrentUser }) {
   const [logOpen, setLogOpen] = useState(false);
@@ -371,7 +369,8 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const option = (key: keyof Appointment) => [...new Set(appointments.map((item) => String(item[key])).filter(Boolean))].sort();
   const filtered = useMemo(() => appointments.filter((item) => {
     const q = search.toLocaleLowerCase("pt-BR");
-    const hit = !q || [item.plate, item.contact, item.issue, item.model, ...fieldDefinitions.filter((field) => field.storage === "custom" && ["text", "textarea"].includes(field.field_type)).map((field) => item.customFields[field.field_key] ?? "")].some((value) => value.toLocaleLowerCase("pt-BR").includes(q));
+    const qPlate = normalizePlate(search);
+    const hit = !q || (qPlate !== "" && item.plate.includes(qPlate)) || [item.plate, item.brand, item.contactNumber, item.contact, item.issue, item.model, ...fieldDefinitions.filter((field) => field.storage === "custom" && ["text", "textarea"].includes(field.field_type)).map((field) => item.customFields[field.field_key] ?? "")].some((value) => value.toLocaleLowerCase("pt-BR").includes(q));
     return hit && (!contact || item.contact === contact) && (!workshop || item.workshop === workshop) && (!model || item.model === model) && (!operator || item.operator === operator) && (!startDate || item.date >= startDate) && (!endDate || item.date <= endDate) && (!reworksOnly || Boolean(item.reworkOf));
   }), [appointments, contact, endDate, model, operator, reworksOnly, search, startDate, workshop, fieldDefinitions]);
 
@@ -450,6 +449,9 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     for (const [key, value] of Object.entries(changes)) {
       if (key === "customFields") { update.custom_fields = { ...selected.customFields, ...(value as CustomValues) }; continue; }
       if (key === "currentDeadline") update.current_deadline = String(value || "") || null;
+      else if (key === "kmScheduled") update.km_scheduled = parseKm(value) ?? null;
+      else if (key === "plate") update.plate = normalizePlate(value);
+      else if (typeof value === "string") Object.assign(update, { [columnForField[key as keyof typeof columnForField]]: value.trim() });
       else Object.assign(update, { [columnForField[key as keyof typeof columnForField]]: value });
     }
     if (!Object.keys(update).length) return true;
@@ -465,7 +467,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   async function createAppointment(fields: Partial<AppointmentFields>): Promise<boolean> {
     const date = fields.date?.trim();
     const time = fields.time?.trim();
-    const plate = fields.plate?.trim();
+    const plate = normalizePlate(fields.plate);
     if (!date || !time || !plate) { setMessage("Informe data, hora e placa."); return false; }
     const values: TablesInsert<"appointments"> = {
       date, time, plate, created_by: currentUser.id, status: "", sheet_id: "",
@@ -475,6 +477,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     };
     values.custom_fields = fields.customFields ?? {};
     for (const [key, value] of Object.entries(fields)) {
+      if (key === "kmScheduled") { values.km_scheduled = parseKm(value) ?? null; continue; }
       if (key !== "customFields" && key !== "currentDeadline" && key !== "date" && key !== "time" && key !== "plate")
         Object.assign(values, { [columnForField[key as keyof typeof columnForField]]: typeof value === "string" ? value.trim() : "" });
     }
@@ -492,7 +495,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     if (!reworkSource) return false;
     const date = fields.date.trim();
     const time = fields.time.trim();
-    const plate = fields.plate.trim();
+    const plate = normalizePlate(fields.plate);
     const reason = fields.reason.trim();
     if (!date || !time || !plate || !reason) { setMessage("Informe data, hora, placa e motivo do retorno."); return false; }
     const values: TablesInsert<"appointments"> = {
