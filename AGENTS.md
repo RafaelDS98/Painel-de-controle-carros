@@ -10,7 +10,7 @@
 <!-- LOVABLE:END -->
 
 ## Decisões técnicas
-- Dados persistem no Lovable Cloud (tabelas appointments, profiles, edit_log, contact_log); o painel lê/grava direto via cliente do navegador com RLS — evita estado só em memória.
+- O painel lê/grava no Lovable Cloud pelo cliente do navegador com RLS — evita estado só em memória.
 - Acesso e papéis ficam em `user_roles`, consultados por funções protegidas no banco — separa privilégio dos dados pessoais e impede autoatribuição.
 - `appointments.id` é uuid; o ID da planilha fica em `sheet_id` — importações podem repetir IDs.
 - Regras de edição por perfil ficam em trigger BEFORE UPDATE em appointments e o histórico em trigger AFTER UPDATE (edit_log só leitura para usuários) — a tela só espelha, o banco decide.
@@ -21,9 +21,8 @@
 - Atalhos de período usam datas de calendário em America/Sao_Paulo e a grade mostra apenas a semana atual no intervalo selecionado — evita misturar dias homônimos de semanas diferentes.
 - Contatos são inseridos na tabela existente `contact_log` com o usuário autenticado e lidos por agendamento via RLS — preserva a autoria sem criar estrutura paralela.
 - Situações e campos opcionais vêm das tabelas de configuração; campos originais continuam em colunas e novos campos ficam em `custom_fields` — permite personalizar sem perder dados ou histórico.
-- Urgência só é alterada por gerente/master: o trigger de edição descarta a mudança de `priority_urgent` vinda de atendimento sem bloquear o resto — a tela apenas espelha. A ordenação por prioridade é calculada no navegador a partir da situação de conclusão configurada.
+- Urgência só é alterada por gerente/master, filtrada no banco nos triggers BEFORE INSERT e UPDATE (descarta a mudança vinda de atendimento sem bloquear o resto) — tela, importação e chamadas diretas não burlam.
 - Perfis de usuários são listados e alterados só por funções protegidas no banco que exigem master e impedem alterar o próprio perfil — a tela não grava user_roles diretamente.
-- Urgência na criação também é filtrada no banco por trigger BEFORE INSERT (só gerente/master mantêm priority_urgent) — importações e chamadas diretas não burlam a regra.
 - Campos de controle do SGLOC (sgloc_*) só mudam por rotina de sistema ou master, garantido no trigger de edição; tokens do SGLOC ficam em sgloc_accounts, acessível só pelo servidor, e a tela lê o status pela função get_my_sgloc_status — evita expor credenciais.
 - Dados digitados e importados passam pelas funções puras de src/lib/normalize.ts (placa, data, hora, HTML, texto); a importação nunca cria um segundo registro com o mesmo sgloc_reference, apenas ignora a linha — evita duplicar agendamentos do SGLOC.
 - Exibição, filtros, ordenação, agrupamento e exportação passam pelas funções puras de src/lib/agenda-safety.ts, e as seções principais ficam em SectionBoundary — dado vazio ou estranho nunca derruba a tela.
@@ -32,4 +31,4 @@
 - Indicadores e histórico do veículo usam os mesmos filtros do painel; seleção de placa é separada da busca textual e a faixa de filtros reflete ambos — permite remover um critério sem apagar os demais.
 - Usuários e senhas são editados só por updatePanelUser/resetPanelPassword (master conferido no servidor); a redefinição encerra sessões via revoke_user_sessions (só service_role) e registra user_admin_log sem senha — trilha auditável sem expor credenciais.
 - Erros de criação/edição/senha de usuários passam por src/lib/auth-errors.ts (tradução, campo e código curto) e o erro técnico vai ao log do servidor sem senha — o master vê o motivo sem expor segredos.
-- O conector SGLOC fica em src/lib/sgloc (core.ts puro; client.server.ts só servidor; sgloc.functions.ts com master/usuário conferido no servidor); tokens SGLOC são cifrados (AES-GCM, chave SGLOC_TOKEN_KEY) em sgloc_accounts, inacessível ao cliente, e relatórios de teste só guardam dados mascarados — evita vazar credenciais e dados pessoais.
+- Excluir agendamento = arquivar (archived_at/archived_by), só master, garantido no trigger de edição e na RLS de leitura; o painel carrega só ativos por activeOnly (src/lib/agenda-safety.ts) e a deduplicação de importação usa existing_sgloc_references (inclui arquivados) — nada é apagado e nada some de uma tela só.

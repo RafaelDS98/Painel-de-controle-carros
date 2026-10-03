@@ -214,3 +214,16 @@ export function dropExistingReferences<T extends { sgloc_reference?: string | nu
   });
   return { kept, skippedExisting };
 }
+
+// ---------- Lixeira (excluir = arquivar, só master) ----------
+
+/** Único ponto que decide se um agendamento aparece no painel: arquivados (Lixeira) nunca entram. */
+export function activeOnly<T extends { archived_at?: string | null }>(rows: T[]): T[] {
+  return rows.filter((row) => !row.archived_at);
+}
+
+/** Texto da confirmação de exclusão; avisa quando o agendamento veio do SGLOC. */
+export function archiveConfirmText(sglocReference: unknown): string {
+  const base = "Excluir este agendamento? Ele vai para a Lixeira e pode ser restaurado.";
+  return safeText(sglocReference) ? `${base}\n\nEste agendamento veio do SGLOC. Excluir aqui NÃO exclui no SGLOC, e uma sincronização futura pode trazê-lo de volta.` : base;
+}

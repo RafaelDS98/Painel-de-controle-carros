@@ -46,7 +46,7 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { AppointmentHistory, ChangeLogDialog } from "@/components/edit-history";
-import { AlertTriangle, ChevronLeft, ChevronRight, History, Unlock, UserCircle } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, History, Trash2, Unlock, UserCircle } from "lucide-react";
 import { MyAccountDialog } from "@/components/my-account";
 import { useQueryClient } from "@tanstack/react-query";
 import { AppointmentForm, columnForField, emptyFields, type AppointmentFields } from "@/components/appointment-form";
@@ -58,7 +58,8 @@ import { periodRange, weekRange, pendingDeliveries, type PeriodPreset } from "@/
 import { ContactRegister } from "@/components/contact-register";
 import { AgendaSettings } from "@/components/agenda-settings";
 import { isEmergency, normalizeDate, normalizePlate, normalizeTime, parseKm, safeText, sglocStateLabels, stripHtml } from "@/lib/normalize";
-import { DASH, EMPTY_OPTION, NO_DATE_GROUP, clampPage, compareDateTime, compareText, countBy, dash, exportHeaders, exportRows, foldedOptions, formatDateBR, groupWeek, inPeriod, matchesFilter, safeAverage, serviceCategory, textMatches, toCsv, buildImportRecords, dropExistingReferences } from "@/lib/agenda-safety";
+import { DASH, EMPTY_OPTION, NO_DATE_GROUP, clampPage, compareDateTime, compareText, countBy, dash, exportHeaders, exportRows, foldedOptions, formatDateBR, groupWeek, inPeriod, matchesFilter, safeAverage, serviceCategory, textMatches, toCsv, buildImportRecords, dropExistingReferences, activeOnly, archiveConfirmText } from "@/lib/agenda-safety";
+import { TrashDialog } from "@/components/trash-dialog";
 import { fixSheetRange } from "@/lib/sheet-range";
 import { SearchableSelect } from "@/components/searchable-select";
 import { weekdayIndex } from "@/lib/agenda-safety";
@@ -121,7 +122,7 @@ type AppointmentRow = {
   original_deadline: string | null; current_deadline: string | null;
   rework_of: string | null; rework_reason: string | null; custom_fields: unknown;
   brand?: string | null; contact_number?: string | null; km_scheduled?: number | null; os_number?: number | null;
-  schedule_type?: string | null; sgloc_reference?: string | null; sgloc_sync_state?: string | null;
+  schedule_type?: string | null; sgloc_reference?: string | null; sgloc_sync_state?: string | null; archived_at?: string | null;
 };
 
 function fromRow(row: AppointmentRow): Appointment {
@@ -253,7 +254,7 @@ function UrgentBadge() {
   return <span className="inline-flex w-fit items-center gap-1 rounded border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-[11px] font-semibold text-destructive"><AlertTriangle className="size-3" />Urgente</span>;
 }
 
-const rowColumns = "id, sheet_id, registered_at, date, time, plate, store, model, contact, workshop, issue, note, operator, external_order, status, original_deadline, current_deadline, creator_edits_used, creator_edits_allowed, manager_edit_used, priority_urgent, rework_of, rework_reason, custom_fields, brand, contact_number, km_scheduled, os_number, schedule_type, sgloc_reference, sgloc_sync_state";
+const rowColumns = "id, sheet_id, registered_at, date, time, plate, store, model, contact, workshop, issue, note, operator, external_order, status, original_deadline, current_deadline, creator_edits_used, creator_edits_allowed, manager_edit_used, priority_urgent, rework_of, rework_reason, custom_fields, brand, contact_number, km_scheduled, os_number, schedule_type, sgloc_reference, sgloc_sync_state, archived_at";
 
 export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: () => void; currentUser: CurrentUser }) {
   const [logOpen, setLogOpen] = useState(false);
@@ -286,6 +287,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const agendaRef = useRef<HTMLElement>(null);
   useEffect(() => { setGridStart(null); }, [startDate, endDate]);
   const [selected, setSelected] = useState<Appointment | null>(null);
+  const [trashOpen, setTrashOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<{ key: keyof Appointment | "priority"; asc: boolean }>({ key: "priority", asc: true });
   const [message, setMessage] = useState("");
@@ -324,16 +326,24 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     setCompletedAtById(latest);
   }
 
+  async function archiveAppointment(item: Appointment) {
+    if (!window.confirm(archiveConfirmText(item.sglocReference))) return;
+    const { error } = await supabase.from("appointments").update({ archived_at: new Date().toISOString() }).eq("id", item.dbId);
+    if (error) { toast.error(`Não foi possível excluir: ${error.message}`); return; }
+    setSelected(null); toast.success("Agendamento excluído. Ele está na Lixeira e pode ser restaurado.");
+    await loadAppointments();
+  }
+
   async function loadAppointments() {
     const data: AppointmentRow[] = [];
     for (let offset = 0; ; offset += 500) {
-      const result = await supabase.from("appointments").select(rowColumns).order("date").order("time").range(offset, offset + 499);
+      const result = await supabase.from("appointments").select(rowColumns).is("archived_at", null).order("date").order("time").range(offset, offset + 499);
       if (result.error) { setLoadError("Não foi possível carregar a agenda. Verifique sua conexão e tente de novo."); return; }
       data.push(...(result.data ?? []));
       if (!result.data || result.data.length < 500) break;
     }
     setLoadError("");
-    const rows = data.map(fromRow);
+    const rows = activeOnly(data).map(fromRow);
     setAppointments(rows);
     void loadCompletionLogs(rows);
   }
@@ -564,9 +574,9 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
       const refs = [...new Set(candidates.map((item) => item.sgloc_reference).filter((ref): ref is string => Boolean(ref)))];
       const existing = new Set<string>();
       for (let start = 0; start < refs.length; start += 200) {
-        const { data, error } = await supabase.from("appointments").select("sgloc_reference").in("sgloc_reference", refs.slice(start, start + 200));
+        const { data, error } = await supabase.rpc("existing_sgloc_references", { _refs: refs.slice(start, start + 200) });
         if (error) throw new Error("Não foi possível conferir os IDs do SGLOC já cadastrados.");
-        for (const item of data ?? []) if (item.sgloc_reference) existing.add(item.sgloc_reference);
+        for (const ref of data ?? []) if (ref) existing.add(ref);
       }
       const { kept: records, skippedExisting } = dropExistingReferences(candidates, existing);
       if (records.length) {
@@ -709,6 +719,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
             <Button variant="secondary" onClick={() => setLogOpen(true)}><History /> Log de alterações</Button>
             <Button variant="secondary" onClick={() => setNewOpen(true)}><Plus /> Novo agendamento</Button>
              {currentUser.role === "master" && <Button variant="secondary" onClick={() => setSettingsOpen(true)}><Settings /> Configurações</Button>}
+            {currentUser.role === "master" && <Button variant="secondary" onClick={() => setTrashOpen(true)}><Trash2 /> Lixeira</Button>}
             <Button variant="secondary" onClick={() => inputRef.current?.click()}><Upload /> Importar agenda</Button>
             <input ref={inputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(event) => importFile(event.target.files?.[0])} />
             <Button variant="ghost" size="icon" onClick={() => setDark((value) => !value)} className="text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground" aria-label="Alternar tema">{dark ? <Sun /> : <Moon />}</Button>
@@ -836,7 +847,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
             {editBlockReason(selected, currentUser.role) && <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{editBlockReason(selected, currentUser.role)}</p>}
             {currentUser.role !== "atendimento" && <div className="flex flex-wrap items-center gap-3"><Button variant="outline" disabled={selected.editsAllowed > 1} onClick={() => grantExtraEdit(selected)}><Unlock /> Liberar edição extra</Button><span className="text-xs text-muted-foreground">Atendimento: {selected.editsUsed} de {selected.editsAllowed} edição(ões) usada(s){selected.editsAllowed > 1 ? " • edição extra já liberada" : ""}</span></div>}
             <AppointmentForm key={`${selected.dbId}-${historyKey}`} initial={fieldsFromAppointment(selected)} definitions={fieldDefinitions} editing blocked={editBlockReason(selected, currentUser.role)} onSave={saveAppointment} />
-            <div className="border-t pt-4"><Button variant="outline" onClick={() => openRework(selected)}><RotateCcw /> Registrar retrabalho</Button></div>
+            <div className="flex flex-wrap gap-2 border-t pt-4"><Button variant="outline" onClick={() => openRework(selected)}><RotateCcw /> Registrar retrabalho</Button>{currentUser.role === "master" && <Button variant="destructive" onClick={() => void archiveAppointment(selected)}><Trash2 /> Excluir</Button>}</div>
             {(selected.osNumber !== null && fieldDefinitions.find((field) => field.field_key === "os_number")?.visible !== false) || selected.sglocReference ? <div className="grid gap-3 sm:grid-cols-2">
               {selected.osNumber !== null && fieldDefinitions.find((field) => field.field_key === "os_number")?.visible !== false && <Detail label="O.S Fornecedor" value={String(selected.osNumber)} />}
               {selected.sglocReference && <Detail label="ID SGLOC" value={selected.sglocReference} />}
@@ -849,6 +860,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
       </Dialog>
       <ChangeLogDialog open={logOpen} onOpenChange={setLogOpen} onPlateClick={openVehicle} />
       <Toaster richColors position="bottom-right" />
+      {currentUser.role === "master" && <TrashDialog open={trashOpen} onOpenChange={setTrashOpen} onRestored={() => void loadAppointments()} />}
       {currentUser.role === "master" && <AgendaSettings open={settingsOpen} onOpenChange={setSettingsOpen} statuses={statuses} fields={fieldDefinitions} currentUserId={currentUser.id} onRefresh={async () => { await loadConfig(); await loadAppointments(); }} />}
     </div>
   );
