@@ -56,6 +56,8 @@ import { periodRange, weekRange, pendingDeliveries, type PeriodPreset } from "@/
 import { ContactRegister } from "@/components/contact-register";
 import { AgendaSettings } from "@/components/agenda-settings";
 import { importRowSkipReason, isEmergency, normalizeDate, normalizePlate, normalizeTime, parseKm, safeText, sglocExtras, sglocStateLabels, stripHtml } from "@/lib/normalize";
+import { DASH, EMPTY_OPTION, NO_DATE_GROUP, clampPage, compareDateTime, compareText, countBy, dash, exportHeaders, exportRows, foldedOptions, formatDateBR, groupWeek, inPeriod, matchesFilter, safeAverage, serviceCategory, textMatches, toCsv, buildImportRecords, dropExistingReferences } from "@/lib/agenda-safety";
+import { SectionBoundary } from "@/components/section-boundary";
 import { customValues, statusColors, type FieldDefinition, type StatusOption, type CustomValues } from "@/lib/agenda-config";
 
 type Appointment = {
@@ -175,24 +177,6 @@ function parseTime(value: unknown): string {
   return normalizeTime(value);
 }
 
-function serviceCategory(issue: string) {
-  const text = issue.toLocaleUpperCase("pt-BR");
-  if (text.includes("FREIO")) return "Freios";
-  if (text.includes("SUSPENS")) return "Suspensão";
-  if (text.includes("PNEU") || text.includes("ALINH") || text.includes("BALANCE")) return "Pneus";
-  if (text.includes("REVIS") || text.includes("MANUTEN")) return "Revisão";
-  return "Corretiva";
-}
-
-function countBy(data: Appointment[], getter: (item: Appointment) => string) {
-  const counts = new Map<string, number>();
-  data.forEach((item) => {
-    const key = getter(item) || "Não informado";
-    counts.set(key, (counts.get(key) ?? 0) + 1);
-  });
-  return [...counts].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
-}
-
 function FilterSelect({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) {
   return (
     <label className="relative min-w-44 flex-1">
@@ -206,11 +190,11 @@ function FilterSelect({ label, value, options, onChange }: { label: string; valu
   );
 }
 
-function ChartPanel({ title, subtitle, children, className }: { title: string; subtitle: string; children: React.ReactNode; className?: string }) {
+function ChartPanel({ title, subtitle, children, className, empty }: { title: string; subtitle: string; children: React.ReactNode; className?: string; empty?: boolean }) {
   return (
     <section className={cn("rounded-lg border bg-card p-5 shadow-sm", className)}>
       <div className="mb-5"><h3 className="font-semibold text-card-foreground">{title}</h3><p className="mt-1 text-xs text-muted-foreground">{subtitle}</p></div>
-      <div className="h-64 w-full">{children}</div>
+      <div className="h-64 w-full">{empty ? <div className="grid h-full place-items-center rounded-md border border-dashed text-sm text-muted-foreground">Sem dados no período</div> : children}</div>
     </section>
   );
 }
@@ -349,7 +333,8 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
 
   async function loadAppointments() {
     const { data, error } = await supabase.from("appointments").select(rowColumns).order("date").order("time");
-    if (error) { setMessage("Não foi possível carregar a agenda."); return; }
+    if (error) { setLoadError("Não foi possível carregar a agenda. Verifique sua conexão e tente de novo."); return; }
+    setLoadError("");
     const rows = (data ?? []).map(fromRow);
     setAppointments(rows);
     void loadCompletionLogs(rows);
@@ -360,47 +345,45 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
       supabase.from("status_options").select("*").order("sort_order").order("created_at"),
       supabase.from("custom_field_definitions").select("*").order("sort_order").order("created_at"),
     ]);
-    if (statusResult.error || fieldResult.error) { setMessage("Não foi possível carregar as configurações da agenda."); return; }
+    if (statusResult.error || fieldResult.error) { setLoadError("Não foi possível carregar as configurações da agenda. Tente de novo."); return; }
     setStatuses(statusResult.data ?? []);
     setFieldDefinitions(fieldResult.data ?? []);
   }
   useEffect(() => { void loadConfig(); void loadAppointments(); }, []);
   useEffect(() => { if (statuses.length) void loadCompletionLogs(appointments); }, [completion]);
 
-  const option = (key: keyof Appointment) => [...new Set(appointments.map((item) => String(item[key])).filter(Boolean))].sort();
+  const option = (key: keyof Appointment) => foldedOptions(appointments.map((item) => item[key]));
   const filtered = useMemo(() => appointments.filter((item) => {
-    const q = search.toLocaleLowerCase("pt-BR");
     const qPlate = normalizePlate(search);
-    const hit = !q || (qPlate !== "" && item.plate.includes(qPlate)) || [item.plate, item.brand, item.contactNumber, item.contact, item.issue, item.model, ...fieldDefinitions.filter((field) => field.storage === "custom" && ["text", "textarea"].includes(field.field_type)).map((field) => item.customFields[field.field_key] ?? "")].some((value) => value.toLocaleLowerCase("pt-BR").includes(q));
-    return hit && (!contact || item.contact === contact) && (!workshop || item.workshop === workshop) && (!model || item.model === model) && (!operator || item.operator === operator) && (!startDate || item.date >= startDate) && (!endDate || item.date <= endDate) && (!reworksOnly || Boolean(item.reworkOf));
+    const hit = !search.trim() || (qPlate !== "" && item.plate.includes(qPlate)) || textMatches(search, [item.plate, item.brand, item.contactNumber, item.contact, item.issue, item.model, item.workshop, item.note, ...fieldDefinitions.filter((field) => field.storage === "custom" && ["text", "textarea"].includes(field.field_type)).map((field) => item.customFields[field.field_key])]);
+    return hit && matchesFilter(item.contact, contact) && matchesFilter(item.workshop, workshop) && matchesFilter(item.model, model) && matchesFilter(item.operator, operator) && inPeriod(item.date, startDate, endDate) && (!reworksOnly || Boolean(item.reworkOf));
   }), [appointments, contact, endDate, model, operator, reworksOnly, search, startDate, workshop, fieldDefinitions]);
 
   const sorted = useMemo(() => [...filtered].sort((a, b) => {
     if (sort.key === "priority") return comparePriority(a, b, today, completion) * (sort.asc ? 1 : -1);
-    const first = sort.key === "date" ? `${a.date}${a.time}` : String(a[sort.key]);
-    const second = sort.key === "date" ? `${b.date}${b.time}` : String(b[sort.key]);
-    return first.localeCompare(second, "pt-BR", { numeric: true }) * (sort.asc ? 1 : -1);
+    if (sort.key === "date") return compareDateTime(a, b, sort.asc);
+    return compareText(a[sort.key], b[sort.key], sort.asc);
   }), [filtered, sort, today, completion]);
   const pageSize = 8;
-  const pages = Math.max(1, Math.ceil(sorted.length / pageSize));
-  const pageRows = sorted.slice((page - 1) * pageSize, page * pageSize);
+  const { pages, current: currentPage } = clampPage(page, sorted.length, pageSize);
+  const pageRows = sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const visibleWeek = weekRange(today);
   const selectedWeek = startDate && endDate && (new Date(`${endDate}T12:00:00Z`).getTime() - new Date(`${startDate}T12:00:00Z`).getTime()) <= 6 * 86400000 ? weekRange(startDate) : visibleWeek;
-  const weeklyRows = filtered.filter((item) => item.date >= selectedWeek.start && item.date <= selectedWeek.end);
-  const daily = days.map((name, index) => ({ name: name.slice(0, 3), value: weeklyRows.filter((item) => localDate(item.date).getDay() === index + 1).length }));
+  const week = groupWeek(filtered, selectedWeek.start, selectedWeek.end);
+  const daily = days.map((name, index) => ({ name: name.slice(0, 3), value: week.days[index]?.length ?? 0 }));
   const pendingToday = pendingDeliveries(appointments, today, today, completion);
   const pendingWeek = pendingDeliveries(appointments, visibleWeek.start, visibleWeek.end, completion);
-  const hourly = countBy(filtered, (item) => item.time).sort((a, b) => a.name.localeCompare(b.name));
+  const hourly = countBy(filtered, (item) => normalizeTime(item.time)).sort((a, b) => a.name === DASH ? 1 : b.name === DASH ? -1 : a.name.localeCompare(b.name));
   const workshops = countBy(filtered, (item) => item.workshop).slice(0, 6);
   const contacts = countBy(filtered, (item) => item.contact).slice(0, 7);
   const services = countBy(filtered, (item) => serviceCategory(item.issue));
   const models = countBy(filtered, (item) => item.model).slice(0, 6);
-  const uniqueVehicles = new Set(filtered.map((item) => item.plate)).size;
-  const uniqueContacts = new Set(filtered.map((item) => item.contact)).size;
-  const uniqueWorkshops = new Set(filtered.map((item) => item.workshop).filter(Boolean)).size;
-  const usedDays = new Set(filtered.map((item) => item.date)).size;
-  const average = usedDays ? filtered.length / usedDays : 0;
+  const uniqueVehicles = new Set(filtered.map((item) => item.plate).filter(Boolean)).size;
+  const uniqueContacts = countBy(filtered.filter((item) => safeText(item.contact)), (item) => item.contact).length;
+  const uniqueWorkshops = countBy(filtered.filter((item) => safeText(item.workshop)), (item) => item.workshop).length;
+  const usedDays = new Set(filtered.map((item) => normalizeDate(item.date)).filter(Boolean)).size;
+  const average = safeAverage(filtered.filter((item) => normalizeDate(item.date)).length, usedDays);
 
   function resetFilters() {
     setSearch(""); setContact(""); setWorkshop(""); setModel(""); setOperator(""); setPeriodPreset("week"); const range = periodRange("week", today); setStartDate(range.start); setEndDate(range.end); setReworksOnly(false); setPage(1);
@@ -465,6 +448,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   }
 
   const [newUrgent, setNewUrgent] = useState(false);
+  const [loadError, setLoadError] = useState("");
   const [extraColumns, setExtraColumns] = useState(false);
   async function createAppointment(fields: Partial<AppointmentFields>): Promise<boolean> {
     const date = fields.date?.trim();
@@ -549,23 +533,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
       const hasDeadline = columns.includes("Previsão de Entrega");
       const { data: userData } = await supabase.auth.getUser();
       const createdBy = userData.user?.id ?? null;
-      const cell = (row: Record<string, unknown>, column: string) => stripHtml(row[column]);
-      let skippedEmpty = 0;
-      let skippedExisting = 0;
-      const candidates: TablesInsert<"appointments">[] = [];
-      for (const row of rows) {
-        if (importRowSkipReason(row)) { skippedEmpty++; continue; }
-        const deadline = hasDeadline ? normalizeDate(row["Previsão de Entrega"]) : null;
-        const extras = sglocExtras(row);
-        candidates.push({
-          sheet_id: cell(row, "ID"), registered_at: normalizeDate(row["Data Cadastro"]), date: normalizeDate(row["Data Atendimento"]),
-          time: normalizeTime(row["Hora"]), plate: normalizePlate(cell(row, "Placa")), store: cell(row, "Loja"), model: cell(row, "Modelo"),
-          contact: cell(row, "Contato"), workshop: cell(row, "Local/Oficina"), issue: cell(row, "Problemas Relatado"),
-          note: cell(row, "Observação"), operator: cell(row, "Operador"), external_order: cell(row, "O.S Externa"),
-          status: "", created_by: createdBy, original_deadline: deadline, current_deadline: deadline,
-          os_number: extras.os_number, schedule_type: extras.schedule_type, sgloc_reference: extras.sgloc_reference,
-        });
-      }
+      const { records: candidates, skippedEmpty } = buildImportRecords(rows, createdBy, hasDeadline);
       const refs = [...new Set(candidates.map((item) => item.sgloc_reference).filter((ref): ref is string => Boolean(ref)))];
       const existing = new Set<string>();
       for (let start = 0; start < refs.length; start += 200) {
@@ -573,12 +541,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
         if (error) throw new Error("Não foi possível conferir os IDs do SGLOC já cadastrados.");
         for (const item of data ?? []) if (item.sgloc_reference) existing.add(item.sgloc_reference);
       }
-      const records = candidates.filter((item) => {
-        if (!item.sgloc_reference) return true;
-        if (existing.has(item.sgloc_reference)) { skippedExisting++; return false; }
-        existing.add(item.sgloc_reference);
-        return true;
-      });
+      const { kept: records, skippedExisting } = dropExistingReferences(candidates, existing);
       if (records.length) {
         const { error } = await supabase.from("appointments").insert(records);
         if (error) throw new Error(error.code === "23505" ? "Outro usuário cadastrou um ID do SGLOC desta planilha ao mesmo tempo. Importe novamente." : "Não foi possível gravar a agenda importada no banco.");
@@ -590,10 +553,10 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
 
   function exportFile(kind: "csv" | "xlsx") {
     import("xlsx").then((XLSX) => {
-       const rows = sorted.map((item) => ({ ID: item.id, "Data Atendimento": item.date, Hora: item.time, Placa: item.plate, Situação: item.status || "Não atualizada", Modelo: item.model, Contato: item.contact, "Local/Oficina": item.workshop, "Problemas Relatado": item.issue, Observação: item.note, Operador: item.operator }));
-      const sheet = XLSX.utils.json_to_sheet(rows);
+      const rows = exportRows(sorted);
+      const sheet = XLSX.utils.json_to_sheet(rows, { header: exportHeaders });
       if (kind === "csv") {
-        const blob = new Blob(["\ufeff", XLSX.utils.sheet_to_csv(sheet)], { type: "text/csv;charset=utf-8" });
+        const blob = new Blob(["\ufeff", toCsv(rows, exportHeaders)], { type: "text/csv;charset=utf-8" });
         const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = "agenda-filtrada.csv"; link.click(); URL.revokeObjectURL(link.href);
       } else {
         const book = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(book, sheet, "Agenda"); XLSX.writeFile(book, "agenda-filtrada.xlsx");
@@ -688,22 +651,24 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const orderedDates = appointments.map((item) => item.date).filter(Boolean).sort();
   const firstDate = orderedDates[0];
   const lastDate = orderedDates.at(-1);
-  const loadedPeriod = firstDate && lastDate ? `${fullDate.format(localDate(firstDate))} — ${fullDate.format(localDate(lastDate))}` : "Sem dados";
+  const loadedPeriod = firstDate && lastDate ? `${formatDateBR(firstDate)} — ${formatDateBR(lastDate)}` : "Sem dados";
   const selectedOriginal = selected?.reworkOf ? appointments.find((item) => item.dbId === selected.reworkOf) : undefined;
   const kpiDetails = (() => {
-    if (kpiOpen === "Agendamentos") return sorted.map((item) => ({ key: item.dbId, title: item.plate || "Sem placa", detail: `${item.date ? fullDate.format(localDate(item.date)) : "Sem data"} · ${item.status || "Não atualizada"}` }));
-    if (kpiOpen === "Retrabalhos no período") return sorted.filter((item) => item.reworkOf).map((item) => ({ key: item.dbId, title: item.plate || "Sem placa", detail: `${item.date ? fullDate.format(localDate(item.date)) : "Sem data"} · ${item.status || "Não atualizada"}` }));
+    if (kpiOpen === "Agendamentos") return sorted.map((item) => ({ key: item.dbId, title: item.plate || "Sem placa", detail: `${formatDateBR(item.date)} · ${item.status || "Não atualizada"}` }));
+    if (kpiOpen === "Retrabalhos no período") return sorted.filter((item) => item.reworkOf).map((item) => ({ key: item.dbId, title: item.plate || "Sem placa", detail: `${formatDateBR(item.date)} · ${item.status || "Não atualizada"}` }));
     if (kpiOpen === "Veículos únicos") return countBy(filtered, (item) => item.plate).map((row) => ({ key: row.name, title: row.name, detail: `${row.value} agendamento(s)` }));
     if (kpiOpen === "Clientes atendidos") {
-      return [...new Set(filtered.map((item) => item.contact))].sort().map((contact) => {
-        const rows = filtered.filter((item) => item.contact === contact);
-        return { key: contact, title: contact || "Não informado", detail: `${rows.length} agendamento(s) · ${new Set(rows.map((item) => item.plate)).size} veículo(s)` };
+      return foldedOptions(filtered.map((item) => item.contact)).map((contact) => {
+        const rows = filtered.filter((item) => matchesFilter(item.contact, contact));
+        return { key: contact, title: contact === EMPTY_OPTION ? DASH : contact, detail: `${rows.length} agendamento(s) · ${new Set(rows.map((item) => item.plate)).size} veículo(s)` };
       });
     }
     if (kpiOpen === "Oficinas acionadas") return countBy(filtered.filter((item) => item.workshop), (item) => item.workshop).map((row) => ({ key: row.name, title: row.name, detail: `${row.value} agendamento(s)` }));
-    if (kpiOpen === "Média por dia") return countBy(filtered.filter((item) => item.date), (item) => item.date).sort((a, b) => a.name.localeCompare(b.name)).map((row) => ({ key: row.name, title: fullDate.format(localDate(row.name)), detail: `${row.value} agendamento(s)` }));
+    if (kpiOpen === "Média por dia") return countBy(filtered.filter((item) => normalizeDate(item.date)), (item) => item.date).sort((a, b) => a.name.localeCompare(b.name)).map((row) => ({ key: row.name, title: formatDateBR(row.name), detail: `${row.value} agendamento(s)` }));
     return [];
   })();
+
+  const renderCard = (item: Appointment) => (<article key={item.dbId} className="overflow-hidden rounded-md border bg-card shadow-sm transition hover:-translate-y-0.5 hover:border-accent"><Button variant="ghost" onClick={() => setSelected(item)} className="h-auto w-full justify-start rounded-none p-3 text-left hover:bg-transparent"><span className="min-w-0 flex-1"><span className="flex items-center justify-between"><span className="text-xs font-bold text-accent-foreground">{item.time}</span><span className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold", serviceCategory(item.issue) === "Revisão" ? "bg-service-review text-service-review-foreground" : "bg-service-repair text-service-repair-foreground")}>{serviceCategory(item.issue)}</span></span><span className="mt-2 block font-bold tracking-wide">{item.plate}</span><span className="block truncate text-xs font-normal text-muted-foreground">{item.model}</span><span className="mt-2 block truncate text-xs font-medium">{item.contact}</span><span className="mt-1 line-clamp-2 whitespace-normal text-[11px] font-normal leading-4 text-muted-foreground">{item.issue}</span><span className="mt-2 flex flex-wrap gap-1">{item.priorityUrgent && item.status !== completion && <UrgentBadge />}{item.reworkOf && <ReworkBadge />}{isEmergency(item.scheduleType) && <EmergencyBadge />}<DeadlineBadge item={item} completedAt={completedAtById[item.dbId]} today={today} completion={completion} /></span></span></Button><label className="relative block border-t"><span className="sr-only">Situação de {item.plate}</span><select value={item.status} disabled={Boolean(editBlockReason(item, currentUser.role))} title={editBlockReason(item, currentUser.role) ?? undefined} onChange={(event) => updateStatus(item.dbId, event.target.value as ServiceStatus)} className={cn("disabled:cursor-not-allowed disabled:opacity-70 h-9 w-full appearance-none border-0 px-3 pr-8 text-xs font-semibold outline-none focus:ring-2 focus:ring-inset focus:ring-ring", statusClasses(item.status, statuses))}><option value="">Atualizar situação</option>{serviceStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select><ChevronDown className="pointer-events-none absolute right-3 top-2.5 size-4 opacity-70" /></label></article>);
 
   return (
     <div className={cn("min-h-screen bg-background text-foreground", dark && "dark")}>
@@ -729,6 +694,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
           <div className="rounded-md border bg-card px-4 py-2 text-right"><p className="text-xs text-muted-foreground">Período carregado</p><p className="text-sm font-semibold">{loadedPeriod}</p></div>
         </div>
 
+        {loadError && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"><span>{loadError}</span><Button variant="outline" size="sm" onClick={() => { void loadConfig(); void loadAppointments(); }}>Tentar de novo</Button></div>}
         {message && <div className="flex items-center justify-between rounded-md border border-accent bg-accent/30 px-4 py-3 text-sm"><span>{message}</span><Button variant="ghost" size="icon" onClick={() => setMessage("")}><X /></Button></div>}
         {batchResult && <section aria-label="Resultado da atualização em lote" className="space-y-2 border-y py-4 text-sm">
           <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-semibold">Atualização em lote concluída</h2><Button variant="ghost" size="icon" aria-label="Fechar resultado" onClick={() => setBatchResult(null)}><X /></Button></div>
@@ -757,30 +723,31 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
           {kpis.map(({ label, value, detail, icon: Icon }) => <Button key={label} variant="outline" onClick={() => setKpiOpen(label)} className="h-auto min-h-28 min-w-0 flex-col items-stretch justify-start whitespace-normal rounded-md bg-card p-4 text-left shadow-sm"><span className="mb-4 flex w-full items-center justify-between gap-2"><span className="text-xs font-medium text-muted-foreground">{label}</span><Icon className="size-4 shrink-0 text-accent-foreground" /></span><span className="text-3xl font-bold tabular-nums">{value}</span><span className="mt-1 text-xs font-normal text-muted-foreground">{detail}</span></Button>)}
         </section>
 
-        <section>
+        <SectionBoundary name="a grade semanal"><section>
           <div className="mb-3 flex items-end justify-between"><div><h2 className="text-lg font-semibold">Grade semanal</h2><p className="text-sm text-muted-foreground">{periodPreset === "month" || (startDate && endDate && (new Date(`${endDate}T12:00:00Z`).getTime() - new Date(`${startDate}T12:00:00Z`).getTime()) > 6 * 86400000) ? "Semana atual no período; consulte a agenda detalhada para todos os dias." : "Clique em um veículo para abrir a ficha."}</p></div></div>
           <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
             {days.map((day, index) => {
-              const rows = weeklyRows.filter((item) => localDate(item.date).getDay() === index + 1).sort((a,b) => comparePriority(a, b, today, completion));
-               return <div key={day} className="min-h-48 rounded-lg border bg-muted/30 p-3"><div className="mb-3 flex items-center justify-between"><div><h3 className="text-sm font-semibold">{day}</h3><p className="text-xs text-muted-foreground">{dayMonth.format(localDate(new Date(new Date(`${selectedWeek.start}T12:00:00Z`).getTime() + index * 86400000).toISOString().slice(0, 10)))}</p></div><span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-semibold">{rows.length}</span></div><div className="space-y-2">{rows.map((item) => <article key={item.dbId} className="overflow-hidden rounded-md border bg-card shadow-sm transition hover:-translate-y-0.5 hover:border-accent"><Button variant="ghost" onClick={() => setSelected(item)} className="h-auto w-full justify-start rounded-none p-3 text-left hover:bg-transparent"><span className="min-w-0 flex-1"><span className="flex items-center justify-between"><span className="text-xs font-bold text-accent-foreground">{item.time}</span><span className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold", serviceCategory(item.issue) === "Revisão" ? "bg-service-review text-service-review-foreground" : "bg-service-repair text-service-repair-foreground")}>{serviceCategory(item.issue)}</span></span><span className="mt-2 block font-bold tracking-wide">{item.plate}</span><span className="block truncate text-xs font-normal text-muted-foreground">{item.model}</span><span className="mt-2 block truncate text-xs font-medium">{item.contact}</span><span className="mt-1 line-clamp-2 whitespace-normal text-[11px] font-normal leading-4 text-muted-foreground">{item.issue}</span><span className="mt-2 flex flex-wrap gap-1">{item.priorityUrgent && item.status !== completion && <UrgentBadge />}{item.reworkOf && <ReworkBadge />}{isEmergency(item.scheduleType) && <EmergencyBadge />}<DeadlineBadge item={item} completedAt={completedAtById[item.dbId]} today={today} completion={completion} /></span></span></Button><label className="relative block border-t"><span className="sr-only">Situação de {item.plate}</span><select value={item.status} disabled={Boolean(editBlockReason(item, currentUser.role))} title={editBlockReason(item, currentUser.role) ?? undefined} onChange={(event) => updateStatus(item.dbId, event.target.value as ServiceStatus)} className={cn("disabled:cursor-not-allowed disabled:opacity-70 h-9 w-full appearance-none border-0 px-3 pr-8 text-xs font-semibold outline-none focus:ring-2 focus:ring-inset focus:ring-ring", statusClasses(item.status, statuses))}><option value="">Atualizar situação</option>{serviceStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select><ChevronDown className="pointer-events-none absolute right-3 top-2.5 size-4 opacity-70" /></label></article>)}</div></div>;
+              const rows = [...(week.days[index] ?? [])].sort((a,b) => comparePriority(a, b, today, completion));
+               return <div key={day} className="min-h-48 rounded-lg border bg-muted/30 p-3"><div className="mb-3 flex items-center justify-between"><div><h3 className="text-sm font-semibold">{day}</h3><p className="text-xs text-muted-foreground">{dayMonth.format(localDate(new Date(new Date(`${selectedWeek.start}T12:00:00Z`).getTime() + index * 86400000).toISOString().slice(0, 10)))}</p></div><span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-semibold">{rows.length}</span></div><div className="space-y-2">{rows.map(renderCard)}</div></div>;
             })}
           </div>
-        </section>
+          {week.noDate.length > 0 && <div className="mt-3 rounded-lg border border-dashed bg-muted/30 p-3"><div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-semibold">{NO_DATE_GROUP}</h3><span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-semibold">{week.noDate.length}</span></div><div className="grid gap-2 md:grid-cols-3 xl:grid-cols-6">{week.noDate.map(renderCard)}</div></div>}
+        </section></SectionBoundary>
 
-        <section><h2 className="mb-3 text-lg font-semibold">Indicadores da operação</h2><div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-          <ChartPanel title="Atendimentos por dia" subtitle="Volume distribuído na semana"><ResponsiveContainer width="100%" height="100%"><BarChart data={daily}><CartesianGrid vertical={false} stroke="var(--border)" /><XAxis dataKey="name" tickLine={false} axisLine={false} /><YAxis allowDecimals={false} tickLine={false} axisLine={false} /><Tooltip content={<CustomTooltip />} /><Bar dataKey="value" fill="var(--chart-1)" radius={[4,4,0,0]} /></BarChart></ResponsiveContainer></ChartPanel>
-          <ChartPanel title="Faixas de horário" subtitle="Concentração ao longo da manhã"><ResponsiveContainer width="100%" height="100%"><AreaChart data={hourly}><CartesianGrid vertical={false} stroke="var(--border)" /><XAxis dataKey="name" tickLine={false} axisLine={false} /><YAxis allowDecimals={false} tickLine={false} axisLine={false} /><Tooltip content={<CustomTooltip />} /><Area type="monotone" dataKey="value" stroke="var(--chart-2)" fill="var(--chart-2)" fillOpacity={0.16} strokeWidth={2} /></AreaChart></ResponsiveContainer></ChartPanel>
-          <ChartPanel title="Volume por oficina" subtitle="Prestadores mais acionados"><ResponsiveContainer width="100%" height="100%"><BarChart data={workshops} layout="vertical" margin={{ left: 8 }}><CartesianGrid horizontal={false} stroke="var(--border)" /><XAxis type="number" allowDecimals={false} hide /><YAxis dataKey="name" type="category" width={118} tickLine={false} axisLine={false} tick={{ fontSize: 10 }} /><Tooltip content={<CustomTooltip />} /><Bar dataKey="value" fill="var(--chart-3)" radius={[0,4,4,0]} /></BarChart></ResponsiveContainer></ChartPanel>
-          <ChartPanel title="Atendimentos por contato" subtitle="Participação dos órgãos atendidos"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={contacts} dataKey="value" nameKey="name" innerRadius={48} outerRadius={82} paddingAngle={2}>{contacts.map((item,index) => <Cell key={item.name} fill={palette[index % palette.length]} />)}</Pie><Tooltip content={<CustomTooltip />} /></PieChart></ResponsiveContainer></ChartPanel>
-          <ChartPanel title="Categorias de serviço" subtitle="Classificação pelos problemas relatados"><ResponsiveContainer width="100%" height="100%"><BarChart data={services}><CartesianGrid vertical={false} stroke="var(--border)" /><XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fontSize: 10 }} /><YAxis allowDecimals={false} tickLine={false} axisLine={false} /><Tooltip content={<CustomTooltip />} /><Bar dataKey="value" fill="var(--chart-4)" radius={[4,4,0,0]} /></BarChart></ResponsiveContainer></ChartPanel>
-          <ChartPanel title="Top modelos" subtitle="Veículos com maior demanda"><ResponsiveContainer width="100%" height="100%"><BarChart data={models} layout="vertical"><CartesianGrid horizontal={false} stroke="var(--border)" /><XAxis type="number" allowDecimals={false} hide /><YAxis dataKey="name" type="category" width={112} tickLine={false} axisLine={false} tick={{ fontSize: 10 }} /><Tooltip content={<CustomTooltip />} /><Bar dataKey="value" fill="var(--chart-5)" radius={[0,4,4,0]} /></BarChart></ResponsiveContainer></ChartPanel>
-        </div></section>
+        <SectionBoundary name="os gráficos"><section><h2 className="mb-3 text-lg font-semibold">Indicadores da operação</h2><div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+          <ChartPanel empty={daily.every((d) => !d.value)} title="Atendimentos por dia" subtitle="Volume distribuído na semana"><ResponsiveContainer width="100%" height="100%"><BarChart data={daily}><CartesianGrid vertical={false} stroke="var(--border)" /><XAxis dataKey="name" tickLine={false} axisLine={false} /><YAxis allowDecimals={false} tickLine={false} axisLine={false} /><Tooltip content={<CustomTooltip />} /><Bar dataKey="value" fill="var(--chart-1)" radius={[4,4,0,0]} /></BarChart></ResponsiveContainer></ChartPanel>
+          <ChartPanel empty={!hourly.length} title="Faixas de horário" subtitle="Concentração ao longo da manhã"><ResponsiveContainer width="100%" height="100%"><AreaChart data={hourly}><CartesianGrid vertical={false} stroke="var(--border)" /><XAxis dataKey="name" tickLine={false} axisLine={false} /><YAxis allowDecimals={false} tickLine={false} axisLine={false} /><Tooltip content={<CustomTooltip />} /><Area type="monotone" dataKey="value" stroke="var(--chart-2)" fill="var(--chart-2)" fillOpacity={0.16} strokeWidth={2} /></AreaChart></ResponsiveContainer></ChartPanel>
+          <ChartPanel empty={!workshops.length} title="Volume por oficina" subtitle="Prestadores mais acionados"><ResponsiveContainer width="100%" height="100%"><BarChart data={workshops} layout="vertical" margin={{ left: 8 }}><CartesianGrid horizontal={false} stroke="var(--border)" /><XAxis type="number" allowDecimals={false} hide /><YAxis dataKey="name" type="category" width={118} tickLine={false} axisLine={false} tick={{ fontSize: 10 }} /><Tooltip content={<CustomTooltip />} /><Bar dataKey="value" fill="var(--chart-3)" radius={[0,4,4,0]} /></BarChart></ResponsiveContainer></ChartPanel>
+          <ChartPanel empty={!contacts.length} title="Atendimentos por contato" subtitle="Participação dos órgãos atendidos"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={contacts} dataKey="value" nameKey="name" innerRadius={48} outerRadius={82} paddingAngle={2}>{contacts.map((item,index) => <Cell key={item.name} fill={palette[index % palette.length]} />)}</Pie><Tooltip content={<CustomTooltip />} /></PieChart></ResponsiveContainer></ChartPanel>
+          <ChartPanel empty={!services.length} title="Categorias de serviço" subtitle="Classificação pelos problemas relatados"><ResponsiveContainer width="100%" height="100%"><BarChart data={services}><CartesianGrid vertical={false} stroke="var(--border)" /><XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fontSize: 10 }} /><YAxis allowDecimals={false} tickLine={false} axisLine={false} /><Tooltip content={<CustomTooltip />} /><Bar dataKey="value" fill="var(--chart-4)" radius={[4,4,0,0]} /></BarChart></ResponsiveContainer></ChartPanel>
+          <ChartPanel empty={!models.length} title="Top modelos" subtitle="Veículos com maior demanda"><ResponsiveContainer width="100%" height="100%"><BarChart data={models} layout="vertical"><CartesianGrid horizontal={false} stroke="var(--border)" /><XAxis type="number" allowDecimals={false} hide /><YAxis dataKey="name" type="category" width={112} tickLine={false} axisLine={false} tick={{ fontSize: 10 }} /><Tooltip content={<CustomTooltip />} /><Bar dataKey="value" fill="var(--chart-5)" radius={[0,4,4,0]} /></BarChart></ResponsiveContainer></ChartPanel>
+        </div></section></SectionBoundary>
 
-        <section className="rounded-lg border bg-card shadow-sm">
+        <SectionBoundary name="a tabela"><section className="rounded-lg border bg-card shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4"><div><h2 className="font-semibold">Agenda detalhada</h2><p className="text-xs text-muted-foreground">{sorted.length} registros encontrados</p></div><div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" aria-pressed={extraColumns} onClick={() => setExtraColumns((value) => !value)}>{extraColumns ? "Ocultar colunas extras" : "Mostrar colunas extras"}</Button><Button variant="outline" size="sm" onClick={exportBatch}><Download /> Exportar para edição em lote</Button><Button variant="outline" size="sm" disabled={batchBusy} onClick={() => batchInputRef.current?.click()}><Upload /> {batchBusy ? "Atualizando…" : "Atualizar agenda em lote"}</Button><input ref={batchInputRef} type="file" accept=".xlsx" className="hidden" aria-label="Arquivo de atualização em lote" onChange={(event) => void importBatch(event.target.files?.[0])} /><Button variant="outline" size="sm" onClick={() => exportFile("csv")}><Download /> CSV</Button><Button variant="outline" size="sm" onClick={() => exportFile("xlsx")}><Download /> Excel</Button></div></div>
-           <div className="overflow-x-auto"><table className="w-full min-w-[1400px] text-sm"><thead className="bg-muted/60 text-left text-xs text-muted-foreground"><tr>{[["priority","Prioridade"],["id","ID"],["date","Atendimento"],["time","Hora"],["plate","Placa"],["status","Situação"],["currentDeadline","Prazo"],["model","Modelo"],["contact","Contato"],["workshop","Local/Oficina"],["issue","Problema relatado"],["note","Observação"],["operator","Operador"], ...(extraColumns ? [["brand","Marca"],["kmScheduled","KM"],["contactNumber","Telefone"],["osNumber","O.S Fornecedor"]] : [])].map(([key,label]) => <th key={key} className="px-4 py-3 font-medium"><Button variant="ghost" size="sm" className="h-auto p-0" onClick={() => changeSort(key as keyof Appointment | "priority")}>{label}<ArrowDownAZ className="size-3" /></Button></th>)}</tr></thead><tbody>{pageRows.map((item) => <tr key={item.dbId} onClick={() => setSelected(item)} className="cursor-pointer border-t hover:bg-muted/40"><td className="px-4 py-3">{item.priorityUrgent && item.status !== completion ? <UrgentBadge /> : <span className="text-xs text-muted-foreground">{["Urgente","Atrasado","Hoje","Futuro","Sem prazo"][priorityLevel(item, today, completion)]}</span>}</td><td className="px-4 py-3 font-mono text-xs">#{item.id}</td><td className="whitespace-nowrap px-4 py-3">{fullDate.format(localDate(item.date))}</td><td className="px-4 py-3 font-semibold">{item.time}</td><td className="px-4 py-3 font-bold">{item.plate}{item.reworkOf && <span className="mt-1 block"><ReworkBadge /></span>}{isEmergency(item.scheduleType) && <span className="mt-1 block"><EmergencyBadge /></span>}</td><td className="px-4 py-3"><span className={cn("whitespace-nowrap rounded border px-2 py-1 text-xs font-semibold", statusClasses(item.status, statuses))}>{item.status || "Não atualizada"}</span></td><td className="whitespace-nowrap px-4 py-3"><DeadlineBadge item={item} completedAt={completedAtById[item.dbId]} today={today} completion={completion} /></td><td className="max-w-48 truncate px-4 py-3">{item.model}</td><td className="px-4 py-3">{item.contact}</td><td className="max-w-52 truncate px-4 py-3">{item.workshop || "—"}</td><td className="max-w-72 truncate px-4 py-3 text-muted-foreground">{item.issue}</td><td className="max-w-36 truncate px-4 py-3">{item.note || "—"}</td><td className="whitespace-nowrap px-4 py-3 capitalize">{item.operator}</td>{extraColumns && <><td className="max-w-36 truncate px-4 py-3">{item.brand || "—"}</td><td className="whitespace-nowrap px-4 py-3">{item.kmScheduled ?? "—"}</td><td className="whitespace-nowrap px-4 py-3">{item.contactNumber || "—"}</td><td className="whitespace-nowrap px-4 py-3">{item.osNumber ?? "—"}</td></>}</tr>)}</tbody></table></div>
-          <div className="flex items-center justify-between border-t p-4"><p className="text-xs text-muted-foreground">Página {Math.min(page, pages)} de {pages}</p><div className="flex gap-2"><Button variant="outline" size="icon" disabled={page === 1} onClick={() => setPage((value) => Math.max(1,value-1))} aria-label="Página anterior"><ArrowLeft /></Button><Button variant="outline" size="icon" disabled={page === pages} onClick={() => setPage((value) => Math.min(pages,value+1))} aria-label="Próxima página"><ArrowRight /></Button></div></div>
-        </section>
+           <div className="overflow-x-auto"><table className="w-full min-w-[1400px] text-sm"><thead className="bg-muted/60 text-left text-xs text-muted-foreground"><tr>{[["priority","Prioridade"],["id","ID"],["date","Atendimento"],["time","Hora"],["plate","Placa"],["status","Situação"],["currentDeadline","Prazo"],["model","Modelo"],["contact","Contato"],["workshop","Local/Oficina"],["issue","Problema relatado"],["note","Observação"],["operator","Operador"], ...(extraColumns ? [["brand","Marca"],["kmScheduled","KM"],["contactNumber","Telefone"],["osNumber","O.S Fornecedor"]] : [])].map(([key,label]) => <th key={key} className="px-4 py-3 font-medium"><Button variant="ghost" size="sm" className="h-auto p-0" onClick={() => changeSort(key as keyof Appointment | "priority")}>{label}<ArrowDownAZ className="size-3" /></Button></th>)}</tr></thead><tbody>{pageRows.map((item) => <tr key={item.dbId} onClick={() => setSelected(item)} className="cursor-pointer border-t hover:bg-muted/40"><td className="px-4 py-3">{item.priorityUrgent && item.status !== completion ? <UrgentBadge /> : <span className="text-xs text-muted-foreground">{["Urgente","Atrasado","Hoje","Futuro","Sem prazo"][priorityLevel(item, today, completion)]}</span>}</td><td className="px-4 py-3 font-mono text-xs">#{item.id}</td><td className="whitespace-nowrap px-4 py-3">{formatDateBR(item.date)}</td><td className="px-4 py-3 font-semibold">{item.time}</td><td className="px-4 py-3 font-bold">{item.plate}{item.reworkOf && <span className="mt-1 block"><ReworkBadge /></span>}{isEmergency(item.scheduleType) && <span className="mt-1 block"><EmergencyBadge /></span>}</td><td className="px-4 py-3"><span className={cn("whitespace-nowrap rounded border px-2 py-1 text-xs font-semibold", statusClasses(item.status, statuses))}>{item.status || "Não atualizada"}</span></td><td className="whitespace-nowrap px-4 py-3"><DeadlineBadge item={item} completedAt={completedAtById[item.dbId]} today={today} completion={completion} /></td><td className="max-w-48 truncate px-4 py-3">{item.model}</td><td className="px-4 py-3">{item.contact}</td><td className="max-w-52 truncate px-4 py-3">{item.workshop || "—"}</td><td className="max-w-72 truncate px-4 py-3 text-muted-foreground">{item.issue}</td><td className="max-w-36 truncate px-4 py-3">{item.note || "—"}</td><td className="whitespace-nowrap px-4 py-3 capitalize">{item.operator}</td>{extraColumns && <><td className="max-w-36 truncate px-4 py-3">{item.brand || "—"}</td><td className="whitespace-nowrap px-4 py-3">{item.kmScheduled ?? "—"}</td><td className="whitespace-nowrap px-4 py-3">{item.contactNumber || "—"}</td><td className="whitespace-nowrap px-4 py-3">{item.osNumber ?? "—"}</td></>}</tr>)}</tbody></table></div>
+          <div className="flex items-center justify-between border-t p-4"><p className="text-xs text-muted-foreground">Página {currentPage} de {pages}</p><div className="flex gap-2"><Button variant="outline" size="icon" disabled={currentPage <= 1} onClick={() => setPage((value) => Math.max(1,value-1))} aria-label="Página anterior"><ArrowLeft /></Button><Button variant="outline" size="icon" disabled={currentPage >= pages} onClick={() => setPage((value) => Math.min(pages,value+1))} aria-label="Próxima página"><ArrowRight /></Button></div></div>
+        </section></SectionBoundary>
       </main>
 
       <Dialog open={Boolean(kpiOpen)} onOpenChange={(open) => { if (!open) setKpiOpen(null); }}>
@@ -798,27 +765,27 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
       </Dialog>
       <Dialog open={Boolean(reworkSource)} onOpenChange={(open) => { if (!open) setReworkSource(null); }}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-          <DialogHeader><DialogTitle>Registrar retrabalho</DialogTitle><DialogDescription>{reworkSource ? `Retorno de ${reworkSource.plate} • ${reworkSource.date ? fullDate.format(localDate(reworkSource.date)) : "Sem data"}` : ""}</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle>Registrar retrabalho</DialogTitle><DialogDescription>{reworkSource ? `Retorno de ${reworkSource.plate} • ${formatDateBR(reworkSource.date)}` : ""}</DialogDescription></DialogHeader>
           {reworkSource && <ReworkForm key={reworkSource.dbId} initial={{ date: "", time: "", plate: reworkSource.plate, model: reworkSource.model, contact: reworkSource.contact, workshop: reworkSource.workshop, operator: reworkSource.operator, reason: "" }} onSave={createRework} />}
         </DialogContent>
       </Dialog>
       <Dialog open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-          {selected && <>
+          {selected && <SectionBoundary name="a ficha do agendamento">
             <DialogHeader>
               <DialogTitle className="flex flex-wrap items-center gap-3"><span className="rounded-md bg-primary px-2 py-1 text-primary-foreground">{selected.plate}</span>{selected.model}{selected.priorityUrgent && selected.status !== completion && <UrgentBadge />}{selected.reworkOf && <ReworkBadge />}{isEmergency(selected.scheduleType) && <EmergencyBadge />}{(selected.sglocReference || selected.sglocSyncState !== "local_only") && <span className="inline-flex w-fit items-center rounded border bg-secondary px-2 py-0.5 text-[11px] font-semibold text-secondary-foreground">SGLOC: {sglocStateLabels[selected.sglocSyncState] ?? selected.sglocSyncState}</span>}</DialogTitle>
-              <DialogDescription>{selected.id ? `Agendamento #${selected.id} • ` : ""}{selected.date ? fullDate.format(localDate(selected.date)) : "Sem data"} às {selected.time}</DialogDescription>
+              <DialogDescription>{selected.id ? `Agendamento #${selected.id} • ` : ""}{formatDateBR(selected.date)} às {selected.time}</DialogDescription>
             </DialogHeader>
             {selected.reworkOf && <div className="space-y-2 border-b pb-4">
               <Detail label="Motivo do retorno" value={selected.reworkReason ?? ""} />
-              {selectedOriginal ? <Button variant="link" className="h-auto p-0 text-left whitespace-normal" onClick={() => openLinked(selectedOriginal)}>Agendamento original: {selectedOriginal.plate} • {selectedOriginal.date ? fullDate.format(localDate(selectedOriginal.date)) : "Sem data"}</Button> : <p className="text-sm text-muted-foreground">Agendamento original indisponível</p>}
+              {selectedOriginal ? <Button variant="link" className="h-auto p-0 text-left whitespace-normal" onClick={() => openLinked(selectedOriginal)}>Agendamento original: {selectedOriginal.plate} • {formatDateBR(selectedOriginal.date)}</Button> : <p className="text-sm text-muted-foreground">Agendamento original indisponível</p>}
             </div>}
-            {appointments.filter((item) => item.reworkOf === selected.dbId).map((child) => <div key={child.dbId} className="border-b pb-3"><Button variant="link" className="h-auto p-0 text-left whitespace-normal" onClick={() => openLinked(child)}>Gerou retrabalho em {child.date ? fullDate.format(localDate(child.date)) : "data não informada"} • {child.plate}</Button></div>)}
+            {appointments.filter((item) => item.reworkOf === selected.dbId).map((child) => <div key={child.dbId} className="border-b pb-3"><Button variant="link" className="h-auto p-0 text-left whitespace-normal" onClick={() => openLinked(child)}>Gerou retrabalho em {child.date ? formatDateBR(child.date) : "data não informada"} • {child.plate}</Button></div>)}
             <div className="space-y-3 border-b pb-4">
               <DeadlineBadge item={selected} completedAt={completedAtById[selected.dbId]} today={today} completion={completion} />
               <div className="grid gap-3 sm:grid-cols-2">
-                {selected.originalDeadline && selected.originalDeadline !== selected.currentDeadline && <Detail label="Prazo original" value={fullDate.format(localDate(selected.originalDeadline))} />}
-                {selected.currentDeadline ? <Detail label={selected.originalDeadline === selected.currentDeadline ? "Previsão de entrega" : "Prazo atual"} value={fullDate.format(localDate(selected.currentDeadline))} /> : <Detail label={selected.originalDeadline ? "Prazo atual" : "Previsão de entrega"} value="" />}
+                {selected.originalDeadline && selected.originalDeadline !== selected.currentDeadline && <Detail label="Prazo original" value={formatDateBR(selected.originalDeadline)} />}
+                {selected.currentDeadline ? <Detail label={selected.originalDeadline === selected.currentDeadline ? "Previsão de entrega" : "Prazo atual"} value={formatDateBR(selected.currentDeadline)} /> : <Detail label={selected.originalDeadline ? "Prazo atual" : "Previsão de entrega"} value="" />}
               </div>
             </div>
             <label><span className="mb-1.5 block text-xs font-medium uppercase text-muted-foreground">Situação do veículo</span>
@@ -835,10 +802,10 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
               {selected.osNumber !== null && fieldDefinitions.find((field) => field.field_key === "os_number")?.visible !== false && <Detail label="O.S Fornecedor" value={String(selected.osNumber)} />}
               {selected.sglocReference && <Detail label="ID SGLOC" value={selected.sglocReference} />}
             </div> : null}
-            <Detail label="Data de cadastro" value={selected.registeredAt ? fullDate.format(localDate(selected.registeredAt)) : ""} />
+            <Detail label="Data de cadastro" value={formatDateBR(selected.registeredAt)} />
             <ContactRegister key={selected.dbId} appointmentId={selected.dbId} userId={currentUser.id} />
             <AppointmentHistory appointmentId={selected.dbId} refreshKey={historyKey} customLabels={Object.fromEntries(fieldDefinitions.map((field) => [field.field_key, field.label]))} />
-          </>}
+          </SectionBoundary>}
         </DialogContent>
       </Dialog>
       <ChangeLogDialog open={logOpen} onOpenChange={setLogOpen} />
@@ -848,5 +815,5 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
 }
 
 function Detail({ label, value }: { label: string; value: string }) {
-  return <div><p className="text-xs font-medium uppercase text-muted-foreground">{label}</p><p className="mt-1 text-sm leading-6">{value || "Não informado"}</p></div>;
+  return <div><p className="text-xs font-medium uppercase text-muted-foreground">{label}</p><p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6">{dash(value)}</p></div>;
 }
