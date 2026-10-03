@@ -1,3 +1,4 @@
+import { formatDateTimeBR } from "@/lib/agenda-safety";
 import { useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,7 +29,7 @@ function LogLine({ row, withPlate }: { row: LogRow; withPlate?: boolean }) {
   return (
     <li className="rounded-md border bg-muted/30 p-3 text-sm">
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-        <span>{authorLabel(row.changed_by, row.profiles?.full_name)} • {dateTime.format(new Date(row.changed_at))}</span>
+        <span>{authorLabel(row.changed_by, row.profiles?.full_name)} • {formatDateTimeBR(row.changed_at)}</span>
         {withPlate && <span className="rounded bg-primary px-1.5 py-0.5 font-semibold text-primary-foreground">{row.appointments?.plate || "—"}</span>}
       </div>
       <p className="mt-1"><span className="font-semibold">{fieldLabels[row.field_changed] ?? row.field_changed}:</span>{" "}
