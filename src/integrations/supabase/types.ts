@@ -316,6 +316,7 @@ export type Database = {
           sgloc_email: string
           sgloc_user_code: string | null
           token: string
+          token_encrypted: boolean
           token_expires_at: string | null
           updated_at: string | null
           user_id: string
@@ -324,6 +325,7 @@ export type Database = {
           sgloc_email: string
           sgloc_user_code?: string | null
           token: string
+          token_encrypted?: boolean
           token_expires_at?: string | null
           updated_at?: string | null
           user_id: string
@@ -332,35 +334,78 @@ export type Database = {
           sgloc_email?: string
           sgloc_user_code?: string | null
           token?: string
+          token_encrypted?: boolean
           token_expires_at?: string | null
           updated_at?: string | null
           user_id?: string
         }
         Relationships: []
       }
+      sgloc_probe_runs: {
+        Row: {
+          error: string | null
+          http_status: number | null
+          id: string
+          latency_ms: number | null
+          ok: boolean
+          run_at: string
+          run_by: string | null
+          step: string
+          summary: Json
+        }
+        Insert: {
+          error?: string | null
+          http_status?: number | null
+          id?: string
+          latency_ms?: number | null
+          ok?: boolean
+          run_at?: string
+          run_by?: string | null
+          step: string
+          summary?: Json
+        }
+        Update: {
+          error?: string | null
+          http_status?: number | null
+          id?: string
+          latency_ms?: number | null
+          ok?: boolean
+          run_at?: string
+          run_by?: string | null
+          step?: string
+          summary?: Json
+        }
+        Relationships: []
+      }
       sgloc_settings: {
         Row: {
+          base_url: string | null
           enabled: boolean
           id: boolean
           interval_minutes: number
+          request_timeout_seconds: number
           updated_at: string | null
           updated_by: string | null
           window_days_ahead: number
           window_days_back: number
         }
         Insert: {
+          base_url?: string | null
           enabled?: boolean
           id?: boolean
           interval_minutes?: number
+          request_timeout_seconds?: number
           updated_at?: string | null
           updated_by?: string | null
           window_days_ahead?: number
           window_days_back?: number
         }
         Update: {
+          base_url?: string | null
           enabled?: boolean
           id?: boolean
           interval_minutes?: number
+          request_timeout_seconds?: number
           updated_at?: string | null
           updated_by?: string | null
           window_days_ahead?: number

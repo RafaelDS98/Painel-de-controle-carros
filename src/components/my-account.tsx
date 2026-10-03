@@ -3,6 +3,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SglocAccountSection } from "@/components/sgloc-account";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export function isWeakPassword(value: string) {
@@ -61,6 +62,7 @@ export function MyAccountDialog({ open, onOpenChange, userId, email, name, onSav
         <Button type="submit" size="sm" disabled={busy}>Alterar senha</Button></form>
       {msg.error && <p role="alert" className="text-sm text-destructive">{msg.error}</p>}
       {msg.ok && <p role="status" className="text-sm text-muted-foreground">{msg.ok}</p>}
+      {open && <SglocAccountSection />}
     </DialogContent>
   </Dialog>;
 }
