@@ -62,6 +62,9 @@ import { SearchableSelect } from "@/components/searchable-select";
 import { weekdayIndex } from "@/lib/agenda-safety";
 import { SectionBoundary } from "@/components/section-boundary";
 import { customValues, statusColors, type FieldDefinition, type StatusOption, type CustomValues } from "@/lib/agenda-config";
+import { IndicatorDetails, type IndicatorGroup, type IndicatorAppointment } from "@/components/indicator-details";
+import { toast } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
 
 type Appointment = {
   dbId: string;
@@ -265,6 +268,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const [reworksOnly, setReworksOnly] = useState(false);
   const [today, setToday] = useState(() => dateInBrazil(new Date()));
   const [search, setSearch] = useState("");
+  const [plateFilter, setPlateFilter] = useState("");
   const [contact, setContact] = useState("");
   const [workshop, setWorkshop] = useState("");
   const [model, setModel] = useState("");
@@ -274,10 +278,9 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const [periodPreset, setPeriodPreset] = useState<PeriodPreset>("week");
   const [kpiOpen, setKpiOpen] = useState<string | null>(null);
   const [gridStart, setGridStart] = useState<string | null>(null);
-  const [kpiSearch, setKpiSearch] = useState("");
-  const [expandedContact, setExpandedContact] = useState<string | null>(null);
+  const [historyPlate, setHistoryPlate] = useState<string | null>(null);
+  const agendaRef = useRef<HTMLElement>(null);
   useEffect(() => { setGridStart(null); }, [startDate, endDate]);
-  useEffect(() => { setKpiSearch(""); setExpandedContact(null); }, [kpiOpen]);
   const [selected, setSelected] = useState<Appointment | null>(null);
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<{ key: keyof Appointment | "priority"; asc: boolean }>({ key: "priority", asc: true });
@@ -318,10 +321,15 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   }
 
   async function loadAppointments() {
-    const { data, error } = await supabase.from("appointments").select(rowColumns).order("date").order("time");
-    if (error) { setLoadError("Não foi possível carregar a agenda. Verifique sua conexão e tente de novo."); return; }
+    const data: AppointmentRow[] = [];
+    for (let offset = 0; ; offset += 500) {
+      const result = await supabase.from("appointments").select(rowColumns).order("date").order("time").range(offset, offset + 499);
+      if (result.error) { setLoadError("Não foi possível carregar a agenda. Verifique sua conexão e tente de novo."); return; }
+      data.push(...(result.data ?? []));
+      if (!result.data || result.data.length < 500) break;
+    }
     setLoadError("");
-    const rows = (data ?? []).map(fromRow);
+    const rows = data.map(fromRow);
     setAppointments(rows);
     void loadCompletionLogs(rows);
   }
@@ -342,8 +350,8 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const baseFiltered = useMemo(() => appointments.filter((item) => {
     const qPlate = normalizePlate(search);
     const hit = !search.trim() || (qPlate !== "" && item.plate.includes(qPlate)) || textMatches(search, [item.plate, item.brand, item.contactNumber, item.contact, item.issue, item.model, item.workshop, item.note, ...fieldDefinitions.filter((field) => field.storage === "custom" && ["text", "textarea"].includes(field.field_type)).map((field) => item.customFields[field.field_key])]);
-    return hit && matchesFilter(item.contact, contact) && matchesFilter(item.workshop, workshop) && matchesFilter(item.model, model) && matchesFilter(item.operator, operator) && (!reworksOnly || Boolean(item.reworkOf));
-  }), [appointments, contact, model, operator, reworksOnly, search, workshop, fieldDefinitions]);
+    return hit && (!plateFilter || (plateFilter === EMPTY_OPTION ? !item.plate : normalizePlate(item.plate) === normalizePlate(plateFilter))) && matchesFilter(item.contact, contact) && matchesFilter(item.workshop, workshop) && matchesFilter(item.model, model) && matchesFilter(item.operator, operator) && (!reworksOnly || Boolean(item.reworkOf));
+  }), [appointments, contact, model, operator, plateFilter, reworksOnly, search, workshop, fieldDefinitions]);
   const filtered = useMemo(() => baseFiltered.filter((item) => inPeriod(item.date, startDate, endDate)), [baseFiltered, startDate, endDate]);
 
   const sorted = useMemo(() => [...filtered].sort((a, b) => {
@@ -378,8 +386,30 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const average = safeAverage(filtered.filter((item) => normalizeDate(item.date)).length, usedDays);
 
   function resetFilters() {
-    setSearch(""); setContact(""); setWorkshop(""); setModel(""); setOperator(""); setPeriodPreset("week"); const range = periodRange("week", today); setStartDate(range.start); setEndDate(range.end); setReworksOnly(false); setPage(1);
+    setSearch(""); setPlateFilter(""); setContact(""); setWorkshop(""); setModel(""); setOperator(""); setPeriodPreset("custom"); setStartDate(""); setEndDate(""); setReworksOnly(false); setPage(1);
   }
+
+  function applyDetailFilter(label: string, apply: () => void, undo: () => void) {
+    apply(); setPage(1); setKpiOpen(null); setHistoryPlate(null);
+    window.setTimeout(() => agendaRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 180);
+    toast(`Filtrando por: ${label}`, { action: { label: "Desfazer", onClick: () => { undo(); setPage(1); } } });
+  }
+  function filterPlate(value: string) {
+    const previous = plateFilter;
+    applyDetailFilter(`Placa: ${value === EMPTY_OPTION ? "Não informado" : value}`, () => setPlateFilter(value), () => setPlateFilter(previous));
+  }
+  function openVehicle(plate: string) { setKpiOpen(null); setLogOpen(false); setSelected(null); setHistoryPlate(plate || EMPTY_OPTION); }
+  const activeFilters = [
+    search && { key: "search", label: `Busca: ${search}`, remove: () => setSearch("") },
+    plateFilter && { key: "plate", label: `Placa: ${plateFilter === EMPTY_OPTION ? "Não informado" : plateFilter}`, remove: () => setPlateFilter("") },
+    contact && { key: "contact", label: `Cliente: ${contact === EMPTY_OPTION ? "Não informado" : contact}`, remove: () => setContact("") },
+    workshop && { key: "workshop", label: `Oficina: ${workshop === EMPTY_OPTION ? "Não informado" : workshop}`, remove: () => setWorkshop("") },
+    model && { key: "model", label: `Modelo: ${model === EMPTY_OPTION ? "Não informado" : model}`, remove: () => setModel("") },
+    operator && { key: "operator", label: `Operador: ${operator === EMPTY_OPTION ? "Não informado" : operator}`, remove: () => setOperator("") },
+    startDate && { key: "start", label: `De: ${formatDateBR(startDate)}`, remove: () => { setStartDate(""); setPeriodPreset("custom"); } },
+    endDate && { key: "end", label: `Até: ${formatDateBR(endDate)}`, remove: () => { setEndDate(""); setPeriodPreset("custom"); } },
+    reworksOnly && { key: "reworks", label: "Somente retrabalhos", remove: () => setReworksOnly(false) },
+  ].filter((filter): filter is { key: string; label: string; remove: () => void } => Boolean(filter));
 
   function changeSort(key: keyof Appointment | "priority") {
     setSort((current) => ({ key, asc: current.key === key ? !current.asc : true }));
@@ -647,25 +677,25 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const lastDate = orderedDates.at(-1);
   const loadedPeriod = firstDate && lastDate ? `${formatDateBR(firstDate)} — ${formatDateBR(lastDate)}` : "Sem dados";
   const selectedOriginal = selected?.reworkOf ? appointments.find((item) => item.dbId === selected.reworkOf) : undefined;
-  const kpiDetails = (() => {
-    if (kpiOpen === "Agendamentos") return sorted.map((item) => ({ key: item.dbId, title: item.plate || "Sem placa", detail: `${formatDateBR(item.date)} · ${item.status || "Não atualizada"}` }));
-    if (kpiOpen === "Retrabalhos no período") return sorted.filter((item) => item.reworkOf).map((item) => ({ key: item.dbId, title: item.plate || "Sem placa", detail: `${formatDateBR(item.date)} · ${item.status || "Não atualizada"}` }));
-    if (kpiOpen === "Veículos únicos") return countBy(filtered, (item) => item.plate).map((row) => ({ key: row.name, title: row.name, detail: `${row.value} agendamento(s)` }));
-    if (kpiOpen === "Clientes atendidos") {
-      return foldedOptions(filtered.map((item) => item.contact)).map((contact) => {
-        const rows = filtered.filter((item) => matchesFilter(item.contact, contact));
-        return { key: contact, title: contact === EMPTY_OPTION ? DASH : contact, detail: `${rows.length} agendamento(s) · ${new Set(rows.map((item) => item.plate)).size} veículo(s)` };
-      });
-    }
-    if (kpiOpen === "Oficinas acionadas") return countBy(filtered.filter((item) => item.workshop), (item) => item.workshop).map((row) => ({ key: row.name, title: row.name, detail: `${row.value} agendamento(s)` }));
-    if (kpiOpen === "Média por dia") return countBy(filtered.filter((item) => normalizeDate(item.date)), (item) => item.date).sort((a, b) => a.name.localeCompare(b.name)).map((row) => ({ key: row.name, title: formatDateBR(row.name), detail: `${row.value} agendamento(s)` }));
-    return [];
-  })();
+  const indicatorRow = (item: Appointment): IndicatorAppointment => ({
+    dbId: item.dbId, plate: item.plate, date: item.date, time: item.time, status: item.status, workshop: item.workshop,
+    reworkReason: item.reworkReason, original: item.reworkOf ? appointments.find((row) => row.dbId === item.reworkOf)?.plate || "Não informado" : undefined,
+  });
+  const grouped = (key: keyof Pick<Appointment, "plate" | "contact" | "workshop">): IndicatorGroup[] => foldedOptions(filtered.map((item) => item[key])).map((value) => {
+    const rows = filtered.filter((item) => key === "plate" ? (value === EMPTY_OPTION ? !item.plate : normalizePlate(item.plate) === normalizePlate(value)) : matchesFilter(item[key], value));
+    const previous = key === "plate" ? plateFilter : key === "contact" ? contact : workshop;
+    return { key: value, label: value === EMPTY_OPTION ? "Não informado" : value, rows: rows.map(indicatorRow),
+      filter: () => key === "plate" ? filterPlate(value) : applyDetailFilter(`${key === "contact" ? "Cliente" : "Oficina"}: ${value === EMPTY_OPTION ? "Não informado" : value}`,
+        () => key === "contact" ? setContact(value) : setWorkshop(value), () => key === "contact" ? setContact(previous) : setWorkshop(previous)) };
+  });
+  const indicatorGroups: IndicatorGroup[] = kpiOpen === "Veículos únicos" ? grouped("plate") : kpiOpen === "Clientes atendidos" ? grouped("contact") : kpiOpen === "Oficinas acionadas" ? grouped("workshop") :
+    kpiOpen === "Média por dia" ? [...new Set(filtered.map((item) => normalizeDate(item.date)).filter((date): date is string => Boolean(date)))].sort().map((date) => ({ key: date, label: formatDateBR(date), rows: filtered.filter((item) => normalizeDate(item.date) === date).map(indicatorRow), filter: () => { const before = { startDate, endDate, periodPreset }; applyDetailFilter(`Dia: ${formatDateBR(date)}`, () => { setPeriodPreset("custom"); setStartDate(date); setEndDate(date); }, () => { setPeriodPreset(before.periodPreset); setStartDate(before.startDate); setEndDate(before.endDate); }); } })) :
+    kpiOpen === "Agendamentos" || kpiOpen === "Retrabalhos no período" ? sorted.filter((item) => kpiOpen === "Agendamentos" || item.reworkOf).map((item) => ({ key: item.dbId, label: `${item.plate || "Não informado"} · ${formatDateBR(item.date)}${item.reworkOf ? ` · Original: ${appointments.find((row) => row.dbId === item.reworkOf)?.plate || "Não informado"}` : ""}`, rows: [indicatorRow(item)], filter: () => filterPlate(item.plate || EMPTY_OPTION) })) : [];
 
-  const renderCard = (item: Appointment) => (<article key={item.dbId} className="overflow-hidden rounded-md border bg-card shadow-sm transition hover:-translate-y-0.5 hover:border-accent"><Button variant="ghost" onClick={() => setSelected(item)} className="h-auto w-full justify-start rounded-none p-3 text-left hover:bg-transparent"><span className="min-w-0 flex-1"><span className="flex items-center justify-between"><span className="text-xs font-bold text-accent-foreground">{dash(normalizeTime(item.time))}</span><span className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold", serviceCategory(item.issue) === "Revisão" ? "bg-service-review text-service-review-foreground" : "bg-service-repair text-service-repair-foreground")}>{serviceCategory(item.issue)}</span></span><span className="mt-2 block font-bold tracking-wide">{dash(item.plate)}</span><span className="block truncate text-xs font-normal text-muted-foreground">{dash(item.model)}</span><span className="mt-2 block truncate text-xs font-medium">{dash(item.contact)}</span><span className="mt-1 line-clamp-2 whitespace-normal text-[11px] font-normal leading-4 text-muted-foreground">{dash(item.issue)}</span><span className="mt-2 flex flex-wrap gap-1">{item.priorityUrgent && item.status !== completion && <UrgentBadge />}{item.reworkOf && <ReworkBadge />}{isEmergency(item.scheduleType) && <EmergencyBadge />}<DeadlineBadge item={item} completedAt={completedAtById[item.dbId]} today={today} completion={completion} /></span></span></Button><label className="relative block border-t"><span className="sr-only">Situação de {item.plate}</span><select value={item.status} disabled={Boolean(editBlockReason(item, currentUser.role))} title={editBlockReason(item, currentUser.role) ?? undefined} onChange={(event) => updateStatus(item.dbId, event.target.value as ServiceStatus)} className={cn("disabled:cursor-not-allowed disabled:opacity-70 h-9 w-full appearance-none border-0 px-3 pr-8 text-xs font-semibold outline-none focus:ring-2 focus:ring-inset focus:ring-ring", statusClasses(item.status, statuses))}><option value="">Atualizar situação</option>{serviceStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select><ChevronDown className="pointer-events-none absolute right-3 top-2.5 size-4 opacity-70" /></label></article>);
+  const renderCard = (item: Appointment) => (<article key={item.dbId} className="overflow-hidden rounded-md border bg-card shadow-sm transition hover:-translate-y-0.5 hover:border-accent"><div className="p-3"><div className="flex items-center justify-between"><span className="text-xs font-bold text-accent-foreground">{dash(normalizeTime(item.time))}</span><span className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold", serviceCategory(item.issue) === "Revisão" ? "bg-service-review text-service-review-foreground" : "bg-service-repair text-service-repair-foreground")}>{serviceCategory(item.issue)}</span></div><Button variant="link" className="mt-1 min-h-11 h-auto px-0 font-bold text-primary" onClick={() => openVehicle(item.plate)}>{item.plate || "Não informado"}<ChevronRight className="size-4" /></Button><p className="truncate text-xs text-muted-foreground">{dash(item.model)}</p><p className="mt-2 truncate text-xs font-medium">{dash(item.contact)}</p><p className="mt-1 line-clamp-2 whitespace-normal text-[11px] leading-4 text-muted-foreground">{dash(item.issue)}</p><div className="mt-2 flex flex-wrap gap-1">{item.priorityUrgent && item.status !== completion && <UrgentBadge />}{item.reworkOf && <ReworkBadge />}{isEmergency(item.scheduleType) && <EmergencyBadge />}<DeadlineBadge item={item} completedAt={completedAtById[item.dbId]} today={today} completion={completion} /></div><Button variant="ghost" size="sm" className="mt-2 w-full justify-between text-primary" onClick={() => setSelected(item)}>Abrir agendamento<ChevronRight className="size-4" /></Button></div><label className="relative block border-t"><span className="sr-only">Situação de {item.plate}</span><select value={item.status} disabled={Boolean(editBlockReason(item, currentUser.role))} title={editBlockReason(item, currentUser.role) ?? undefined} onChange={(event) => updateStatus(item.dbId, event.target.value as ServiceStatus)} className={cn("disabled:cursor-not-allowed disabled:opacity-70 h-9 w-full appearance-none border-0 px-3 pr-8 text-xs font-semibold outline-none focus:ring-2 focus:ring-inset focus:ring-ring", statusClasses(item.status, statuses))}><option value="">Atualizar situação</option>{serviceStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select><ChevronDown className="pointer-events-none absolute right-3 top-2.5 size-4 opacity-70" /></label></article>);
 
   return (
-    <div className={cn("min-h-screen bg-background text-foreground", dark && "dark")}>
+    <div className={cn("min-h-screen overflow-x-hidden bg-background text-foreground", dark && "dark")}>
       <header className="border-b bg-primary text-primary-foreground">
         <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-4 px-5 py-4 lg:px-8">
           <div className="flex items-center gap-3"><div className="grid size-10 place-items-center rounded-md bg-primary-foreground text-primary"><Wrench className="size-5" /></div><div><p className="text-xl font-bold">ANPEXC</p><p className="text-xs text-primary-foreground/70">Gestão de Agendamentos</p></div></div>
@@ -698,28 +728,30 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
 
         <section className="rounded-lg border bg-card p-4 shadow-sm">
           <div className="flex flex-col gap-3 xl:flex-row">
-            <label className="relative min-w-64 flex-[1.4]"><Search className="absolute left-3 top-3 size-4 text-muted-foreground" /><Input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Buscar placa, contato ou serviço" className="pl-9" /></label>
-            <div className="flex min-w-64 flex-1 gap-2"><Input type="date" aria-label="Data inicial" value={startDate} onChange={(e) => { setStartDate(e.target.value); setPeriodPreset("custom"); setPage(1); }} /><Input type="date" aria-label="Data final" value={endDate} onChange={(e) => { setEndDate(e.target.value); setPeriodPreset("custom"); setPage(1); }} /></div>
+            <label className="relative min-w-0 flex-[1.4] sm:min-w-64"><Search className="absolute left-3 top-3 size-4 text-muted-foreground" /><Input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Buscar placa, contato ou serviço" className="pl-9" /></label>
+            <div className="flex min-w-0 flex-1 flex-wrap gap-2 sm:min-w-64"><Input type="date" aria-label="Data inicial" value={startDate} onChange={(e) => { setStartDate(e.target.value); setPeriodPreset("custom"); setPage(1); }} className="min-w-36 flex-1" /><Input type="date" aria-label="Data final" value={endDate} onChange={(e) => { setEndDate(e.target.value); setPeriodPreset("custom"); setPage(1); }} className="min-w-36 flex-1" /></div>
             <SearchableSelect label="Todos os contatos" value={contact} options={option("contact")} onChange={setContact} />
             <SearchableSelect label="Todas as oficinas" value={workshop} options={option("workshop")} onChange={setWorkshop} />
           </div>
           <div className="mt-3 flex flex-col gap-3 md:flex-row">
+            <SearchableSelect label="Todas as placas" value={plateFilter} options={option("plate")} onChange={(value) => { setPlateFilter(value); setPage(1); }} />
             <SearchableSelect label="Todos os modelos" value={model} options={option("model")} onChange={setModel} />
             <SearchableSelect label="Todos os operadores" value={operator} options={option("operator")} onChange={setOperator} />
             <label className="flex min-h-10 items-center gap-2 text-sm text-foreground"><Checkbox checked={reworksOnly} onCheckedChange={(checked) => { setReworksOnly(checked === true); setPage(1); }} aria-label="Mostrar somente retrabalhos" />Mostrar somente retrabalhos</label>
-            <Button variant="outline" onClick={resetFilters}><RotateCcw /> Limpar filtros</Button>
+            <Button variant="outline" onClick={resetFilters}><RotateCcw /> Limpar tudo</Button>
           </div>
           <div className="mt-3 flex flex-wrap gap-1" role="group" aria-label="Período da agenda">{([ ["today", "Hoje"], ["week", "Esta semana"], ["month", "Este mês"], ["custom", "Personalizado"] ] as const).map(([key, label]) => <Button key={key} size="sm" variant={periodPreset === key ? "default" : "outline"} aria-pressed={periodPreset === key} onClick={() => { setPeriodPreset(key); setPage(1); }}>{label}</Button>)}</div>
         </section>
+        {activeFilters.length > 0 && <section aria-label="Filtros ativos" className="flex flex-wrap items-center gap-2 border-y py-3 text-sm"><strong className="mr-1">Filtros ativos</strong>{activeFilters.map((filter) => <Button key={filter.key} variant="secondary" size="sm" className="min-h-11 max-w-full gap-2" aria-label={`Remover filtro ${filter.label}`} onClick={() => { filter.remove(); setPage(1); }}><span className="truncate">{filter.label}</span><X className="size-4 shrink-0" /></Button>)}<Button variant="outline" size="sm" className="min-h-11 border-primary font-semibold text-primary" onClick={resetFilters}><RotateCcw className="size-4" />Limpar tudo</Button></section>}
 
         <section aria-label="Entregas pendentes" className="flex flex-wrap gap-x-8 gap-y-2 border-y py-4 text-sm"><p><span className="font-semibold">Hoje:</span> {pendingToday} veículo(s) a entregar</p><p><span className="font-semibold">Esta semana:</span> {pendingWeek} veículo(s) a entregar</p></section>
         <section className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
-          {kpis.map(({ label, value, detail, icon: Icon }) => <Button key={label} variant="outline" onClick={() => setKpiOpen(label)} className="h-auto min-h-28 min-w-0 flex-col items-stretch justify-start whitespace-normal rounded-md bg-card p-4 text-left shadow-sm"><span className="mb-4 flex w-full items-center justify-between gap-2"><span className="text-xs font-medium text-muted-foreground">{label}</span><Icon className="size-4 shrink-0 text-accent-foreground" /></span><span className="text-3xl font-bold tabular-nums">{value}</span><span className="mt-1 text-xs font-normal text-muted-foreground">{detail}</span></Button>)}
+          {kpis.map(({ label, value, detail, icon: Icon }) => <Button key={label} variant="outline" onClick={() => setKpiOpen(label)} title={`Ver detalhes de ${label}`} className="h-auto min-h-28 min-w-0 cursor-pointer flex-col items-stretch justify-start whitespace-normal rounded-md bg-card p-4 text-left shadow-sm transition-colors hover:border-primary hover:bg-accent/20"><span className="mb-4 flex w-full items-center justify-between gap-2"><span className="text-xs font-medium text-muted-foreground">{label}</span><Icon className="size-4 shrink-0 text-accent-foreground" /></span><span className="text-3xl font-bold tabular-nums">{value}</span><span className="mt-1 text-xs font-normal text-muted-foreground">{detail}</span><span className="mt-2 flex items-center gap-1 text-xs font-semibold text-primary">Ver detalhes<ChevronRight className="size-3" /></span></Button>)}
         </section>
 
         <SectionBoundary name="a grade semanal"><section>
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h2 className="text-lg font-semibold">Grade semanal</h2><div className="flex items-center gap-1"><Button variant="outline" size="icon" aria-label="Semana anterior" onClick={() => shiftGrid(-1)}><ChevronLeft /></Button><span className="min-w-32 text-center text-sm font-medium" aria-live="polite">{gridLabel}</span><Button variant="outline" size="icon" aria-label="Próxima semana" onClick={() => shiftGrid(1)}><ChevronRight /></Button><Button variant="outline" size="sm" onClick={() => setGridStart(weekRange(today).start)}>Hoje</Button></div></div>
-          <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+          <div className="grid min-w-0 gap-3 md:grid-cols-3 xl:grid-cols-6">
             {days.map((day, index) => {
               const rows = [...(week.days[index] ?? [])].sort((a,b) => comparePriority(a, b, today, completion));
                return <div key={day} className="min-h-48 rounded-lg border bg-muted/30 p-3"><div className="mb-3 flex items-center justify-between"><div><h3 className="text-sm font-semibold">{day}</h3><p className="text-xs text-muted-foreground">{dayMonth.format(new Date(new Date(`${gridWeek.start}T12:00:00Z`).getTime() + index * 86400000))}</p></div><span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-semibold">{rows.length}</span></div><div className="space-y-2">{rows.map(renderCard)}</div></div>;
@@ -737,39 +769,24 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
           <ChartPanel empty={!models.length} title="Top modelos" subtitle="Veículos com maior demanda"><ResponsiveContainer width="100%" height="100%"><BarChart data={models} layout="vertical"><CartesianGrid horizontal={false} stroke="var(--border)" /><XAxis type="number" allowDecimals={false} hide /><YAxis dataKey="name" type="category" width={112} tickLine={false} axisLine={false} tick={{ fontSize: 10 }} /><Tooltip content={<CustomTooltip />} /><Bar dataKey="value" fill="var(--chart-5)" radius={[0,4,4,0]} /></BarChart></ResponsiveContainer></ChartPanel>
         </div></section></SectionBoundary>
 
-        <SectionBoundary name="a tabela"><section className="rounded-lg border bg-card shadow-sm">
+        <SectionBoundary name="a tabela"><section ref={agendaRef} className="scroll-mt-4 rounded-lg border bg-card shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4"><div><h2 className="font-semibold">Agenda detalhada</h2><p className="text-xs text-muted-foreground">{sorted.length} registros encontrados</p></div><div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" aria-pressed={extraColumns} onClick={() => setExtraColumns((value) => !value)}>{extraColumns ? "Ocultar colunas extras" : "Mostrar colunas extras"}</Button><Button variant="outline" size="sm" onClick={exportBatch}><Download /> Exportar para edição em lote</Button><Button variant="outline" size="sm" disabled={batchBusy} onClick={() => batchInputRef.current?.click()}><Upload /> {batchBusy ? "Atualizando…" : "Atualizar agenda em lote"}</Button><input ref={batchInputRef} type="file" accept=".xlsx" className="hidden" aria-label="Arquivo de atualização em lote" onChange={(event) => void importBatch(event.target.files?.[0])} /><Button variant="outline" size="sm" onClick={() => exportFile("csv")}><Download /> CSV</Button><Button variant="outline" size="sm" onClick={() => exportFile("xlsx")}><Download /> Excel</Button></div></div>
-           <div className="overflow-x-auto"><table className="w-full min-w-[1400px] text-sm"><thead className="bg-muted/60 text-left text-xs text-muted-foreground"><tr>{[["priority","Prioridade"],["id","ID"],["date","Atendimento"],["time","Hora"],["plate","Placa"],["status","Situação"],["currentDeadline","Prazo"],["model","Modelo"],["contact","Contato"],["workshop","Local/Oficina"],["issue","Problema relatado"],["note","Observação"],["operator","Operador"], ...(extraColumns ? [["brand","Marca"],["kmScheduled","KM"],["contactNumber","Telefone"],["osNumber","O.S Fornecedor"]] : [])].map(([key,label]) => <th key={key} className="px-4 py-3 font-medium"><Button variant="ghost" size="sm" className="h-auto p-0" onClick={() => changeSort(key as keyof Appointment | "priority")}>{label}<ArrowDownAZ className="size-3" /></Button></th>)}</tr></thead><tbody>{pageRows.map((item) => <tr key={item.dbId} onClick={() => setSelected(item)} className="cursor-pointer border-t hover:bg-muted/40"><td className="px-4 py-3">{item.priorityUrgent && item.status !== completion ? <UrgentBadge /> : <span className="text-xs text-muted-foreground">{["Urgente","Atrasado","Hoje","Futuro","Sem prazo"][priorityLevel(item, today, completion)]}</span>}</td><td className="px-4 py-3 font-mono text-xs">#{item.id}</td><td className="whitespace-nowrap px-4 py-3">{formatDateBR(item.date)}</td><td className="px-4 py-3 font-semibold">{dash(normalizeTime(item.time))}</td><td className="px-4 py-3 font-bold">{item.plate}{item.reworkOf && <span className="mt-1 block"><ReworkBadge /></span>}{isEmergency(item.scheduleType) && <span className="mt-1 block"><EmergencyBadge /></span>}</td><td className="px-4 py-3"><span className={cn("whitespace-nowrap rounded border px-2 py-1 text-xs font-semibold", statusClasses(item.status, statuses))}>{item.status || "Não atualizada"}</span></td><td className="whitespace-nowrap px-4 py-3"><DeadlineBadge item={item} completedAt={completedAtById[item.dbId]} today={today} completion={completion} /></td><td title={item.model} className="max-w-48 truncate px-4 py-3">{dash(item.model)}</td><td title={item.contact} className="max-w-48 truncate px-4 py-3">{dash(item.contact)}</td><td title={item.workshop} className="max-w-52 truncate px-4 py-3">{dash(item.workshop)}</td><td title={item.issue} className="max-w-72 truncate px-4 py-3 text-muted-foreground">{dash(item.issue.replace(/\s+/g, " "))}</td><td title={item.note} className="max-w-36 truncate px-4 py-3">{dash(item.note.replace(/\s+/g, " "))}</td><td title={item.operator} className="max-w-40 truncate whitespace-nowrap px-4 py-3">{dash(item.operator)}</td>{extraColumns && <><td title={item.brand} className="max-w-36 truncate px-4 py-3">{dash(item.brand)}</td><td className="whitespace-nowrap px-4 py-3">{dash(item.kmScheduled)}</td><td className="whitespace-nowrap px-4 py-3">{dash(item.contactNumber)}</td><td className="whitespace-nowrap px-4 py-3">{dash(item.osNumber)}</td></>}</tr>)}</tbody></table></div>
+           <div className="max-w-full overflow-x-auto"><table className="w-full min-w-[1400px] text-sm"><thead className="bg-muted/60 text-left text-xs text-muted-foreground"><tr>{[["priority","Prioridade"],["id","ID"],["date","Atendimento"],["time","Hora"],["plate","Placa"],["status","Situação"],["currentDeadline","Prazo"],["model","Modelo"],["contact","Contato"],["workshop","Local/Oficina"],["issue","Problema relatado"],["note","Observação"],["operator","Operador"], ...(extraColumns ? [["brand","Marca"],["kmScheduled","KM"],["contactNumber","Telefone"],["osNumber","O.S Fornecedor"]] : [])].map(([key,label]) => <th key={key} className="px-4 py-3 font-medium"><Button variant="ghost" size="sm" className="h-auto p-0" onClick={() => changeSort(key as keyof Appointment | "priority")}>{label}<ArrowDownAZ className="size-3" /></Button></th>)}</tr></thead><tbody>{pageRows.map((item) => <tr key={item.dbId} onClick={() => setSelected(item)} className="cursor-pointer border-t hover:bg-muted/40"><td className="px-4 py-3">{item.priorityUrgent && item.status !== completion ? <UrgentBadge /> : <span className="text-xs text-muted-foreground">{["Urgente","Atrasado","Hoje","Futuro","Sem prazo"][priorityLevel(item, today, completion)]}</span>}</td><td className="px-4 py-3 font-mono text-xs">#{item.id}</td><td className="whitespace-nowrap px-4 py-3">{formatDateBR(item.date)}</td><td className="px-4 py-3 font-semibold">{dash(normalizeTime(item.time))}</td><td className="px-4 py-3 font-bold"><Button variant="link" className="min-h-11 h-auto px-0 font-bold text-primary" onClick={(event) => { event.stopPropagation(); openVehicle(item.plate); }}>{item.plate || "Não informado"}<ChevronRight className="size-4" /></Button>{item.reworkOf && <span className="mt-1 block"><ReworkBadge /></span>}{isEmergency(item.scheduleType) && <span className="mt-1 block"><EmergencyBadge /></span>}</td><td className="px-4 py-3"><span className={cn("whitespace-nowrap rounded border px-2 py-1 text-xs font-semibold", statusClasses(item.status, statuses))}>{item.status || "Não atualizada"}</span></td><td className="whitespace-nowrap px-4 py-3"><DeadlineBadge item={item} completedAt={completedAtById[item.dbId]} today={today} completion={completion} /></td><td title={item.model} className="max-w-48 truncate px-4 py-3">{dash(item.model)}</td><td title={item.contact} className="max-w-48 truncate px-4 py-3">{dash(item.contact)}</td><td title={item.workshop} className="max-w-52 truncate px-4 py-3">{dash(item.workshop)}</td><td title={item.issue} className="max-w-72 truncate px-4 py-3 text-muted-foreground">{dash(item.issue.replace(/\s+/g, " "))}</td><td title={item.note} className="max-w-36 truncate px-4 py-3">{dash(item.note.replace(/\s+/g, " "))}</td><td title={item.operator} className="max-w-40 truncate whitespace-nowrap px-4 py-3">{dash(item.operator)}</td>{extraColumns && <><td title={item.brand} className="max-w-36 truncate px-4 py-3">{dash(item.brand)}</td><td className="whitespace-nowrap px-4 py-3">{dash(item.kmScheduled)}</td><td className="whitespace-nowrap px-4 py-3">{dash(item.contactNumber)}</td><td className="whitespace-nowrap px-4 py-3">{dash(item.osNumber)}</td></>}</tr>)}</tbody></table></div>
           <div className="flex items-center justify-between border-t p-4"><p className="text-xs text-muted-foreground">Página {currentPage} de {pages}</p><div className="flex gap-2"><Button variant="outline" size="icon" disabled={currentPage <= 1} onClick={() => setPage((value) => Math.max(1,value-1))} aria-label="Página anterior"><ArrowLeft /></Button><Button variant="outline" size="icon" disabled={currentPage >= pages} onClick={() => setPage((value) => Math.min(pages,value+1))} aria-label="Próxima página"><ArrowRight /></Button></div></div>
         </section></SectionBoundary>
       </main>
 
       <Dialog open={Boolean(kpiOpen)} onOpenChange={(open) => { if (!open) setKpiOpen(null); }}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl"><DialogHeader><DialogTitle>{kpiOpen}</DialogTitle><DialogDescription>Agendamentos no período filtrado</DialogDescription></DialogHeader>
-          {kpiOpen === "Veículos únicos" ? (() => {
-            const q = normalizePlate(kpiSearch);
-            const plates = countBy(filtered.filter((item) => item.plate), (item) => item.plate).filter((row) => !q || normalizePlate(row.name).includes(q));
-            return <div className="space-y-3">
-              <Input autoFocus value={kpiSearch} onChange={(e) => setKpiSearch(e.target.value)} placeholder="Buscar placa (ex.: ABC-1D23)" aria-label="Buscar placa" />
-              {plates.length ? <ul className="divide-y">{plates.map((row) => <li key={row.name}><button type="button" className="flex w-full flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 text-left text-sm hover:bg-muted/50" onClick={() => { setSearch(row.name); setPage(1); setKpiOpen(null); }}><span className="font-medium">{row.name}</span><span className="text-muted-foreground">{row.value} agendamento(s) · ver na agenda</span></button></li>)}</ul> : <p className="text-sm text-muted-foreground">Nenhuma placa encontrada.</p>}
-            </div>;
-          })() : kpiOpen === "Clientes atendidos" ? (() => {
-            const clients = foldedOptions(filtered.map((item) => item.contact)).filter((name) => textMatches(kpiSearch, [name === EMPTY_OPTION ? "Não informado" : name]));
-            return <div className="space-y-3">
-              <Input autoFocus value={kpiSearch} onChange={(e) => setKpiSearch(e.target.value)} placeholder="Buscar cliente" aria-label="Buscar cliente" />
-              {clients.length ? <ul className="divide-y">{clients.map((name) => {
-                const rows = filtered.filter((item) => matchesFilter(item.contact, name)).sort((a, b) => compareDateTime(a, b, true));
-                const open = expandedContact === name;
-                return <li key={name} className="py-2">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <button type="button" aria-expanded={open} className="flex min-w-0 flex-1 items-center gap-2 text-left text-sm" onClick={() => setExpandedContact(open ? null : name)}><ChevronDown className={cn("size-4 shrink-0 transition-transform", open && "rotate-180")} /><span className="truncate font-medium">{name === EMPTY_OPTION ? "Não informado" : name}</span><span className="shrink-0 text-muted-foreground">{rows.length} atendimento(s) · {new Set(rows.map((item) => item.plate)).size} veículo(s)</span></button>
-                    <Button size="sm" variant="outline" onClick={() => { setContact(name); setPage(1); setKpiOpen(null); }}>Ver na agenda</Button>
-                  </div>
-                  {open && <ul className="mt-2 space-y-1 border-l pl-4">{rows.map((item) => <li key={item.dbId}><button type="button" className="flex w-full flex-wrap gap-x-3 rounded px-2 py-1 text-left text-sm hover:bg-muted/50" onClick={() => { setKpiOpen(null); setSelected(item); }}><span className="font-semibold">{dash(item.plate)}</span><span>{formatDateBR(item.date)}</span><span>{dash(normalizeTime(item.time))}</span><span className="text-muted-foreground">{item.status || "Não atualizada"}</span></button></li>)}</ul>}
-                </li>;
-              })}</ul> : <p className="text-sm text-muted-foreground">Nenhum cliente encontrado.</p>}
-            </div>;
-          })() : kpiDetails.length ? <ul className="divide-y">{kpiDetails.map((entry) => <li key={entry.key} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 text-sm"><span className="font-medium">{entry.title}</span><span className="text-muted-foreground">{entry.detail}</span></li>)}</ul> : <p className="text-sm text-muted-foreground">Nenhum registro no período.</p>}
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl"><DialogHeader><DialogTitle>{kpiOpen}</DialogTitle><DialogDescription>Agendamentos no período filtrado</DialogDescription></DialogHeader>
+          <IndicatorDetails key={kpiOpen ?? ""} groups={indicatorGroups} placeholder={kpiOpen === "Veículos únicos" ? "Buscar placa" : kpiOpen === "Clientes atendidos" ? "Buscar cliente" : kpiOpen === "Oficinas acionadas" ? "Buscar oficina" : kpiOpen === "Média por dia" ? "Buscar dia" : "Buscar agendamento"} onPlate={openVehicle} onAppointment={(id) => { setKpiOpen(null); setSelected(appointments.find((item) => item.dbId === id) ?? null); }} />
+        </DialogContent>
+      </Dialog>
+      <Dialog open={historyPlate !== null} onOpenChange={(open) => { if (!open) setHistoryPlate(null); }}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl"><DialogHeader><DialogTitle>Histórico do veículo · {historyPlate === EMPTY_OPTION ? "Não informado" : historyPlate}</DialogTitle><DialogDescription>Todos os agendamentos desta placa, independentemente do período.</DialogDescription></DialogHeader>
+          <div className="space-y-2">{appointments.filter((item) => historyPlate === EMPTY_OPTION ? !item.plate : normalizePlate(item.plate) === normalizePlate(historyPlate)).sort((a, b) => compareDateTime(a, b, false)).map((item) => <Button key={item.dbId} variant="outline" className="min-h-11 h-auto w-full justify-between whitespace-normal text-left hover:border-primary" onClick={() => { setHistoryPlate(null); setSelected(item); }}><span>{formatDateBR(item.date)} · {normalizeTime(item.time) || "—"} · {item.status || "Não atualizada"} · {item.workshop || "Não informado"}</span><ChevronRight className="size-4 shrink-0 text-primary" /></Button>)}
+            {!appointments.some((item) => historyPlate === EMPTY_OPTION ? !item.plate : normalizePlate(item.plate) === normalizePlate(historyPlate)) && <p className="text-sm text-muted-foreground">Nenhum agendamento encontrado.</p>}
+            {historyPlate !== null && <Button variant="outline" className="min-h-11" onClick={() => { const plate = historyPlate; const previous = { plateFilter, startDate, endDate, periodPreset }; applyDetailFilter(`Placa: ${plate === EMPTY_OPTION ? "Não informado" : plate}`, () => { setPlateFilter(plate); setPeriodPreset("custom"); setStartDate(""); setEndDate(""); }, () => { setPlateFilter(previous.plateFilter); setPeriodPreset(previous.periodPreset); setStartDate(previous.startDate); setEndDate(previous.endDate); }); }}><ArrowRight className="size-4" />Ver na agenda</Button>}
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -825,7 +842,8 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
           </SectionBoundary>}
         </DialogContent>
       </Dialog>
-      <ChangeLogDialog open={logOpen} onOpenChange={setLogOpen} />
+      <ChangeLogDialog open={logOpen} onOpenChange={setLogOpen} onPlateClick={openVehicle} />
+      <Toaster richColors position="bottom-right" />
       {currentUser.role === "master" && <AgendaSettings open={settingsOpen} onOpenChange={setSettingsOpen} statuses={statuses} fields={fieldDefinitions} currentUserId={currentUser.id} onRefresh={async () => { await loadConfig(); await loadAppointments(); }} />}
     </div>
   );
