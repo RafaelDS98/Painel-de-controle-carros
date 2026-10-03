@@ -1,5 +1,5 @@
 /** Cliente SGLOC — SOMENTE servidor. Nunca registra senha, token, Authorization nem corpo com dados pessoais. */
-import { classifyHttp, classifyNetwork, SglocError, validateBaseUrl } from "./core";
+import { classifyHttp, classifyNetwork, describeResponseDetail, SglocError, validateBaseUrl } from "./core";
 
 export type SglocSettings = { enabled: boolean; base_url: string | null; request_timeout_seconds: number };
 
@@ -75,7 +75,7 @@ export async function sglocFetch(opts: {
       throw new SglocError("http", `O SGLOC redirecionou a chamada (${res.status}). Confira se a URL base está completa e correta.`, res.status, latencyMs);
     }
     const httpError = classifyHttp(res.status, isJson ? body : null);
-    if (httpError) { httpError.latencyMs = latencyMs; logCall(opts.method, logPath, res.status, latencyMs, httpError.kind); throw httpError; }
+    if (httpError) { httpError.latencyMs = latencyMs; httpError.diagnostic = describeResponseDetail(isJson, ct || null, isJson ? body : null, text); logCall(opts.method, logPath, res.status, latencyMs, httpError.kind); throw httpError; }
     if (!isJson) { logCall(opts.method, logPath, res.status, latencyMs, "not_json"); throw new SglocError("not_json", "O SGLOC respondeu, mas não em formato JSON. Confira a URL base.", res.status, latencyMs); }
     logCall(opts.method, logPath, res.status, latencyMs);
     return { status: res.status, latencyMs, body, headers };

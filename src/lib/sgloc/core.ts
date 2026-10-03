@@ -5,6 +5,8 @@ export type SglocErrorKind =
   | "unauthorized" | "not_found" | "validation" | "server" | "not_json" | "http" | "rate_limited";
 
 export class SglocError extends Error {
+  /** Detalhe seguro da resposta do servidor (mensagem/chaves/content-type), sem dados enviados por nós. */
+  public diagnostic: string | null = null;
   constructor(public kind: SglocErrorKind, message: string, public status: number | null = null, public latencyMs: number | null = null) {
     super(message);
     this.name = "SglocError";
@@ -75,6 +77,28 @@ export function sglocMessage(body: unknown): string {
     }
   }
   return parts.join(" ").replace(/\s+/g, " ").slice(0, 300).trim();
+}
+
+/**
+ * Descreve a resposta de erro do SGLOC de forma segura: mensagem, content-type e só as CHAVES do JSON
+ * (nunca valores). Se não for JSON, diz isso e mostra até 120 caracteres do texto sem HTML.
+ * Só fala da RESPOSTA — nunca do que enviamos (e-mail, senha, corpo, token).
+ */
+export function describeResponseDetail(isJson: boolean, contentType: string | null, body: unknown, text: string): string {
+  const ct = contentType && contentType.trim() ? contentType.trim() : "sem content-type";
+  if (isJson) {
+    const msg = sglocMessage(body);
+    const keys = isObj(body) ? Object.keys(body) : [];
+    return `Resposta do SGLOC: ${msg || "(sem mensagem no corpo)"} [${ct}${keys.length ? `; chaves: ${keys.join(", ")}` : ""}]`;
+  }
+  const plain = text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 120);
+  return `Resposta do SGLOC não é JSON [${ct}]: ${plain || "(corpo vazio)"}`;
+}
+
+/** Monta a mensagem final do erro de login: motivo base + diagnóstico da resposta (quando houver). */
+export function composeLoginError(e: SglocError): string {
+  const base = e.kind === "not_found" ? e.message : `E-mail ou senha do SGLOC recusados${e.status ? ` (${e.status})` : ""}.`;
+  return `${base}${e.diagnostic ? ` ${e.diagnostic}` : ""}`;
 }
 
 /* ---------------- Leitura tolerante ---------------- */
