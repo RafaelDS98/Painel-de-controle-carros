@@ -10,7 +10,7 @@
 <!-- LOVABLE:END -->
 
 ## Decisões técnicas
-- Dados persistem no Lovable Cloud (tabelas appointments, profiles, edit_log, contact_log); o painel lê/grava direto via cliente do navegador com RLS — evita estado só em memória.
+- O painel lê/grava no Lovable Cloud pelo cliente do navegador com RLS — evita estado só em memória.
 - Acesso e papéis ficam em `user_roles`, consultados por funções protegidas no banco — separa privilégio dos dados pessoais e impede autoatribuição.
 - `appointments.id` é uuid; o ID da planilha fica em `sheet_id` — importações podem repetir IDs.
 - Regras de edição por perfil ficam em trigger BEFORE UPDATE em appointments e o histórico em trigger AFTER UPDATE (edit_log só leitura para usuários) — a tela só espelha, o banco decide.
@@ -21,7 +21,7 @@
 - Atalhos de período usam datas de calendário em America/Sao_Paulo e a grade mostra apenas a semana atual no intervalo selecionado — evita misturar dias homônimos de semanas diferentes.
 - Contatos são inseridos na tabela existente `contact_log` com o usuário autenticado e lidos por agendamento via RLS — preserva a autoria sem criar estrutura paralela.
 - Situações e campos opcionais vêm das tabelas de configuração; campos originais continuam em colunas e novos campos ficam em `custom_fields` — permite personalizar sem perder dados ou histórico.
-- Urgência só é alterada por gerente/master, filtrada no banco nos triggers BEFORE INSERT e UPDATE (descarta a mudança vinda de atendimento sem bloquear o resto) — tela, importação e chamadas diretas não burlam. Ordenação por prioridade é calculada no navegador pela situação de conclusão.
+- Urgência só é alterada por gerente/master, filtrada no banco nos triggers BEFORE INSERT e UPDATE (descarta a mudança vinda de atendimento sem bloquear o resto) — tela, importação e chamadas diretas não burlam.
 - Perfis de usuários são listados e alterados só por funções protegidas no banco que exigem master e impedem alterar o próprio perfil — a tela não grava user_roles diretamente.
 - Campos de controle do SGLOC (sgloc_*) só mudam por rotina de sistema ou master, garantido no trigger de edição; tokens do SGLOC ficam em sgloc_accounts, acessível só pelo servidor, e a tela lê o status pela função get_my_sgloc_status — evita expor credenciais.
 - Dados digitados e importados passam pelas funções puras de src/lib/normalize.ts (placa, data, hora, HTML, texto); a importação nunca cria um segundo registro com o mesmo sgloc_reference, apenas ignora a linha — evita duplicar agendamentos do SGLOC.
