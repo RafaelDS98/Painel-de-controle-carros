@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { classifyHttp, classifyNetwork, compareFields, describeFields, maskValue, readItem, readList, readLogin, readOptions, SglocError, tokenState, validateBaseUrl } from "./core";
+import { composeLoginError, classifyHttp, classifyNetwork, compareFields, describeFields, describeResponseDetail, maskValue, readItem, readList, readLogin, readOptions, SglocError, tokenState, validateBaseUrl } from "./core";
 
 const bad = (u: string) => { try { validateBaseUrl(u); return null; } catch (e) { return (e as SglocError).kind; } };
 
@@ -75,5 +75,37 @@ describe("máscara", () => {
   });
   it("compara listagem e detalhe", () => {
     expect(compareFields({ id: 1, loja_codigo: "X", a: "1" }, { id: 1, a: 1 })).toEqual({ onlyInList: ["loja_codigo"], onlyInDetail: [], differentType: ["a"], differentValue: ["a"] });
+  });
+});
+
+describe("diagnóstico do login", () => {
+  it("JSON: mostra mensagem, content-type e só as chaves (sem valores)", () => {
+    const d = describeResponseDetail(true, "application/json; charset=UTF-8", { message: "Credenciais incorretas", extra: "segredo" }, "{}");
+    expect(d).toBe("Resposta do SGLOC: Credenciais incorretas [application/json; charset=UTF-8; chaves: message, extra]");
+    expect(d).not.toContain("segredo");
+    expect(describeResponseDetail(true, null, {}, "x")).toBe("Resposta do SGLOC: (sem mensagem no corpo) [sem content-type; chaves: ]".replace("chaves: ]", "]"));
+  });
+  it("JSON: message limitada a 300 caracteres", () => {
+    const d = describeResponseDetail(true, "application/json", { message: "x".repeat(400) }, "");
+    expect(d.startsWith("Resposta do SGLOC: ")).toBe(true);
+    expect(d).toContain("chaves: message");
+    expect(d.length).toBeLessThan("Resposta do SGLOC: ".length + 320 + 60);
+  });
+  it("não JSON: diz que não é JSON e mostra até 120 caracteres sem HTML", () => {
+    const html = `<html><body>Erro ${"x".repeat(300)}</body></html>`;
+    const d = describeResponseDetail(false, "text/html", null, html);
+    expect(d.startsWith("Resposta do SGLOC não é JSON [text/html]: ")).toBe(true);
+    expect(d).not.toContain("<html");
+    expect(d.length - d.indexOf(":") - 1).toBeLessThanOrEqual(125);
+    expect(describeResponseDetail(false, null, null, "")).toContain("(corpo vazio)");
+  });
+  it("composeLoginError junta motivo e diagnóstico; sem diagnóstico fica como antes", () => {
+    const com = new SglocError("unauthorized", "base", 401);
+    com.diagnostic = describeResponseDetail(true, "application/json", { message: "Credenciais incorretas" }, "{}");
+    expect(composeLoginError(com)).toBe("E-mail ou senha do SGLOC recusados (401). Resposta do SGLOC: Credenciais incorretas [application/json; chaves: message]");
+    expect(composeLoginError(new SglocError("unauthorized", "base", 401))).toBe("E-mail ou senha do SGLOC recusados (401).");
+    const nf = new SglocError("not_found", "Endereço não encontrado no SGLOC (404).", 404);
+    nf.diagnostic = "Resposta do SGLOC: (sem mensagem no corpo) [text/html; chaves: ]".replace("chaves: ]", "]");
+    expect(composeLoginError(nf)).toBe("Endereço não encontrado no SGLOC (404). Resposta do SGLOC: (sem mensagem no corpo) [text/html]");
   });
 });
