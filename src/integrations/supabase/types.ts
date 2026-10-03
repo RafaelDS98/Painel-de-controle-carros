@@ -16,7 +16,10 @@ export type Database = {
     Tables: {
       appointments: {
         Row: {
+          brand: string
+          client_id: number | null
           contact: string
+          contact_number: string
           created_at: string
           created_by: string | null
           creator_edits_allowed: number
@@ -27,25 +30,40 @@ export type Database = {
           external_order: string
           id: string
           issue: string
+          km_scheduled: number | null
           manager_edit_used: boolean
           model: string
           note: string
           operator: string
+          operator_id: number | null
           original_deadline: string | null
+          os_number: number | null
           plate: string
           priority_urgent: boolean
           registered_at: string | null
           rework_of: string | null
           rework_reason: string | null
+          schedule_type: string
+          sgloc_confirmed: string | null
+          sgloc_last_error: string | null
+          sgloc_missing_count: number
+          sgloc_performed: string | null
           sgloc_reference: string | null
+          sgloc_sync_state: string
+          sgloc_synced_at: string | null
           sheet_id: string
           status: string
           store: string
+          store_id: number | null
+          supplier_id: number | null
           time: string
           workshop: string
         }
         Insert: {
+          brand?: string
+          client_id?: number | null
           contact?: string
+          contact_number?: string
           created_at?: string
           created_by?: string | null
           creator_edits_allowed?: number
@@ -56,25 +74,40 @@ export type Database = {
           external_order?: string
           id?: string
           issue?: string
+          km_scheduled?: number | null
           manager_edit_used?: boolean
           model?: string
           note?: string
           operator?: string
+          operator_id?: number | null
           original_deadline?: string | null
+          os_number?: number | null
           plate?: string
           priority_urgent?: boolean
           registered_at?: string | null
           rework_of?: string | null
           rework_reason?: string | null
+          schedule_type?: string
+          sgloc_confirmed?: string | null
+          sgloc_last_error?: string | null
+          sgloc_missing_count?: number
+          sgloc_performed?: string | null
           sgloc_reference?: string | null
+          sgloc_sync_state?: string
+          sgloc_synced_at?: string | null
           sheet_id?: string
           status?: string
           store?: string
+          store_id?: number | null
+          supplier_id?: number | null
           time?: string
           workshop?: string
         }
         Update: {
+          brand?: string
+          client_id?: number | null
           contact?: string
+          contact_number?: string
           created_at?: string
           created_by?: string | null
           creator_edits_allowed?: number
@@ -85,20 +118,32 @@ export type Database = {
           external_order?: string
           id?: string
           issue?: string
+          km_scheduled?: number | null
           manager_edit_used?: boolean
           model?: string
           note?: string
           operator?: string
+          operator_id?: number | null
           original_deadline?: string | null
+          os_number?: number | null
           plate?: string
           priority_urgent?: boolean
           registered_at?: string | null
           rework_of?: string | null
           rework_reason?: string | null
+          schedule_type?: string
+          sgloc_confirmed?: string | null
+          sgloc_last_error?: string | null
+          sgloc_missing_count?: number
+          sgloc_performed?: string | null
           sgloc_reference?: string | null
+          sgloc_sync_state?: string
+          sgloc_synced_at?: string | null
           sheet_id?: string
           status?: string
           store?: string
+          store_id?: number | null
+          supplier_id?: number | null
           time?: string
           workshop?: string
         }
@@ -266,6 +311,147 @@ export type Database = {
         }
         Relationships: []
       }
+      sgloc_accounts: {
+        Row: {
+          sgloc_email: string
+          sgloc_user_code: string | null
+          token: string
+          token_expires_at: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          sgloc_email: string
+          sgloc_user_code?: string | null
+          token: string
+          token_expires_at?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          sgloc_email?: string
+          sgloc_user_code?: string | null
+          token?: string
+          token_expires_at?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      sgloc_settings: {
+        Row: {
+          enabled: boolean
+          id: boolean
+          interval_minutes: number
+          updated_at: string | null
+          updated_by: string | null
+          window_days_ahead: number
+          window_days_back: number
+        }
+        Insert: {
+          enabled?: boolean
+          id?: boolean
+          interval_minutes?: number
+          updated_at?: string | null
+          updated_by?: string | null
+          window_days_ahead?: number
+          window_days_back?: number
+        }
+        Update: {
+          enabled?: boolean
+          id?: boolean
+          interval_minutes?: number
+          updated_at?: string | null
+          updated_by?: string | null
+          window_days_ahead?: number
+          window_days_back?: number
+        }
+        Relationships: []
+      }
+      sgloc_stores: {
+        Row: {
+          code: string
+          label: string
+          store_id: number
+          updated_at: string | null
+        }
+        Insert: {
+          code: string
+          label?: string
+          store_id: number
+          updated_at?: string | null
+        }
+        Update: {
+          code?: string
+          label?: string
+          store_id?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      sgloc_suppliers: {
+        Row: {
+          name: string
+          supplier_id: number
+          updated_at: string | null
+        }
+        Insert: {
+          name?: string
+          supplier_id: number
+          updated_at?: string | null
+        }
+        Update: {
+          name?: string
+          supplier_id?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      sgloc_sync_runs: {
+        Row: {
+          created_by: string | null
+          error_detail: Json
+          errors: number
+          fetched: number
+          finished_at: string | null
+          id: string
+          inserted: number
+          skipped: number
+          started_at: string | null
+          status: string
+          trigger_source: string
+          updated: number
+        }
+        Insert: {
+          created_by?: string | null
+          error_detail?: Json
+          errors?: number
+          fetched?: number
+          finished_at?: string | null
+          id?: string
+          inserted?: number
+          skipped?: number
+          started_at?: string | null
+          status?: string
+          trigger_source?: string
+          updated?: number
+        }
+        Update: {
+          created_by?: string | null
+          error_detail?: Json
+          errors?: number
+          fetched?: number
+          finished_at?: string | null
+          id?: string
+          inserted?: number
+          skipped?: number
+          started_at?: string | null
+          status?: string
+          trigger_source?: string
+          updated?: number
+        }
+        Relationships: []
+      }
       status_options: {
         Row: {
           color_token: string
@@ -325,6 +511,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_my_sgloc_status: {
+        Args: never
+        Returns: {
+          connected: boolean
+          sgloc_email: string
+          token_expires_at: string
+        }[]
+      }
       has_access: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: {
