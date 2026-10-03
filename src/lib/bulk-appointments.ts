@@ -1,4 +1,5 @@
 import type { TablesUpdate } from "@/integrations/supabase/types";
+import { normalizePlate, stripHtml } from "./normalize";
 
 export const batchIdHeader = "ID do sistema (não editar nem apagar)";
 
@@ -39,18 +40,19 @@ export function batchValue(column: BatchColumn, value: unknown): string | null {
     return column === "current_deadline" && !date ? null : date;
   }
   if (column === "time") return excelTime(value);
+  if (column === "plate") return normalizePlate(stripHtml(value));
   if (column === "status") {
     const status = String(value ?? "").trim();
     return status === "Não atualizada" ? "" : status;
   }
-  return String(value ?? "");
+  return stripHtml(value);
 }
 
 export function batchChanges(row: Record<string, unknown>, current: BatchRecord): TablesUpdate<"appointments"> {
   const changes: TablesUpdate<"appointments"> = {};
   for (const [column, header] of batchColumns) {
     const next = batchValue(column, row[header]);
-    const existing = column === "time" ? excelTime(current[column]) : current[column];
+    const existing = batchValue(column, current[column]);
     if (next !== existing) Object.assign(changes, { [column]: next });
   }
   return changes;
