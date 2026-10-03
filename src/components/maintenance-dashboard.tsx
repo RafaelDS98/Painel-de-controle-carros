@@ -60,6 +60,7 @@ import { AgendaSettings } from "@/components/agenda-settings";
 import { isEmergency, normalizeDate, normalizePlate, normalizeTime, parseKm, safeText, sglocStateLabels, stripHtml } from "@/lib/normalize";
 import { DASH, EMPTY_OPTION, NO_DATE_GROUP, clampPage, compareDateTime, compareText, countBy, dash, exportHeaders, exportRows, foldedOptions, formatDateBR, groupWeek, inPeriod, matchesFilter, safeAverage, serviceCategory, textMatches, toCsv, buildImportRecords, dropExistingReferences, activeOnly, archiveConfirmText } from "@/lib/agenda-safety";
 import { TrashDialog } from "@/components/trash-dialog";
+import { applySelection, hasSelection, isSelected, removeSelection, selectionChips, toggleSelection, type ChartDim, type ChartSelection } from "@/lib/chart-selection";
 import { fixSheetRange } from "@/lib/sheet-range";
 import { SearchableSelect } from "@/components/searchable-select";
 import { weekdayIndex } from "@/lib/agenda-safety";
@@ -177,11 +178,14 @@ const palette = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--ch
 
 
 
-function ChartPanel({ title, subtitle, children, className, empty }: { title: string; subtitle: string; children: React.ReactNode; className?: string; empty?: boolean }) {
+const chartHint = "Clique para filtrar; clique de novo para limpar";
+
+function ChartPanel({ title, subtitle, children, className, empty, items, isOn, onToggle }: { title: string; subtitle: string; children: React.ReactNode; className?: string; empty?: boolean; items?: string[]; isOn?: (name: string) => boolean; onToggle?: (name: string, additive: boolean) => void }) {
   return (
-    <section className={cn("rounded-lg border bg-card p-5 shadow-sm", className)}>
-      <div className="mb-5"><h3 className="font-semibold text-card-foreground">{title}</h3><p className="mt-1 text-xs text-muted-foreground">{subtitle}</p></div>
-      <div className="h-64 w-full">{empty ? <div className="grid h-full place-items-center rounded-md border border-dashed text-sm text-muted-foreground">Sem dados no período</div> : children}</div>
+    <section className={cn("min-w-0 rounded-lg border bg-card p-5 shadow-sm", className)}>
+      <div className="mb-5"><h3 className="font-semibold text-card-foreground">{title}</h3><p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>{onToggle && <p className="mt-1 text-[11px] text-muted-foreground">{chartHint}. Ctrl/Cmd+clique soma itens.</p>}</div>
+      <div className="h-64 w-full cursor-pointer" title={onToggle ? chartHint : undefined}>{empty ? <div className="grid h-full place-items-center rounded-md border border-dashed text-sm text-muted-foreground">Sem dados no período</div> : children}</div>
+      {onToggle && items && items.length > 0 && <div role="group" aria-label={`Filtrar por ${title}`} className="sr-only focus-within:not-sr-only focus-within:mt-3 focus-within:flex focus-within:flex-wrap focus-within:gap-1">{items.map((name) => <button key={name} type="button" aria-pressed={isOn?.(name) ?? false} onClick={(event) => onToggle(name, event.ctrlKey || event.metaKey)} className={cn("min-h-11 max-w-full truncate rounded-md border px-3 text-xs", isOn?.(name) && "border-primary bg-primary text-primary-foreground")}>{name}</button>)}</div>}
     </section>
   );
 }
@@ -288,6 +292,12 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   useEffect(() => { setGridStart(null); }, [startDate, endDate]);
   const [selected, setSelected] = useState<Appointment | null>(null);
   const [trashOpen, setTrashOpen] = useState(false);
+  const [chartSel, setChartSel] = useState<ChartSelection>({});
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") setChartSel((current) => (hasSelection(current) ? {} : current)); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<{ key: keyof Appointment | "priority"; asc: boolean }>({ key: "priority", asc: true });
   const [message, setMessage] = useState("");
@@ -366,7 +376,10 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     const hit = !search.trim() || (qPlate !== "" && item.plate.includes(qPlate)) || textMatches(search, [item.plate, item.brand, item.contactNumber, item.contact, item.issue, item.model, item.workshop, item.note, ...fieldDefinitions.filter((field) => field.storage === "custom" && ["text", "textarea"].includes(field.field_type)).map((field) => item.customFields[field.field_key])]);
     return hit && (!plateFilter || (plateFilter === EMPTY_OPTION ? !item.plate : normalizePlate(item.plate) === normalizePlate(plateFilter))) && matchesFilter(item.contact, contact) && matchesFilter(item.workshop, workshop) && matchesFilter(item.model, model) && matchesFilter(item.operator, operator) && (!reworksOnly || Boolean(item.reworkOf));
   }), [appointments, contact, model, operator, plateFilter, reworksOnly, search, workshop, fieldDefinitions]);
-  const filtered = useMemo(() => baseFiltered.filter((item) => inPeriod(item.date, startDate, endDate)), [baseFiltered, startDate, endDate]);
+  const periodFiltered = useMemo(() => baseFiltered.filter((item) => inPeriod(item.date, startDate, endDate)), [baseFiltered, startDate, endDate]);
+  // Seleção dos gráficos (filtro cruzado): vale para KPIs, balões, lista e grade; cada gráfico ignora a própria seleção.
+  const filtered = useMemo(() => applySelection(periodFiltered, chartSel), [periodFiltered, chartSel]);
+  const chartBase = (dim: ChartDim) => applySelection(periodFiltered, chartSel, dim);
 
   const sorted = useMemo(() => [...filtered].sort((a, b) => {
     if (sort.key === "priority") return comparePriority(a, b, today, completion) * (sort.asc ? 1 : -1);
@@ -380,19 +393,19 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const visibleWeek = weekRange(today);
   const selectedWeek = startDate && endDate && (new Date(`${endDate}T12:00:00Z`).getTime() - new Date(`${startDate}T12:00:00Z`).getTime()) <= 6 * 86400000 ? weekRange(startDate) : visibleWeek;
   const gridWeek = gridStart ? weekRange(gridStart) : selectedWeek;
-  const gridDays = groupWeek(baseFiltered, gridWeek.start, gridWeek.end).days;
+  const gridDays = groupWeek(applySelection(baseFiltered, chartSel), gridWeek.start, gridWeek.end).days;
   const week = { days: gridDays, noDate: groupWeek(filtered, gridWeek.start, gridWeek.end).noDate };
   const shiftGrid = (weeks: number) => { const base = new Date(`${gridWeek.start}T12:00:00Z`); base.setUTCDate(base.getUTCDate() + weeks * 7); setGridStart(base.toISOString().slice(0, 10)); };
   const shortDay = (iso: string) => new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", timeZone: "UTC" }).format(new Date(`${iso}T12:00:00Z`)).replace(/\./g, "").replace(" de ", " ");
   const gridLabel = `${shortDay(gridWeek.start)} – ${shortDay(gridWeek.end)}`;
-  const daily = days.map((name, index) => ({ name: name.slice(0, 3), value: filtered.filter((item) => weekdayIndex(item.date) === index).length }));
+  const daily = days.map((name, index) => ({ name: name.slice(0, 3), value: chartBase("weekday").filter((item) => weekdayIndex(item.date) === index).length }));
   const pendingToday = pendingDeliveries(appointments, today, today, completion);
   const pendingWeek = pendingDeliveries(appointments, visibleWeek.start, visibleWeek.end, completion);
-  const hourly = countBy(filtered, (item) => normalizeTime(item.time)).sort((a, b) => a.name === DASH ? 1 : b.name === DASH ? -1 : a.name.localeCompare(b.name));
-  const workshops = countBy(filtered, (item) => item.workshop).slice(0, 6);
-  const contacts = countBy(filtered, (item) => item.contact).slice(0, 7);
-  const services = countBy(filtered, (item) => serviceCategory(item.issue));
-  const models = countBy(filtered, (item) => item.model).slice(0, 6);
+  const hourly = countBy(chartBase("hour"), (item) => normalizeTime(item.time)).sort((a, b) => a.name === DASH ? 1 : b.name === DASH ? -1 : a.name.localeCompare(b.name));
+  const workshops = countBy(chartBase("workshop"), (item) => item.workshop).slice(0, 6);
+  const contacts = countBy(chartBase("contact"), (item) => item.contact).slice(0, 7);
+  const services = countBy(chartBase("service"), (item) => serviceCategory(item.issue));
+  const models = countBy(chartBase("model"), (item) => item.model).slice(0, 6);
   const uniqueVehicles = new Set(filtered.map((item) => item.plate).filter(Boolean)).size;
   const uniqueContacts = countBy(filtered.filter((item) => safeText(item.contact)), (item) => item.contact).length;
   const uniqueWorkshops = countBy(filtered.filter((item) => safeText(item.workshop)), (item) => item.workshop).length;
@@ -400,7 +413,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const average = safeAverage(filtered.filter((item) => normalizeDate(item.date)).length, usedDays);
 
   function resetFilters() {
-    setSearch(""); setPlateFilter(""); setContact(""); setWorkshop(""); setModel(""); setOperator(""); setPeriodPreset("custom"); setStartDate(""); setEndDate(""); setReworksOnly(false); setPage(1);
+    setSearch(""); setPlateFilter(""); setContact(""); setWorkshop(""); setModel(""); setOperator(""); setPeriodPreset("custom"); setStartDate(""); setEndDate(""); setReworksOnly(false); setChartSel({}); setPage(1);
   }
 
   function applyDetailFilter(label: string, apply: () => void, undo: () => void) {
@@ -408,8 +421,23 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     window.setTimeout(() => agendaRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 180);
     toast(`Filtrando por: ${label}`, { action: { label: "Desfazer", onClick: () => { undo(); setPage(1); } } });
   }
+  function selectChart(dim: ChartDim, value: unknown, additive = false) {
+    const name = safeText(value);
+    if (!name) return;
+    setChartSel((current) => toggleSelection(current, dim, name, additive)); setPage(1);
+  }
+  const chartClick = (dim: ChartDim) => (entry: { name?: unknown; payload?: { name?: unknown } } | undefined, _index?: number, event?: React.MouseEvent) =>
+    selectChart(dim, entry?.payload?.name ?? entry?.name, Boolean(event?.ctrlKey || event?.metaKey));
+  const dimOpacity = (dim: ChartDim, name: string) => (!hasSelection(chartSel, dim) || isSelected(chartSel, dim, name) ? 1 : 0.25);
+  const chartKeys = (dim: ChartDim, data: { name: string }[]) => ({ items: data.map((d) => d.name), isOn: (name: string) => isSelected(chartSel, dim, name), onToggle: (name: string, additive: boolean) => selectChart(dim, name, additive) });
+  /** Balões e cartões: clicar no filtro já ativo desfaz (mesma lógica de alternar dos gráficos). */
+  function toggleDetailFilter(label: string, active: boolean, apply: () => void, undo: () => void, clear: () => void) {
+    if (active) { clear(); setPage(1); setKpiOpen(null); toast(`Filtro removido: ${label}`); return; }
+    applyDetailFilter(label, apply, undo);
+  }
   function filterPlate(value: string) {
     const previous = plateFilter;
+    if (previous && normalizePlate(previous) === normalizePlate(value)) { toggleDetailFilter(`Placa: ${value === EMPTY_OPTION ? "Não informado" : value}`, true, () => {}, () => {}, () => setPlateFilter("")); return; }
     applyDetailFilter(`Placa: ${value === EMPTY_OPTION ? "Não informado" : value}`, () => setPlateFilter(value), () => setPlateFilter(previous));
   }
   function openVehicle(plate: string) { setKpiOpen(null); setLogOpen(false); setSelected(null); setHistoryPlate(plate || EMPTY_OPTION); }
@@ -699,11 +727,11 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     const rows = filtered.filter((item) => key === "plate" ? (value === EMPTY_OPTION ? !item.plate : normalizePlate(item.plate) === normalizePlate(value)) : matchesFilter(item[key], value));
     const previous = key === "plate" ? plateFilter : key === "contact" ? contact : workshop;
     return { key: value, label: value === EMPTY_OPTION ? "Não informado" : value, rows: rows.map(indicatorRow),
-      filter: () => key === "plate" ? filterPlate(value) : applyDetailFilter(`${key === "contact" ? "Cliente" : "Oficina"}: ${value === EMPTY_OPTION ? "Não informado" : value}`,
-        () => key === "contact" ? setContact(value) : setWorkshop(value), () => key === "contact" ? setContact(previous) : setWorkshop(previous)) };
+      filter: () => key === "plate" ? filterPlate(value) : toggleDetailFilter(`${key === "contact" ? "Cliente" : "Oficina"}: ${value === EMPTY_OPTION ? "Não informado" : value}`, Boolean(previous) && matchesFilter(value, previous),
+        () => key === "contact" ? setContact(value) : setWorkshop(value), () => key === "contact" ? setContact(previous) : setWorkshop(previous), () => key === "contact" ? setContact("") : setWorkshop("")) };
   });
   const indicatorGroups: IndicatorGroup[] = kpiOpen === "Veículos únicos" ? grouped("plate") : kpiOpen === "Clientes atendidos" ? grouped("contact") : kpiOpen === "Oficinas acionadas" ? grouped("workshop") :
-    kpiOpen === "Média por dia" ? [...new Set(filtered.map((item) => normalizeDate(item.date)).filter((date): date is string => Boolean(date)))].sort().map((date) => ({ key: date, label: formatDateBR(date), rows: filtered.filter((item) => normalizeDate(item.date) === date).map(indicatorRow), filter: () => { const before = { startDate, endDate, periodPreset }; applyDetailFilter(`Dia: ${formatDateBR(date)}`, () => { setPeriodPreset("custom"); setStartDate(date); setEndDate(date); }, () => { setPeriodPreset(before.periodPreset); setStartDate(before.startDate); setEndDate(before.endDate); }); } })) :
+    kpiOpen === "Média por dia" ? [...new Set(filtered.map((item) => normalizeDate(item.date)).filter((date): date is string => Boolean(date)))].sort().map((date) => ({ key: date, label: formatDateBR(date), rows: filtered.filter((item) => normalizeDate(item.date) === date).map(indicatorRow), filter: () => { const before = { startDate, endDate, periodPreset }; toggleDetailFilter(`Dia: ${formatDateBR(date)}`, startDate === date && endDate === date, () => { setPeriodPreset("custom"); setStartDate(date); setEndDate(date); }, () => { setPeriodPreset(before.periodPreset); setStartDate(before.startDate); setEndDate(before.endDate); }, () => { setPeriodPreset("custom"); setStartDate(""); setEndDate(""); }); } })) :
     kpiOpen === "Agendamentos" || kpiOpen === "Retrabalhos no período" ? sorted.filter((item) => kpiOpen === "Agendamentos" || item.reworkOf).map((item) => ({ key: item.dbId, label: `${item.plate || "Não informado"} · ${formatDateBR(item.date)}${item.reworkOf ? ` · Original: ${appointments.find((row) => row.dbId === item.reworkOf)?.plate || "Não informado"}` : ""}`, rows: [indicatorRow(item)], filter: () => filterPlate(item.plate || EMPTY_OPTION) })) : [];
 
   const renderCard = (item: Appointment) => (<article key={item.dbId} className="overflow-hidden rounded-md border bg-card shadow-sm transition hover:-translate-y-0.5 hover:border-accent"><div className="p-3"><div className="flex items-center justify-between"><span className="text-xs font-bold text-accent-foreground">{dash(normalizeTime(item.time))}</span><span className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold", serviceCategory(item.issue) === "Revisão" ? "bg-service-review text-service-review-foreground" : "bg-service-repair text-service-repair-foreground")}>{serviceCategory(item.issue)}</span></div><Button variant="link" className="mt-1 min-h-11 h-auto px-0 font-bold text-primary" onClick={() => openVehicle(item.plate)}>{item.plate || "Não informado"}<ChevronRight className="size-4" /></Button><p className="truncate text-xs text-muted-foreground">{dash(item.model)}</p><p className="mt-2 truncate text-xs font-medium">{dash(item.contact)}</p><p className="mt-1 line-clamp-2 whitespace-normal text-[11px] leading-4 text-muted-foreground">{dash(item.issue)}</p><div className="mt-2 flex flex-wrap gap-1">{item.priorityUrgent && item.status !== completion && <UrgentBadge />}{item.reworkOf && <ReworkBadge />}{isEmergency(item.scheduleType) && <EmergencyBadge />}<DeadlineBadge item={item} completedAt={completedAtById[item.dbId]} today={today} completion={completion} /></div><Button variant="ghost" size="sm" className="mt-2 w-full justify-between text-primary" onClick={() => setSelected(item)}>Abrir agendamento<ChevronRight className="size-4" /></Button></div><label className="relative block border-t"><span className="sr-only">Situação de {item.plate}</span><select value={item.status} disabled={Boolean(editBlockReason(item, currentUser.role))} title={editBlockReason(item, currentUser.role) ?? undefined} onChange={(event) => updateStatus(item.dbId, event.target.value as ServiceStatus)} className={cn("disabled:cursor-not-allowed disabled:opacity-70 h-9 w-full appearance-none border-0 px-3 pr-8 text-xs font-semibold outline-none focus:ring-2 focus:ring-inset focus:ring-ring", statusClasses(item.status, statuses))}><option value="">Atualizar situação</option>{serviceStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select><ChevronDown className="pointer-events-none absolute right-3 top-2.5 size-4 opacity-70" /></label></article>);
@@ -776,13 +804,15 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
           {week.noDate.length > 0 && <div className="mt-3 rounded-lg border border-dashed bg-muted/30 p-3"><div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-semibold">{NO_DATE_GROUP}</h3><span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-semibold">{week.noDate.length}</span></div><div className="grid gap-2 md:grid-cols-3 xl:grid-cols-6">{week.noDate.map(renderCard)}</div></div>}
         </section></SectionBoundary>
 
-        <SectionBoundary name="os gráficos"><section><h2 className="mb-3 text-lg font-semibold">Indicadores da operação</h2><div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-          <ChartPanel empty={daily.every((d) => !d.value)} title="Atendimentos por dia da semana" subtitle="Soma de todo o período filtrado (registros sem data ficam de fora)"><ResponsiveContainer width="100%" height="100%"><BarChart data={daily}><CartesianGrid vertical={false} stroke="var(--border)" /><XAxis dataKey="name" tickLine={false} axisLine={false} /><YAxis allowDecimals={false} tickLine={false} axisLine={false} /><Tooltip content={<CustomTooltip />} /><Bar dataKey="value" fill="var(--chart-1)" radius={[4,4,0,0]} /></BarChart></ResponsiveContainer></ChartPanel>
-          <ChartPanel empty={!hourly.length} title="Faixas de horário" subtitle="Concentração ao longo da manhã"><ResponsiveContainer width="100%" height="100%"><AreaChart data={hourly}><CartesianGrid vertical={false} stroke="var(--border)" /><XAxis dataKey="name" tickLine={false} axisLine={false} /><YAxis allowDecimals={false} tickLine={false} axisLine={false} /><Tooltip content={<CustomTooltip />} /><Area type="monotone" dataKey="value" stroke="var(--chart-2)" fill="var(--chart-2)" fillOpacity={0.16} strokeWidth={2} /></AreaChart></ResponsiveContainer></ChartPanel>
-          <ChartPanel empty={!workshops.length} title="Volume por oficina" subtitle="Prestadores mais acionados"><ResponsiveContainer width="100%" height="100%"><BarChart data={workshops} layout="vertical" margin={{ left: 8 }}><CartesianGrid horizontal={false} stroke="var(--border)" /><XAxis type="number" allowDecimals={false} hide /><YAxis dataKey="name" type="category" width={118} tickLine={false} axisLine={false} tick={{ fontSize: 10 }} /><Tooltip content={<CustomTooltip />} /><Bar dataKey="value" fill="var(--chart-3)" radius={[0,4,4,0]} /></BarChart></ResponsiveContainer></ChartPanel>
-          <ChartPanel empty={!contacts.length} title="Atendimentos por contato" subtitle="Participação dos órgãos atendidos"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={contacts} dataKey="value" nameKey="name" innerRadius={48} outerRadius={82} paddingAngle={2}>{contacts.map((item,index) => <Cell key={item.name} fill={palette[index % palette.length]} />)}</Pie><Tooltip content={<CustomTooltip />} /></PieChart></ResponsiveContainer></ChartPanel>
-          <ChartPanel empty={!services.length} title="Categorias de serviço" subtitle="Classificação pelos problemas relatados"><ResponsiveContainer width="100%" height="100%"><BarChart data={services}><CartesianGrid vertical={false} stroke="var(--border)" /><XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fontSize: 10 }} /><YAxis allowDecimals={false} tickLine={false} axisLine={false} /><Tooltip content={<CustomTooltip />} /><Bar dataKey="value" fill="var(--chart-4)" radius={[4,4,0,0]} /></BarChart></ResponsiveContainer></ChartPanel>
-          <ChartPanel empty={!models.length} title="Top modelos" subtitle="Veículos com maior demanda"><ResponsiveContainer width="100%" height="100%"><BarChart data={models} layout="vertical"><CartesianGrid horizontal={false} stroke="var(--border)" /><XAxis type="number" allowDecimals={false} hide /><YAxis dataKey="name" type="category" width={112} tickLine={false} axisLine={false} tick={{ fontSize: 10 }} /><Tooltip content={<CustomTooltip />} /><Bar dataKey="value" fill="var(--chart-5)" radius={[0,4,4,0]} /></BarChart></ResponsiveContainer></ChartPanel>
+        <SectionBoundary name="os gráficos"><section><h2 className="mb-3 text-lg font-semibold">Indicadores da operação</h2>
+          {hasSelection(chartSel) && <div aria-label="Seleções dos gráficos" className="mb-3 flex flex-wrap items-center gap-2 text-sm"><span className="text-xs font-semibold text-muted-foreground">Filtrando pelos gráficos:</span>{selectionChips(chartSel).map((chip) => <Button key={`${chip.dim}-${chip.value}`} variant="secondary" size="sm" className="min-h-11 max-w-full gap-2" aria-label={`Remover ${chip.label}`} onClick={() => setChartSel((current) => removeSelection(current, chip.dim, chip.value))}><span className="truncate">{chip.label}</span><X className="size-4 shrink-0" /></Button>)}<Button variant="outline" size="sm" className="min-h-11" onClick={() => setChartSel({})}><RotateCcw className="size-4" />Limpar tudo</Button></div>}
+          <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+          <ChartPanel empty={daily.every((d) => !d.value)} title="Atendimentos por dia da semana" subtitle="Soma de todo o período filtrado (registros sem data ficam de fora)" {...chartKeys("weekday", daily)}><ResponsiveContainer width="100%" height="100%"><BarChart data={daily}><CartesianGrid vertical={false} stroke="var(--border)" /><XAxis dataKey="name" tickLine={false} axisLine={false} /><YAxis allowDecimals={false} tickLine={false} axisLine={false} /><Tooltip content={<CustomTooltip />} /><Bar dataKey="value" fill="var(--chart-1)" radius={[4,4,0,0]} cursor="pointer" onClick={chartClick("weekday")}>{daily.map((d) => <Cell key={d.name} fillOpacity={dimOpacity("weekday", d.name)} />)}</Bar></BarChart></ResponsiveContainer></ChartPanel>
+          <ChartPanel empty={!hourly.length} title="Faixas de horário" subtitle="Concentração ao longo da manhã" {...chartKeys("hour", hourly)}><ResponsiveContainer width="100%" height="100%"><AreaChart data={hourly} onClick={(state, event) => state?.activeLabel !== undefined && selectChart("hour", state.activeLabel, Boolean((event as unknown as React.MouseEvent | undefined)?.ctrlKey || (event as unknown as React.MouseEvent | undefined)?.metaKey))}><CartesianGrid vertical={false} stroke="var(--border)" /><XAxis dataKey="name" tickLine={false} axisLine={false} /><YAxis allowDecimals={false} tickLine={false} axisLine={false} /><Tooltip content={<CustomTooltip />} /><Area type="monotone" dataKey="value" stroke="var(--chart-2)" fill="var(--chart-2)" fillOpacity={hasSelection(chartSel, "hour") ? 0.08 : 0.16} strokeWidth={2} dot={(props: { cx?: number; cy?: number; payload?: { name: string }; index?: number }) => <g key={props.index} style={{ cursor: "pointer" }}><circle cx={props.cx} cy={props.cy} r={14} fill="transparent" /><circle cx={props.cx} cy={props.cy} r={isSelected(chartSel, "hour", props.payload?.name ?? "") ? 6 : 4} fill="var(--chart-2)" fillOpacity={dimOpacity("hour", props.payload?.name ?? "")} /></g>} /></AreaChart></ResponsiveContainer></ChartPanel>
+          <ChartPanel empty={!workshops.length} title="Volume por oficina" subtitle="Prestadores mais acionados" {...chartKeys("workshop", workshops)}><ResponsiveContainer width="100%" height="100%"><BarChart data={workshops} layout="vertical" margin={{ left: 8 }}><CartesianGrid horizontal={false} stroke="var(--border)" /><XAxis type="number" allowDecimals={false} hide /><YAxis dataKey="name" type="category" width={118} tickLine={false} axisLine={false} tick={{ fontSize: 10 }} /><Tooltip content={<CustomTooltip />} /><Bar dataKey="value" fill="var(--chart-3)" radius={[0,4,4,0]} cursor="pointer" onClick={chartClick("workshop")}>{workshops.map((d) => <Cell key={d.name} fillOpacity={dimOpacity("workshop", d.name)} />)}</Bar></BarChart></ResponsiveContainer></ChartPanel>
+          <ChartPanel empty={!contacts.length} title="Atendimentos por contato" subtitle="Participação dos órgãos atendidos" {...chartKeys("contact", contacts)}><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={contacts} dataKey="value" nameKey="name" innerRadius={48} outerRadius={82} paddingAngle={2} cursor="pointer" onClick={chartClick("contact")}>{contacts.map((item,index) => <Cell key={item.name} fill={palette[index % palette.length]} fillOpacity={dimOpacity("contact", item.name)} />)}</Pie><Tooltip content={<CustomTooltip />} /></PieChart></ResponsiveContainer></ChartPanel>
+          <ChartPanel empty={!services.length} title="Categorias de serviço" subtitle="Classificação pelos problemas relatados" {...chartKeys("service", services)}><ResponsiveContainer width="100%" height="100%"><BarChart data={services}><CartesianGrid vertical={false} stroke="var(--border)" /><XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fontSize: 10 }} /><YAxis allowDecimals={false} tickLine={false} axisLine={false} /><Tooltip content={<CustomTooltip />} /><Bar dataKey="value" fill="var(--chart-4)" radius={[4,4,0,0]} cursor="pointer" onClick={chartClick("service")}>{services.map((d) => <Cell key={d.name} fillOpacity={dimOpacity("service", d.name)} />)}</Bar></BarChart></ResponsiveContainer></ChartPanel>
+          <ChartPanel empty={!models.length} title="Top modelos" subtitle="Veículos com maior demanda" {...chartKeys("model", models)}><ResponsiveContainer width="100%" height="100%"><BarChart data={models} layout="vertical"><CartesianGrid horizontal={false} stroke="var(--border)" /><XAxis type="number" allowDecimals={false} hide /><YAxis dataKey="name" type="category" width={112} tickLine={false} axisLine={false} tick={{ fontSize: 10 }} /><Tooltip content={<CustomTooltip />} /><Bar dataKey="value" fill="var(--chart-5)" radius={[0,4,4,0]} cursor="pointer" onClick={chartClick("model")}>{models.map((d) => <Cell key={d.name} fillOpacity={dimOpacity("model", d.name)} />)}</Bar></BarChart></ResponsiveContainer></ChartPanel>
         </div></section></SectionBoundary>
 
         <SectionBoundary name="a tabela"><section ref={agendaRef} className="scroll-mt-4 rounded-lg border bg-card shadow-sm">
