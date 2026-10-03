@@ -31,3 +31,4 @@
 - Usuários são criados só pela função de servidor createPanelUser (src/lib/admin-users.functions.ts), que confere no servidor se quem chama é master e usa a chave de serviço apenas lá; a troca da senha provisória no primeiro acesso usa a marca must_change_password nos metadados do usuário.
 - Indicadores e histórico do veículo usam os mesmos filtros do painel; seleção de placa é separada da busca textual e a faixa de filtros reflete ambos — permite remover um critério sem apagar os demais.
 - Usuários e senhas são editados só por updatePanelUser/resetPanelPassword (master conferido no servidor); a redefinição encerra sessões via revoke_user_sessions (só service_role) e registra user_admin_log sem senha — trilha auditável sem expor credenciais.
+- Erros de criação/edição/senha de usuários passam por src/lib/auth-errors.ts (tradução, campo e código curto) e o erro técnico vai ao log do servidor sem senha — o master vê o motivo sem expor segredos.
