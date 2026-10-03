@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { cn } from "@/lib/utils";
 import { colorNames, fieldKey, statusColors, type FieldDefinition, type StatusOption } from "@/lib/agenda-config";
 import { UserRolesPanel } from "@/components/user-roles-panel";
+import { SglocSettingsPanel } from "@/components/sgloc-settings";
 
 type Props = { open: boolean; onOpenChange: (open: boolean) => void; statuses: StatusOption[]; fields: FieldDefinition[]; onRefresh: () => Promise<void>; currentUserId: string };
 type StatusDraft = { id?: string; label: string; color_token: string; sort_order: number; is_completion: boolean };
@@ -17,7 +18,7 @@ const inputClass = "h-10 w-full rounded-md border border-input bg-background px-
 const fromField = (field: FieldDefinition): FieldDraft => ({ id: field.id, label: field.label, field_type: field.field_type, select_options: Array.isArray(field.select_options) ? field.select_options.join(", ") : "", sort_order: field.sort_order, visible: field.visible, required: field.required, storage: field.storage, field_key: field.field_key });
 
 export function AgendaSettings({ open, onOpenChange, statuses, fields, onRefresh, currentUserId }: Props) {
-  const [tab, setTab] = useState<"statuses" | "fields" | "users">("statuses");
+  const [tab, setTab] = useState<"statuses" | "fields" | "users" | "sgloc">("statuses");
   const [statusDraft, setStatusDraft] = useState<StatusDraft | null>(null);
   const [fieldDraft, setFieldDraft] = useState<FieldDraft | null>(null);
   const [busy, setBusy] = useState(false);
@@ -71,14 +72,15 @@ export function AgendaSettings({ open, onOpenChange, statuses, fields, onRefresh
   return <Dialog open={open} onOpenChange={(value) => { onOpenChange(value); setError(""); setStatusDraft(null); setFieldDraft(null); setConfirmDelete(null); }}>
     <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
       <DialogHeader><DialogTitle>Configurações</DialogTitle><DialogDescription>Agenda ANPEXC</DialogDescription></DialogHeader>
-      <div className="flex gap-2 border-b pb-3" role="tablist" aria-label="Configurações">
+      <div className="flex flex-wrap gap-2 border-b pb-3" role="tablist" aria-label="Configurações">
         <Button role="tab" aria-selected={tab === "statuses"} variant={tab === "statuses" ? "default" : "outline"} onClick={() => { setTab("statuses"); setError(""); setFieldDraft(null); }}>Situações</Button>
         <Button role="tab" aria-selected={tab === "fields"} variant={tab === "fields" ? "default" : "outline"} onClick={() => { setTab("fields"); setError(""); setStatusDraft(null); }}>Campos do formulário</Button>
         <Button role="tab" aria-selected={tab === "users"} variant={tab === "users" ? "default" : "outline"} onClick={() => { setTab("users"); setError(""); setStatusDraft(null); setFieldDraft(null); }}>Usuários e permissões</Button>
+        <Button role="tab" aria-selected={tab === "sgloc"} variant={tab === "sgloc" ? "default" : "outline"} onClick={() => { setTab("sgloc"); setError(""); setStatusDraft(null); setFieldDraft(null); }}>SGLOC</Button>
       </div>
       {error && <p role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>}
       {confirmDelete && <div role="alertdialog" aria-label="Confirmar remoção" className="flex flex-wrap items-center gap-3 border-b pb-3 text-sm"><span>Remover “{confirmDelete.label}”?</span><Button size="sm" variant="destructive" disabled={busy} onClick={remove}>Remover</Button><Button size="sm" variant="outline" onClick={() => setConfirmDelete(null)}>Cancelar</Button></div>}
-      {tab === "users" ? <UserRolesPanel currentUserId={currentUserId} /> : tab === "statuses" ? <section className="space-y-3">
+      {tab === "sgloc" ? <SglocSettingsPanel /> : tab === "users" ? <UserRolesPanel currentUserId={currentUserId} /> : tab === "statuses" ? <section className="space-y-3">
         <div className="flex items-center justify-between"><h3 className="font-semibold">Situações</h3><Button size="sm" variant="outline" onClick={() => { setStatusDraft({ label: "", color_token: "status-blue", sort_order: (Math.max(0, ...statuses.map((row) => row.sort_order)) + 1), is_completion: false }); setError(""); }}><Plus /> Nova situação</Button></div>
         {statuses.map((row) => <div key={row.id} ref={(el) => { rowRefs.current[row.id] = el; }} className="space-y-2"><div className="flex flex-wrap items-center gap-3 border-b py-2 text-sm"><span className={cn("h-6 w-8 rounded border", statusColors[row.color_token])} aria-label={colorNames[row.color_token]} /><span className="min-w-0 flex-1 font-medium">{row.label}{row.is_completion && <span className="ml-2 text-xs text-muted-foreground">Conclusão</span>}</span><span className="text-xs text-muted-foreground">#{row.sort_order}</span><Button size="icon" variant="ghost" aria-label={`Editar ${row.label}`} onClick={() => { setStatusDraft({ ...row }); setError(""); }}><Pencil /></Button><Button size="icon" variant="ghost" aria-label={`Remover ${row.label}`} onClick={() => { setConfirmDelete({ type: "status", id: row.id, label: row.label }); setError(""); }}><Trash2 /></Button></div>{statusDraft?.id === row.id && statusForm}</div>)}
         {statusDraft && !statusDraft.id && statusForm}
