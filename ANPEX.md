@@ -248,7 +248,34 @@ Caso seja solicitado histórico, colaboração entre operadores ou conservação
 
 Até essa implementação existir, não use `localStorage` como substituto de banco para dados operacionais compartilhados.
 
-## 12. Checklist antes de concluir uma mudança
+## 12. Campos novos, normalização e "dado vazio nunca quebra a tela"
+
+### Mapa dos campos novos (appointments)
+| Coluna | Rótulo | Origem no export do SGLOC |
+|---|---|---|
+| brand | Marca | — (digitado) |
+| contact_number | Telefone do contato | — (digitado) |
+| km_scheduled | KM do agendamento | — (inteiro >= 0) |
+| os_number | O.S Fornecedor | "OS FORNEC" (numérico) |
+| schedule_type | Tipo (E = Emergencial, N = Normal) | "Tipo" (HTML removido; contém "emerg" → E) |
+| sgloc_reference | ID SGLOC | "ID" quando numérico; nunca duplicado |
+| store_id, operator_id, supplier_id, client_id | códigos do SGLOC | Fase 2 |
+| sgloc_sync_state, sgloc_synced_at, sgloc_last_error, sgloc_missing_count | controle técnico | nunca exibidos nem exportados |
+
+### Normalização (`src/lib/normalize.ts`)
+- Placa: maiúsculas, só letras e números. Data: AAAA-MM-DD, DD/MM/AAAA, Date ou serial do Excel; inválida vira vazio. Hora: HH:mm ou HH:mm:ss vira HH:mm; inválida vira vazio. HTML é removido e entidades decodificadas. Qualquer valor vira texto aparado.
+
+### Regra "dado vazio nunca quebra a tela" (`src/lib/agenda-safety.ts`)
+- Campo vazio ou nulo aparece como "—" em cards, tabela, ficha, KPIs e gráficos; nunca "undefined", "null" ou "Invalid Date".
+- Registro sem data aparece no grupo "Sem data" da grade e como "—" na tabela; filtros por período o excluem (exceto sem período); na ordenação por data ele fica por último.
+- Filtros e agrupamentos comparam sem diferenciar maiúsculas e acentos e mostram o texto como veio; vazios aparecem como "(sem valor)".
+- Gráficos vazios mostram "Sem dados no período"; médias nunca dividem por zero; a paginação se ajusta quando o filtro reduz o total.
+- Textos longos: uma linha com dica na tabela, até duas linhas no cartão, quebras preservadas na ficha.
+- Exportação CSV/Excel: escapa aspas, vírgulas, ponto e vírgula e quebras de linha; nulos viram vazio; textos começando com =, +, - ou @ recebem apóstrofo; colunas técnicas nunca entram.
+- Falha ao carregar mostra mensagem com "Tentar de novo"; grade, gráficos, tabela e ficha têm proteção própria para um erro não derrubar o painel.
+- O fixture sintético `src/lib/sgloc-fixture.ts` cobre os casos estranhos do export e é usado nos testes.
+
+## 13. Checklist antes de concluir uma mudança
 
 - O projeto compila sem erros.
 - A tela inicial abre com os registros padrão.
@@ -260,7 +287,10 @@ Até essa implementação existir, não use `localStorage` como substituto de ba
 - Não há elementos interativos aninhados nem erros no console.
 - A interface foi conferida em desktop e tablet.
 - Metadados da rota continuam específicos da ANPEXC.
+- O fixture do SGLOC é importado sem erro (testes automáticos passando).
+- Nenhuma tela mostra "undefined", "null" ou "Invalid Date".
+- A exportação sai correta com textos que têm quebra de linha, aspas e vírgulas.
 
-## 13. Contexto do repositório
+## 14. Contexto do repositório
 
 O repositório é sincronizado com o Lovable. Não reescreva histórico já publicado com force push, rebase, amend ou squash. Mantenha a branch conectada sempre em estado funcional.

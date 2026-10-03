@@ -10,7 +10,7 @@ const badgeNormal = '<span class="badge badge-info">Normal</span>';
 export const sglocFixtureRows: Record<string, unknown>[] = [
   {
     ID: "1001", "Data Cadastro": "2026-10-01", "Data Atendimento": "05/10/2026", Hora: "10:30:00", Placa: "abc-1d23", Loja: "FI2",
-    Modelo: "Furgão Teste", Contato: "Órgão Exemplo A", "Local/Oficina": "Oficina Fictícia Centro Automotivo Ltda", // 40 caracteres
+    Modelo: "Furgão Teste", Contato: "Órgão Exemplo A", "Local/Oficina": "Oficina Fictícia Centro Automotivo Ltda.", // cortado em 40 caracteres
     "Problemas Relatado": sglocFixtureIssue, Observação: 'Cliente pediu "urgente", retirar até 17h, sem lavagem', Operador: "maria exemplo",
     "O.S Externa": "", Realizado: badgeYes, Tipo: badgeEmergency, "OS FORNEC": "5501",
   },
