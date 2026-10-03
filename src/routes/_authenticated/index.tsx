@@ -70,5 +70,5 @@ function Index() {
     return <FirstPasswordScreen email={user.email ?? ""} onDone={() => setPasswordChanged(true)} onSignOut={signOut} />;
   }
 
-  return <MaintenanceDashboard onSignOut={signOut} currentUser={{ id: user.id, name: profile.data.full_name || user.email || "Usuário", role: profile.data.role }} />;
+  return <MaintenanceDashboard onSignOut={signOut} currentUser={{ id: user.id, name: profile.data.full_name || user.email || "Usuário", role: profile.data.role, email: user.email ?? "" }} />;
 }

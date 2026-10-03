@@ -46,7 +46,9 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { AppointmentHistory, ChangeLogDialog } from "@/components/edit-history";
-import { AlertTriangle, ChevronLeft, ChevronRight, History, Unlock } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, History, Unlock, UserCircle } from "lucide-react";
+import { MyAccountDialog } from "@/components/my-account";
+import { useQueryClient } from "@tanstack/react-query";
 import { AppointmentForm, columnForField, emptyFields, type AppointmentFields } from "@/components/appointment-form";
 import { ReworkForm, type ReworkFields } from "@/components/rework-form";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -101,7 +103,7 @@ type Appointment = {
 };
 
 export type AppRole = "atendimento" | "gerente" | "master";
-export type CurrentUser = { id: string; name: string; role: AppRole };
+export type CurrentUser = { id: string; name: string; role: AppRole; email?: string };
 const roleLabels: Record<AppRole, string> = { atendimento: "Atendimento", gerente: "Gerente", master: "Master" };
 
 function editBlockReason(item: Appointment, role: AppRole): string | null {
@@ -256,6 +258,8 @@ const rowColumns = "id, sheet_id, registered_at, date, time, plate, store, model
 export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: () => void; currentUser: CurrentUser }) {
   const [logOpen, setLogOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const queryClientForAccount = useQueryClient();
   const [statuses, setStatuses] = useState<StatusOption[]>([]);
   const [fieldDefinitions, setFieldDefinitions] = useState<FieldDefinition[]>([]);
   const completion = statuses.find((option) => option.is_completion)?.label ?? "";
@@ -700,7 +704,8 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
         <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-4 px-5 py-4 lg:px-8">
           <div className="flex items-center gap-3"><div className="grid size-10 place-items-center rounded-md bg-primary-foreground text-primary"><Wrench className="size-5" /></div><div><p className="text-xl font-bold">ANPEXC</p><p className="text-xs text-primary-foreground/70">Gestão de Agendamentos</p></div></div>
           <div className="flex items-center gap-2">
-            <div className="mr-2 hidden text-right text-sm sm:block"><p className="font-semibold">{currentUser.name}</p><p className="text-xs text-primary-foreground/70">{roleLabels[currentUser.role]}</p></div>
+            <button type="button" onClick={() => setAccountOpen(true)} title="Minha conta" className="mr-2 min-h-11 rounded-md px-2 text-right text-sm hover:bg-primary-foreground/10"><p className="font-semibold"><UserCircle className="mr-1 inline size-4" />{currentUser.name}</p><p className="text-xs text-primary-foreground/70">{roleLabels[currentUser.role]} · Minha conta</p></button>
+            <MyAccountDialog open={accountOpen} onOpenChange={setAccountOpen} userId={currentUser.id} email={currentUser.email ?? ""} name={currentUser.name} onSaved={() => void queryClientForAccount.invalidateQueries({ queryKey: ["profile", currentUser.id] })} />
             <Button variant="secondary" onClick={() => setLogOpen(true)}><History /> Log de alterações</Button>
             <Button variant="secondary" onClick={() => setNewOpen(true)}><Plus /> Novo agendamento</Button>
              {currentUser.role === "master" && <Button variant="secondary" onClick={() => setSettingsOpen(true)}><Settings /> Configurações</Button>}
