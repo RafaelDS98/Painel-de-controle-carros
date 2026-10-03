@@ -3,6 +3,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MaintenanceDashboard } from "@/components/maintenance-dashboard";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { FirstPasswordScreen } from "@/components/first-password";
+import { useState } from "react";
 
 export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
@@ -22,6 +24,7 @@ function Index() {
   const { user } = Route.useRouteContext();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [passwordChanged, setPasswordChanged] = useState(false);
   const profile = useQuery({
     queryKey: ["profile", user.id],
     queryFn: async () => {
@@ -61,6 +64,10 @@ function Index() {
         </div>
       </div>
     );
+  }
+
+  if (user.user_metadata?.['must_change_password'] === true && !passwordChanged) {
+    return <FirstPasswordScreen email={user.email ?? ""} onDone={() => setPasswordChanged(true)} onSignOut={signOut} />;
   }
 
   return <MaintenanceDashboard onSignOut={signOut} currentUser={{ id: user.id, name: profile.data.full_name || user.email || "Usuário", role: profile.data.role }} />;

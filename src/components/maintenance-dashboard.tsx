@@ -46,7 +46,7 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { AppointmentHistory, ChangeLogDialog } from "@/components/edit-history";
-import { AlertTriangle, History, Unlock } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, History, Unlock } from "lucide-react";
 import { AppointmentForm, columnForField, emptyFields, type AppointmentFields } from "@/components/appointment-form";
 import { ReworkForm, type ReworkFields } from "@/components/rework-form";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -58,6 +58,8 @@ import { AgendaSettings } from "@/components/agenda-settings";
 import { isEmergency, normalizeDate, normalizePlate, normalizeTime, parseKm, safeText, sglocStateLabels, stripHtml } from "@/lib/normalize";
 import { DASH, EMPTY_OPTION, NO_DATE_GROUP, clampPage, compareDateTime, compareText, countBy, dash, exportHeaders, exportRows, foldedOptions, formatDateBR, groupWeek, inPeriod, matchesFilter, safeAverage, serviceCategory, textMatches, toCsv, buildImportRecords, dropExistingReferences } from "@/lib/agenda-safety";
 import { fixSheetRange } from "@/lib/sheet-range";
+import { SearchableSelect } from "@/components/searchable-select";
+import { weekdayIndex } from "@/lib/agenda-safety";
 import { SectionBoundary } from "@/components/section-boundary";
 import { customValues, statusColors, type FieldDefinition, type StatusOption, type CustomValues } from "@/lib/agenda-config";
 
@@ -168,18 +170,6 @@ const palette = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--ch
 
 
 
-function FilterSelect({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) {
-  return (
-    <label className="relative min-w-44 flex-1">
-      <span className="sr-only">{label}</span>
-      <select value={value} onChange={(event) => onChange(event.target.value)} className="h-10 w-full appearance-none rounded-md border border-input bg-background px-3 pr-8 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring">
-        <option value="">{label}</option>
-        {options.map((option) => <option key={option} value={option}>{option}</option>)}
-      </select>
-      <ChevronDown className="pointer-events-none absolute right-3 top-3 size-4 text-muted-foreground" />
-    </label>
-  );
-}
 
 function ChartPanel({ title, subtitle, children, className, empty }: { title: string; subtitle: string; children: React.ReactNode; className?: string; empty?: boolean }) {
   return (
@@ -283,6 +273,11 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const [endDate, setEndDate] = useState("");
   const [periodPreset, setPeriodPreset] = useState<PeriodPreset>("week");
   const [kpiOpen, setKpiOpen] = useState<string | null>(null);
+  const [gridStart, setGridStart] = useState<string | null>(null);
+  const [kpiSearch, setKpiSearch] = useState("");
+  const [expandedContact, setExpandedContact] = useState<string | null>(null);
+  useEffect(() => { setGridStart(null); }, [startDate, endDate]);
+  useEffect(() => { setKpiSearch(""); setExpandedContact(null); }, [kpiOpen]);
   const [selected, setSelected] = useState<Appointment | null>(null);
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<{ key: keyof Appointment | "priority"; asc: boolean }>({ key: "priority", asc: true });
@@ -344,11 +339,12 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   useEffect(() => { if (statuses.length) void loadCompletionLogs(appointments); }, [completion]);
 
   const option = (key: keyof Appointment) => foldedOptions(appointments.map((item) => item[key]));
-  const filtered = useMemo(() => appointments.filter((item) => {
+  const baseFiltered = useMemo(() => appointments.filter((item) => {
     const qPlate = normalizePlate(search);
     const hit = !search.trim() || (qPlate !== "" && item.plate.includes(qPlate)) || textMatches(search, [item.plate, item.brand, item.contactNumber, item.contact, item.issue, item.model, item.workshop, item.note, ...fieldDefinitions.filter((field) => field.storage === "custom" && ["text", "textarea"].includes(field.field_type)).map((field) => item.customFields[field.field_key])]);
-    return hit && matchesFilter(item.contact, contact) && matchesFilter(item.workshop, workshop) && matchesFilter(item.model, model) && matchesFilter(item.operator, operator) && inPeriod(item.date, startDate, endDate) && (!reworksOnly || Boolean(item.reworkOf));
-  }), [appointments, contact, endDate, model, operator, reworksOnly, search, startDate, workshop, fieldDefinitions]);
+    return hit && matchesFilter(item.contact, contact) && matchesFilter(item.workshop, workshop) && matchesFilter(item.model, model) && matchesFilter(item.operator, operator) && (!reworksOnly || Boolean(item.reworkOf));
+  }), [appointments, contact, model, operator, reworksOnly, search, workshop, fieldDefinitions]);
+  const filtered = useMemo(() => baseFiltered.filter((item) => inPeriod(item.date, startDate, endDate)), [baseFiltered, startDate, endDate]);
 
   const sorted = useMemo(() => [...filtered].sort((a, b) => {
     if (sort.key === "priority") return comparePriority(a, b, today, completion) * (sort.asc ? 1 : -1);
@@ -361,8 +357,13 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
 
   const visibleWeek = weekRange(today);
   const selectedWeek = startDate && endDate && (new Date(`${endDate}T12:00:00Z`).getTime() - new Date(`${startDate}T12:00:00Z`).getTime()) <= 6 * 86400000 ? weekRange(startDate) : visibleWeek;
-  const week = groupWeek(filtered, selectedWeek.start, selectedWeek.end);
-  const daily = days.map((name, index) => ({ name: name.slice(0, 3), value: week.days[index]?.length ?? 0 }));
+  const gridWeek = gridStart ? weekRange(gridStart) : selectedWeek;
+  const gridDays = groupWeek(baseFiltered, gridWeek.start, gridWeek.end).days;
+  const week = { days: gridDays, noDate: groupWeek(filtered, gridWeek.start, gridWeek.end).noDate };
+  const shiftGrid = (weeks: number) => { const base = new Date(`${gridWeek.start}T12:00:00Z`); base.setUTCDate(base.getUTCDate() + weeks * 7); setGridStart(base.toISOString().slice(0, 10)); };
+  const shortDay = (iso: string) => new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", timeZone: "UTC" }).format(new Date(`${iso}T12:00:00Z`)).replace(/\./g, "").replace(" de ", " ");
+  const gridLabel = `${shortDay(gridWeek.start)} – ${shortDay(gridWeek.end)}`;
+  const daily = days.map((name, index) => ({ name: name.slice(0, 3), value: filtered.filter((item) => weekdayIndex(item.date) === index).length }));
   const pendingToday = pendingDeliveries(appointments, today, today, completion);
   const pendingWeek = pendingDeliveries(appointments, visibleWeek.start, visibleWeek.end, completion);
   const hourly = countBy(filtered, (item) => normalizeTime(item.time)).sort((a, b) => a.name === DASH ? 1 : b.name === DASH ? -1 : a.name.localeCompare(b.name));
@@ -699,12 +700,12 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
           <div className="flex flex-col gap-3 xl:flex-row">
             <label className="relative min-w-64 flex-[1.4]"><Search className="absolute left-3 top-3 size-4 text-muted-foreground" /><Input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Buscar placa, contato ou serviço" className="pl-9" /></label>
             <div className="flex min-w-64 flex-1 gap-2"><Input type="date" aria-label="Data inicial" value={startDate} onChange={(e) => { setStartDate(e.target.value); setPeriodPreset("custom"); setPage(1); }} /><Input type="date" aria-label="Data final" value={endDate} onChange={(e) => { setEndDate(e.target.value); setPeriodPreset("custom"); setPage(1); }} /></div>
-            <FilterSelect label="Todos os contatos" value={contact} options={option("contact")} onChange={setContact} />
-            <FilterSelect label="Todas as oficinas" value={workshop} options={option("workshop")} onChange={setWorkshop} />
+            <SearchableSelect label="Todos os contatos" value={contact} options={option("contact")} onChange={setContact} />
+            <SearchableSelect label="Todas as oficinas" value={workshop} options={option("workshop")} onChange={setWorkshop} />
           </div>
           <div className="mt-3 flex flex-col gap-3 md:flex-row">
-            <FilterSelect label="Todos os modelos" value={model} options={option("model")} onChange={setModel} />
-            <FilterSelect label="Todos os operadores" value={operator} options={option("operator")} onChange={setOperator} />
+            <SearchableSelect label="Todos os modelos" value={model} options={option("model")} onChange={setModel} />
+            <SearchableSelect label="Todos os operadores" value={operator} options={option("operator")} onChange={setOperator} />
             <label className="flex min-h-10 items-center gap-2 text-sm text-foreground"><Checkbox checked={reworksOnly} onCheckedChange={(checked) => { setReworksOnly(checked === true); setPage(1); }} aria-label="Mostrar somente retrabalhos" />Mostrar somente retrabalhos</label>
             <Button variant="outline" onClick={resetFilters}><RotateCcw /> Limpar filtros</Button>
           </div>
@@ -717,18 +718,18 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
         </section>
 
         <SectionBoundary name="a grade semanal"><section>
-          <div className="mb-3 flex items-end justify-between"><div><h2 className="text-lg font-semibold">Grade semanal</h2><p className="text-sm text-muted-foreground">{periodPreset === "month" || (startDate && endDate && (new Date(`${endDate}T12:00:00Z`).getTime() - new Date(`${startDate}T12:00:00Z`).getTime()) > 6 * 86400000) ? "Semana atual no período; consulte a agenda detalhada para todos os dias." : "Clique em um veículo para abrir a ficha."}</p></div></div>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h2 className="text-lg font-semibold">Grade semanal</h2><div className="flex items-center gap-1"><Button variant="outline" size="icon" aria-label="Semana anterior" onClick={() => shiftGrid(-1)}><ChevronLeft /></Button><span className="min-w-32 text-center text-sm font-medium" aria-live="polite">{gridLabel}</span><Button variant="outline" size="icon" aria-label="Próxima semana" onClick={() => shiftGrid(1)}><ChevronRight /></Button><Button variant="outline" size="sm" onClick={() => setGridStart(weekRange(today).start)}>Hoje</Button></div></div>
           <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
             {days.map((day, index) => {
               const rows = [...(week.days[index] ?? [])].sort((a,b) => comparePriority(a, b, today, completion));
-               return <div key={day} className="min-h-48 rounded-lg border bg-muted/30 p-3"><div className="mb-3 flex items-center justify-between"><div><h3 className="text-sm font-semibold">{day}</h3><p className="text-xs text-muted-foreground">{dayMonth.format(new Date(new Date(`${selectedWeek.start}T12:00:00Z`).getTime() + index * 86400000))}</p></div><span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-semibold">{rows.length}</span></div><div className="space-y-2">{rows.map(renderCard)}</div></div>;
+               return <div key={day} className="min-h-48 rounded-lg border bg-muted/30 p-3"><div className="mb-3 flex items-center justify-between"><div><h3 className="text-sm font-semibold">{day}</h3><p className="text-xs text-muted-foreground">{dayMonth.format(new Date(new Date(`${gridWeek.start}T12:00:00Z`).getTime() + index * 86400000))}</p></div><span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-semibold">{rows.length}</span></div><div className="space-y-2">{rows.map(renderCard)}</div></div>;
             })}
           </div>
           {week.noDate.length > 0 && <div className="mt-3 rounded-lg border border-dashed bg-muted/30 p-3"><div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-semibold">{NO_DATE_GROUP}</h3><span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-semibold">{week.noDate.length}</span></div><div className="grid gap-2 md:grid-cols-3 xl:grid-cols-6">{week.noDate.map(renderCard)}</div></div>}
         </section></SectionBoundary>
 
         <SectionBoundary name="os gráficos"><section><h2 className="mb-3 text-lg font-semibold">Indicadores da operação</h2><div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-          <ChartPanel empty={daily.every((d) => !d.value)} title="Atendimentos por dia" subtitle="Volume distribuído na semana"><ResponsiveContainer width="100%" height="100%"><BarChart data={daily}><CartesianGrid vertical={false} stroke="var(--border)" /><XAxis dataKey="name" tickLine={false} axisLine={false} /><YAxis allowDecimals={false} tickLine={false} axisLine={false} /><Tooltip content={<CustomTooltip />} /><Bar dataKey="value" fill="var(--chart-1)" radius={[4,4,0,0]} /></BarChart></ResponsiveContainer></ChartPanel>
+          <ChartPanel empty={daily.every((d) => !d.value)} title="Atendimentos por dia da semana" subtitle="Soma de todo o período filtrado (registros sem data ficam de fora)"><ResponsiveContainer width="100%" height="100%"><BarChart data={daily}><CartesianGrid vertical={false} stroke="var(--border)" /><XAxis dataKey="name" tickLine={false} axisLine={false} /><YAxis allowDecimals={false} tickLine={false} axisLine={false} /><Tooltip content={<CustomTooltip />} /><Bar dataKey="value" fill="var(--chart-1)" radius={[4,4,0,0]} /></BarChart></ResponsiveContainer></ChartPanel>
           <ChartPanel empty={!hourly.length} title="Faixas de horário" subtitle="Concentração ao longo da manhã"><ResponsiveContainer width="100%" height="100%"><AreaChart data={hourly}><CartesianGrid vertical={false} stroke="var(--border)" /><XAxis dataKey="name" tickLine={false} axisLine={false} /><YAxis allowDecimals={false} tickLine={false} axisLine={false} /><Tooltip content={<CustomTooltip />} /><Area type="monotone" dataKey="value" stroke="var(--chart-2)" fill="var(--chart-2)" fillOpacity={0.16} strokeWidth={2} /></AreaChart></ResponsiveContainer></ChartPanel>
           <ChartPanel empty={!workshops.length} title="Volume por oficina" subtitle="Prestadores mais acionados"><ResponsiveContainer width="100%" height="100%"><BarChart data={workshops} layout="vertical" margin={{ left: 8 }}><CartesianGrid horizontal={false} stroke="var(--border)" /><XAxis type="number" allowDecimals={false} hide /><YAxis dataKey="name" type="category" width={118} tickLine={false} axisLine={false} tick={{ fontSize: 10 }} /><Tooltip content={<CustomTooltip />} /><Bar dataKey="value" fill="var(--chart-3)" radius={[0,4,4,0]} /></BarChart></ResponsiveContainer></ChartPanel>
           <ChartPanel empty={!contacts.length} title="Atendimentos por contato" subtitle="Participação dos órgãos atendidos"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={contacts} dataKey="value" nameKey="name" innerRadius={48} outerRadius={82} paddingAngle={2}>{contacts.map((item,index) => <Cell key={item.name} fill={palette[index % palette.length]} />)}</Pie><Tooltip content={<CustomTooltip />} /></PieChart></ResponsiveContainer></ChartPanel>
@@ -745,7 +746,30 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
 
       <Dialog open={Boolean(kpiOpen)} onOpenChange={(open) => { if (!open) setKpiOpen(null); }}>
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl"><DialogHeader><DialogTitle>{kpiOpen}</DialogTitle><DialogDescription>Agendamentos no período filtrado</DialogDescription></DialogHeader>
-          {kpiDetails.length ? <ul className="divide-y">{kpiDetails.map((entry) => <li key={entry.key} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 text-sm"><span className="font-medium">{entry.title}</span><span className="text-muted-foreground">{entry.detail}</span></li>)}</ul> : <p className="text-sm text-muted-foreground">Nenhum registro no período.</p>}
+          {kpiOpen === "Veículos únicos" ? (() => {
+            const q = normalizePlate(kpiSearch);
+            const plates = countBy(filtered.filter((item) => item.plate), (item) => item.plate).filter((row) => !q || normalizePlate(row.name).includes(q));
+            return <div className="space-y-3">
+              <Input autoFocus value={kpiSearch} onChange={(e) => setKpiSearch(e.target.value)} placeholder="Buscar placa (ex.: ABC-1D23)" aria-label="Buscar placa" />
+              {plates.length ? <ul className="divide-y">{plates.map((row) => <li key={row.name}><button type="button" className="flex w-full flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 text-left text-sm hover:bg-muted/50" onClick={() => { setSearch(row.name); setPage(1); setKpiOpen(null); }}><span className="font-medium">{row.name}</span><span className="text-muted-foreground">{row.value} agendamento(s) · ver na agenda</span></button></li>)}</ul> : <p className="text-sm text-muted-foreground">Nenhuma placa encontrada.</p>}
+            </div>;
+          })() : kpiOpen === "Clientes atendidos" ? (() => {
+            const clients = foldedOptions(filtered.map((item) => item.contact)).filter((name) => textMatches(kpiSearch, [name === EMPTY_OPTION ? "Não informado" : name]));
+            return <div className="space-y-3">
+              <Input autoFocus value={kpiSearch} onChange={(e) => setKpiSearch(e.target.value)} placeholder="Buscar cliente" aria-label="Buscar cliente" />
+              {clients.length ? <ul className="divide-y">{clients.map((name) => {
+                const rows = filtered.filter((item) => matchesFilter(item.contact, name)).sort((a, b) => compareDateTime(a, b, true));
+                const open = expandedContact === name;
+                return <li key={name} className="py-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <button type="button" aria-expanded={open} className="flex min-w-0 flex-1 items-center gap-2 text-left text-sm" onClick={() => setExpandedContact(open ? null : name)}><ChevronDown className={cn("size-4 shrink-0 transition-transform", open && "rotate-180")} /><span className="truncate font-medium">{name === EMPTY_OPTION ? "Não informado" : name}</span><span className="shrink-0 text-muted-foreground">{rows.length} atendimento(s) · {new Set(rows.map((item) => item.plate)).size} veículo(s)</span></button>
+                    <Button size="sm" variant="outline" onClick={() => { setContact(name); setPage(1); setKpiOpen(null); }}>Ver na agenda</Button>
+                  </div>
+                  {open && <ul className="mt-2 space-y-1 border-l pl-4">{rows.map((item) => <li key={item.dbId}><button type="button" className="flex w-full flex-wrap gap-x-3 rounded px-2 py-1 text-left text-sm hover:bg-muted/50" onClick={() => { setKpiOpen(null); setSelected(item); }}><span className="font-semibold">{dash(item.plate)}</span><span>{formatDateBR(item.date)}</span><span>{dash(normalizeTime(item.time))}</span><span className="text-muted-foreground">{item.status || "Não atualizada"}</span></button></li>)}</ul>}
+                </li>;
+              })}</ul> : <p className="text-sm text-muted-foreground">Nenhum cliente encontrado.</p>}
+            </div>;
+          })() : kpiDetails.length ? <ul className="divide-y">{kpiDetails.map((entry) => <li key={entry.key} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 text-sm"><span className="font-medium">{entry.title}</span><span className="text-muted-foreground">{entry.detail}</span></li>)}</ul> : <p className="text-sm text-muted-foreground">Nenhum registro no período.</p>}
         </DialogContent>
       </Dialog>
 

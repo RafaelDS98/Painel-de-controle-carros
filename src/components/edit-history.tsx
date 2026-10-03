@@ -1,4 +1,6 @@
 import { formatDateTimeBR } from "@/lib/agenda-safety";
+import { normalizePlate } from "@/lib/normalize";
+import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -60,18 +62,48 @@ export function ChangeLogDialog({ open, onOpenChange }: { open: boolean; onOpenC
   const [page, setPage] = useState(1);
   const [rows, setRows] = useState<LogRow[]>([]);
   const [total, setTotal] = useState(0);
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [userName, setUserName] = useState("");
+  const [plate, setPlate] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const plateKey = normalizePlate(plate);
+  const userKey = userName.trim().replace(/[%_,()]/g, "");
+  const filtering = Boolean(from || to || userKey || plateKey);
   useEffect(() => {
     if (!open) return;
-    supabase.from("edit_log").select(select, { count: "exact" }).order("changed_at", { ascending: false })
-      .range((page - 1) * pageSize, page * pageSize - 1)
-      .then(({ data, count }) => { setRows((data ?? []) as unknown as LogRow[]); setTotal(count ?? 0); });
-  }, [open, page]);
+    let active = true;
+    const fields = `id, changed_by, field_changed, old_value, new_value, changed_at, profiles${userKey ? "!inner" : ""}(full_name), appointments${plateKey ? "!inner" : ""}(plate)`;
+    let query = supabase.from("edit_log").select(fields, { count: "exact" });
+    if (from) query = query.gte("changed_at", `${from}T00:00:00-03:00`);
+    if (to) query = query.lte("changed_at", `${to}T23:59:59.999-03:00`);
+    if (userKey) query = query.ilike("profiles.full_name", `%${userKey}%`);
+    if (plateKey) query = query.ilike("appointments.plate", `%${plateKey}%`);
+    const timer = setTimeout(() => {
+      query.order("changed_at", { ascending: false }).range((page - 1) * pageSize, page * pageSize - 1)
+        .then(({ data, count, error }) => {
+          if (!active) return;
+          setLoadError(error ? "Não foi possível carregar o log. Tente de novo." : "");
+          setRows((data ?? []) as unknown as LogRow[]); setTotal(count ?? 0);
+        });
+    }, 250);
+    return () => { active = false; clearTimeout(timer); };
+  }, [open, page, from, to, userKey, plateKey]);
+  const reset = () => { setFrom(""); setTo(""); setUserName(""); setPlate(""); setPage(1); };
   const pages = Math.max(1, Math.ceil(total / pageSize));
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader><DialogTitle>Log de alterações</DialogTitle><DialogDescription>Todas as alterações de agendamentos, mais recentes primeiro.</DialogDescription></DialogHeader>
-        {rows.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma alteração registrada.</p>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <label className="text-xs text-muted-foreground">De<Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} /></label>
+          <label className="text-xs text-muted-foreground">Até<Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} /></label>
+          <label className="text-xs text-muted-foreground">Usuário<Input value={userName} placeholder="Nome do usuário" onChange={(e) => { setUserName(e.target.value); setPage(1); }} /></label>
+          <label className="text-xs text-muted-foreground">Placa<Input value={plate} placeholder="ABC-1D23" onChange={(e) => { setPlate(e.target.value); setPage(1); }} /></label>
+        </div>
+        {filtering && <div><Button variant="outline" size="sm" onClick={reset}>Limpar filtros</Button></div>}
+        {loadError && <p role="alert" className="text-sm text-destructive">{loadError}</p>}
+        {rows.length === 0 ? <p className="text-sm text-muted-foreground">{filtering ? "Nenhuma alteração encontrada com esses filtros." : "Nenhuma alteração registrada."}</p>
           : <ul className="space-y-2">{rows.map((row) => <LogLine key={row.id} row={row} withPlate />)}</ul>}
         <div className="flex items-center justify-between pt-2 text-sm text-muted-foreground">
           <span>{total} alteração(ões) • página {page} de {pages}</span>
