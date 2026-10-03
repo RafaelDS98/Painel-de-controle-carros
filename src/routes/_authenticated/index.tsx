@@ -7,10 +7,10 @@ import { Button } from "@/components/ui/button";
 export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
-      { title: "Agenda de Manutenção | ANPEX" },
-      { name: "description", content: "Painel semanal de agendamentos de manutenção da frota ANPEX." },
-      { property: "og:title", content: "Agenda de Manutenção | ANPEX" },
-      { property: "og:description", content: "Painel semanal de agendamentos de manutenção da frota ANPEX." },
+      { title: "Agenda de Manutenção | ANPEXC" },
+      { name: "description", content: "Painel semanal de agendamentos de manutenção da frota ANPEXC." },
+      { property: "og:title", content: "Agenda de Manutenção | ANPEXC" },
+      { property: "og:description", content: "Painel semanal de agendamentos de manutenção da frota ANPEXC." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],

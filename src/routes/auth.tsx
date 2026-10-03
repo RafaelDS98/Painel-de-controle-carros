@@ -7,10 +7,10 @@ import { Input } from "@/components/ui/input";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Entrar | ANPEX Agenda de Manutenção" },
-      { name: "description", content: "Acesso ao painel de agendamentos de manutenção da frota ANPEX." },
-      { property: "og:title", content: "Entrar | ANPEX Agenda de Manutenção" },
-      { property: "og:description", content: "Acesso ao painel de agendamentos de manutenção da frota ANPEX." },
+      { title: "Entrar | ANPEXC Agenda de Manutenção" },
+      { name: "description", content: "Acesso ao painel de agendamentos de manutenção da frota ANPEXC." },
+      { property: "og:title", content: "Entrar | ANPEXC Agenda de Manutenção" },
+      { property: "og:description", content: "Acesso ao painel de agendamentos de manutenção da frota ANPEXC." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -58,7 +58,7 @@ function AuthPage() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <form onSubmit={submit} className="w-full max-w-sm space-y-4 rounded-lg border bg-card p-8 shadow-sm">
         <div>
-          <h1 className="text-2xl font-bold text-card-foreground">ANPEX</h1>
+          <h1 className="text-2xl font-bold text-card-foreground">ANPEXC</h1>
           <p className="mt-1 text-sm text-muted-foreground">{mode === "login" ? "Entre para acessar a agenda de manutenção." : "Crie sua conta de acesso."}</p>
         </div>
         {mode === "signup" && <Input placeholder="Nome completo" value={fullName} onChange={(e) => setFullName(e.target.value)} required />}

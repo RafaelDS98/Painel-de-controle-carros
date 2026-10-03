@@ -461,6 +461,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     return true;
   }
 
+  const [newUrgent, setNewUrgent] = useState(false);
   async function createAppointment(fields: Partial<AppointmentFields>): Promise<boolean> {
     const date = fields.date?.trim();
     const time = fields.time?.trim();
@@ -470,6 +471,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
       date, time, plate, created_by: currentUser.id, status: "", sheet_id: "",
       original_deadline: fields.currentDeadline || null,
       current_deadline: fields.currentDeadline || null,
+      priority_urgent: currentUser.role !== "atendimento" && newUrgent,
     };
     values.custom_fields = fields.customFields ?? {};
     for (const [key, value] of Object.entries(fields)) {
@@ -479,6 +481,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     const { data, error } = await supabase.from("appointments").insert(values).select(rowColumns).single();
     if (error || !data) { setMessage(error?.message || "Não foi possível criar o agendamento."); return false; }
     setNewOpen(false);
+    setNewUrgent(false);
     resetFilters();
     await loadAppointments();
     setMessage(`Agendamento de ${plate} criado com sucesso.`);
@@ -677,7 +680,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     <div className={cn("min-h-screen bg-background text-foreground", dark && "dark")}>
       <header className="border-b bg-primary text-primary-foreground">
         <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-4 px-5 py-4 lg:px-8">
-          <div className="flex items-center gap-3"><div className="grid size-10 place-items-center rounded-md bg-primary-foreground text-primary"><Wrench className="size-5" /></div><div><p className="text-xl font-bold">ANPEX</p><p className="text-xs text-primary-foreground/70">Gestão de Agendamentos</p></div></div>
+          <div className="flex items-center gap-3"><div className="grid size-10 place-items-center rounded-md bg-primary-foreground text-primary"><Wrench className="size-5" /></div><div><p className="text-xl font-bold">ANPEXC</p><p className="text-xs text-primary-foreground/70">Gestão de Agendamentos</p></div></div>
           <div className="flex items-center gap-2">
             <div className="mr-2 hidden text-right text-sm sm:block"><p className="font-semibold">{currentUser.name}</p><p className="text-xs text-primary-foreground/70">{roleLabels[currentUser.role]}</p></div>
             <Button variant="secondary" onClick={() => setLogOpen(true)}><History /> Log de alterações</Button>
@@ -760,6 +763,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
       <Dialog open={newOpen} onOpenChange={setNewOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader><DialogTitle>Novo agendamento</DialogTitle><DialogDescription>Dados do atendimento</DialogDescription></DialogHeader>
+          {newOpen && <label className="mb-3 flex items-center gap-2 text-sm font-medium"><input type="checkbox" className="size-4 accent-destructive" checked={newUrgent && currentUser.role !== "atendimento"} disabled={currentUser.role === "atendimento"} onChange={(event) => setNewUrgent(event.target.checked)} />Marcar como urgente{currentUser.role === "atendimento" && <span className="text-xs font-normal text-muted-foreground">(somente gerente ou master)</span>}</label>}
           {newOpen && <AppointmentForm initial={emptyFields} definitions={fieldDefinitions} onSave={createAppointment} />}
         </DialogContent>
       </Dialog>
