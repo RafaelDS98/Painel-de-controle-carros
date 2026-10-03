@@ -33,3 +33,5 @@
 - Usuários e senhas são editados só por updatePanelUser/resetPanelPassword (master conferido no servidor); a redefinição encerra sessões via revoke_user_sessions (só service_role) e registra user_admin_log sem senha — trilha auditável sem expor credenciais.
 - Erros de criação/edição/senha de usuários passam por src/lib/auth-errors.ts (tradução, campo e código curto) e o erro técnico vai ao log do servidor sem senha — o master vê o motivo sem expor segredos.
 - O conector SGLOC fica em src/lib/sgloc (core.ts puro; client.server.ts só servidor; sgloc.functions.ts com master/usuário conferido no servidor); tokens SGLOC são cifrados (AES-GCM, chave SGLOC_TOKEN_KEY) em sgloc_accounts, inacessível ao cliente, e relatórios de teste só guardam dados mascarados — evita vazar credenciais e dados pessoais.
+
+- Excluir agendamento = arquivar (archived_at/archived_by), só master, garantido no trigger de edição e na RLS de leitura; o painel carrega só ativos por activeOnly (src/lib/agenda-safety.ts) e a deduplicação de importação usa existing_sgloc_references (inclui arquivados) — nada é apagado e nada some de uma tela só.

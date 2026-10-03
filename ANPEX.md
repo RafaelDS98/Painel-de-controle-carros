@@ -295,3 +295,5 @@ Até essa implementação existir, não use `localStorage` como substituto de ba
 ## 14. Contexto do repositório
 
 O repositório é sincronizado com o Lovable. Não reescreva histórico já publicado com force push, rebase, amend ou squash. Mantenha a branch conectada sempre em estado funcional.
+## Excluir = arquivar (Lixeira)
+- "Excluir" na tela arquiva o agendamento; só master exclui e restaura (validado no banco). Arquivados somem de agenda, indicadores, gráficos, filtros e exportação; ficam na Lixeira (só master) e não podem ser editados até restaurar. Exclusão e restauração ficam no histórico com placa, data e loja. A importação nunca recria um ID SGLOC arquivado.
