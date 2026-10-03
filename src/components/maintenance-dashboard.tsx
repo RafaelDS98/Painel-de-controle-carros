@@ -55,7 +55,7 @@ import { batchChanges, batchColumns, batchIdHeader, batchValidation, type BatchR
 import { periodRange, weekRange, pendingDeliveries, type PeriodPreset } from "@/lib/agenda-period";
 import { ContactRegister } from "@/components/contact-register";
 import { AgendaSettings } from "@/components/agenda-settings";
-import { importRowSkipReason, isEmergency, normalizeDate, normalizePlate, normalizeTime, parseKm, safeText, sglocExtras, sglocStateLabels, stripHtml } from "@/lib/normalize";
+import { isEmergency, normalizeDate, normalizePlate, normalizeTime, parseKm, safeText, sglocStateLabels, stripHtml } from "@/lib/normalize";
 import { DASH, EMPTY_OPTION, NO_DATE_GROUP, clampPage, compareDateTime, compareText, countBy, dash, exportHeaders, exportRows, foldedOptions, formatDateBR, groupWeek, inPeriod, matchesFilter, safeAverage, serviceCategory, textMatches, toCsv, buildImportRecords, dropExistingReferences } from "@/lib/agenda-safety";
 import { SectionBoundary } from "@/components/section-boundary";
 import { customValues, statusColors, type FieldDefinition, type StatusOption, type CustomValues } from "@/lib/agenda-config";
@@ -162,7 +162,6 @@ const requiredColumns = [
 const days = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 const weekday = new Intl.DateTimeFormat("pt-BR", { weekday: "long" });
 const dayMonth = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short" });
-const fullDate = new Intl.DateTimeFormat("pt-BR");
 const palette = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"];
 
 function localDate(value: string) {
