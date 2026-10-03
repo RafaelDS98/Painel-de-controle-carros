@@ -55,6 +55,7 @@ import { batchChanges, batchColumns, batchIdHeader, batchValidation, type BatchR
 import { periodRange, weekRange, pendingDeliveries, type PeriodPreset } from "@/lib/agenda-period";
 import { ContactRegister } from "@/components/contact-register";
 import { AgendaSettings } from "@/components/agenda-settings";
+import { importRowSkipReason, isEmergency, normalizeDate, normalizePlate, normalizeTime, parseKm, safeText, sglocExtras, sglocStateLabels, stripHtml } from "@/lib/normalize";
 import { customValues, statusColors, type FieldDefinition, type StatusOption, type CustomValues } from "@/lib/agenda-config";
 
 type Appointment = {
@@ -547,19 +548,42 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
       const hasDeadline = columns.includes("Previsão de Entrega");
       const { data: userData } = await supabase.auth.getUser();
       const createdBy = userData.user?.id ?? null;
-      const records = rows.map((row) => {
-        const deadline = hasDeadline && String(row["Previsão de Entrega"] ?? "").trim() !== "" ? isoOrNull(parseExcelDate(row["Previsão de Entrega"])) : null;
-        return {
-          sheet_id: String(row["ID"] ?? ""), registered_at: isoOrNull(parseExcelDate(row["Data Cadastro"])), date: isoOrNull(parseExcelDate(row["Data Atendimento"])),
-          time: parseTime(row["Hora"]), plate: String(row["Placa"] ?? ""), store: String(row["Loja"] ?? ""), model: String(row["Modelo"] ?? ""),
-          contact: String(row["Contato"] ?? ""), workshop: String(row["Local/Oficina"] ?? ""), issue: String(row["Problemas Relatado"] ?? ""),
-          note: String(row["Observação"] ?? ""), operator: String(row["Operador"] ?? ""), external_order: String(row["O.S Externa"] ?? ""),
+      const cell = (row: Record<string, unknown>, column: string) => stripHtml(row[column]);
+      let skippedEmpty = 0;
+      let skippedExisting = 0;
+      const candidates: TablesInsert<"appointments">[] = [];
+      for (const row of rows) {
+        if (importRowSkipReason(row)) { skippedEmpty++; continue; }
+        const deadline = hasDeadline ? normalizeDate(row["Previsão de Entrega"]) : null;
+        const extras = sglocExtras(row);
+        candidates.push({
+          sheet_id: cell(row, "ID"), registered_at: normalizeDate(row["Data Cadastro"]), date: normalizeDate(row["Data Atendimento"]),
+          time: normalizeTime(row["Hora"]), plate: normalizePlate(cell(row, "Placa")), store: cell(row, "Loja"), model: cell(row, "Modelo"),
+          contact: cell(row, "Contato"), workshop: cell(row, "Local/Oficina"), issue: cell(row, "Problemas Relatado"),
+          note: cell(row, "Observação"), operator: cell(row, "Operador"), external_order: cell(row, "O.S Externa"),
           status: "", created_by: createdBy, original_deadline: deadline, current_deadline: deadline,
-        };
+          os_number: extras.os_number, schedule_type: extras.schedule_type, sgloc_reference: extras.sgloc_reference,
+        });
+      }
+      const refs = [...new Set(candidates.map((item) => item.sgloc_reference).filter((ref): ref is string => Boolean(ref)))];
+      const existing = new Set<string>();
+      for (let start = 0; start < refs.length; start += 200) {
+        const { data, error } = await supabase.from("appointments").select("sgloc_reference").in("sgloc_reference", refs.slice(start, start + 200));
+        if (error) throw new Error("Não foi possível conferir os IDs do SGLOC já cadastrados.");
+        for (const item of data ?? []) if (item.sgloc_reference) existing.add(item.sgloc_reference);
+      }
+      const records = candidates.filter((item) => {
+        if (!item.sgloc_reference) return true;
+        if (existing.has(item.sgloc_reference)) { skippedExisting++; return false; }
+        existing.add(item.sgloc_reference);
+        return true;
       });
-      const { error } = await supabase.from("appointments").insert(records);
-      if (error) throw new Error("Não foi possível gravar a agenda importada no banco.");
-      await loadAppointments(); resetFilters(); setMessage(`${records.length} agendamentos importados com sucesso.`);
+      if (records.length) {
+        const { error } = await supabase.from("appointments").insert(records);
+        if (error) throw new Error(error.code === "23505" ? "Outro usuário cadastrou um ID do SGLOC desta planilha ao mesmo tempo. Importe novamente." : "Não foi possível gravar a agenda importada no banco.");
+      }
+      await loadAppointments(); resetFilters();
+      setMessage(`${records.length} agendamento(s) importado(s) • ${skippedEmpty} linha(s) ignorada(s) (sem placa ou vazias) • ${skippedExisting} ignorada(s) por ID do SGLOC já existente.`);
     } catch (error) { setMessage(error instanceof Error ? error.message : "Não foi possível ler o arquivo."); }
   }
 
@@ -613,7 +637,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
       const missing = batchColumns.map(([, header]) => header).filter((header) => !headers.includes(header));
       if (missing.length) throw new Error(`Colunas ausentes: ${missing.join(", ")}. Use o arquivo gerado por "Exportar para edição em lote".`);
       if (new Set(headers).size !== headers.length) throw new Error("A planilha contém colunas repetidas. Use o arquivo original de edição em lote.");
-      const result = { updated: 0, unchanged: 0, errors: [] as { line: number; plate: string; reason: string }[] };
+      const result = { updated: 0, unchanged: 0, skipped: 0, errors: [] as { line: number; plate: string; reason: string }[] };
       const seen = new Set<string>();
       const startRow = sheet["!ref"] ? XLSX.utils.decode_range(sheet["!ref"]).s.r : 0;
       for (const [index, cells] of grid.entries()) {
@@ -621,7 +645,8 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
         const row = Object.fromEntries(headers.map((header, column) => [header, cells[column] ?? ""]));
         const line = startRow + index + 1;
         const id = String(row[batchIdHeader] ?? "").trim();
-        const plate = String(row["Placa"] ?? "").trim() || "—";
+        if (/registro\(s\)/i.test(stripHtml(row[batchIdHeader])) || !normalizePlate(stripHtml(row["Placa"]))) { result.skipped++; continue; }
+        const plate = normalizePlate(stripHtml(row["Placa"]));
         if (!id) { result.errors.push({ line, plate, reason: "ID do sistema vazio — use Importar agenda para registros novos." }); continue; }
         if (seen.has(id)) { result.errors.push({ line, plate, reason: "ID repetido nesta planilha." }); continue; }
         seen.add(id);
