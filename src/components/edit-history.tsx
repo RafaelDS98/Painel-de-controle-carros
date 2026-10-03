@@ -26,12 +26,12 @@ type LogRow = {
 const show = (value: string | null) => (value === null || value.trim() === "" ? "—" : value);
 const select = "id, changed_by, field_changed, old_value, new_value, changed_at, profiles(full_name), appointments(plate)";
 
-function LogLine({ row, withPlate }: { row: LogRow; withPlate?: boolean }) {
+function LogLine({ row, withPlate, onPlateClick }: { row: LogRow; withPlate?: boolean; onPlateClick?: (plate: string) => void }) {
   return (
     <li className="rounded-md border bg-muted/30 p-3 text-sm">
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
         <span>{authorLabel(row.changed_by, row.profiles?.full_name)} • {formatDateTimeBR(row.changed_at)}</span>
-        {withPlate && <span className="rounded bg-primary px-1.5 py-0.5 font-semibold text-primary-foreground">{row.appointments?.plate || "—"}</span>}
+        {withPlate && <Button variant="link" className="min-h-11 h-auto gap-1 px-2 font-semibold text-primary" onClick={() => onPlateClick?.(row.appointments?.plate || "")} title="Histórico do veículo">{row.appointments?.plate || "Não informado"}<ArrowRight className="size-4" /></Button>}
       </div>
       <p className="mt-1"><span className="font-semibold">{fieldLabels[row.field_changed] ?? row.field_changed}:</span>{" "}
         <span className="text-muted-foreground line-through">{show(row.old_value)}</span> → <span className="font-medium">{show(row.new_value)}</span></p>
@@ -57,7 +57,7 @@ export function AppointmentHistory({ appointmentId, refreshKey, customLabels = {
   );
 }
 
-export function ChangeLogDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+export function ChangeLogDialog({ open, onOpenChange, onPlateClick }: { open: boolean; onOpenChange: (open: boolean) => void; onPlateClick?: (plate: string) => void }) {
   const pageSize = 20;
   const [page, setPage] = useState(1);
   const [rows, setRows] = useState<LogRow[]>([]);
@@ -104,7 +104,7 @@ export function ChangeLogDialog({ open, onOpenChange }: { open: boolean; onOpenC
         {filtering && <div><Button variant="outline" size="sm" onClick={reset}>Limpar filtros</Button></div>}
         {loadError && <p role="alert" className="text-sm text-destructive">{loadError}</p>}
         {rows.length === 0 ? <p className="text-sm text-muted-foreground">{filtering ? "Nenhuma alteração encontrada com esses filtros." : "Nenhuma alteração registrada."}</p>
-          : <ul className="space-y-2">{rows.map((row) => <LogLine key={row.id} row={row} withPlate />)}</ul>}
+          : <ul className="space-y-2">{rows.map((row) => <LogLine key={row.id} row={row} withPlate onPlateClick={onPlateClick} />)}</ul>}
         <div className="flex items-center justify-between pt-2 text-sm text-muted-foreground">
           <span>{total} alteração(ões) • página {page} de {pages}</span>
           <div className="flex gap-2">
