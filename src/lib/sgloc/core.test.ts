@@ -83,7 +83,7 @@ describe("diagnóstico do login", () => {
     const d = describeResponseDetail(true, "application/json; charset=UTF-8", { message: "Credenciais incorretas", extra: "segredo" }, "{}");
     expect(d).toBe("Resposta do SGLOC: Credenciais incorretas [application/json; charset=UTF-8; chaves: message, extra]");
     expect(d).not.toContain("segredo");
-    expect(describeResponseDetail(true, null, {}, "x")).toBe("Resposta do SGLOC: (sem mensagem no corpo) [sem content-type; chaves: ]".replace("chaves: ]", "]"));
+    expect(describeResponseDetail(true, null, {}, "x")).toBe("Resposta do SGLOC: (sem mensagem no corpo) [sem content-type]");
   });
   it("JSON: message limitada a 300 caracteres", () => {
     const d = describeResponseDetail(true, "application/json", { message: "x".repeat(400) }, "");
@@ -105,7 +105,7 @@ describe("diagnóstico do login", () => {
     expect(composeLoginError(com)).toBe("E-mail ou senha do SGLOC recusados (401). Resposta do SGLOC: Credenciais incorretas [application/json; chaves: message]");
     expect(composeLoginError(new SglocError("unauthorized", "base", 401))).toBe("E-mail ou senha do SGLOC recusados (401).");
     const nf = new SglocError("not_found", "Endereço não encontrado no SGLOC (404).", 404);
-    nf.diagnostic = "Resposta do SGLOC: (sem mensagem no corpo) [text/html; chaves: ]".replace("chaves: ]", "]");
+    nf.diagnostic = "Resposta do SGLOC: (sem mensagem no corpo) [text/html]";
     expect(composeLoginError(nf)).toBe("Endereço não encontrado no SGLOC (404). Resposta do SGLOC: (sem mensagem no corpo) [text/html]");
   });
 });
