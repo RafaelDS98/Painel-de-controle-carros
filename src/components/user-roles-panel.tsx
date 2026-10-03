@@ -7,13 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Pencil, UserPlus } from "lucide-react";
 import { PasswordInput, isWeakPassword } from "@/components/my-account";
+import { parsePanelError, type AuthField } from "@/lib/auth-errors";
 
 type Role = "atendimento" | "gerente" | "master";
 type UserRow = { user_id: string; full_name: string | null; email: string | null; role: Role | null };
 type LogRow = { id: string; changed_at: string; actor_id: string | null; target_label: string; action: string; detail: string };
 const roleNames: Record<Role, string> = { atendimento: "Atendimento", gerente: "Gerente", master: "Master" };
 const selectClass = "h-10 w-full rounded-md border border-input bg-background px-2 text-sm text-foreground disabled:opacity-60";
-const errText = (e: unknown, fallback: string) => e instanceof Error && e.message ? e.message : fallback;
 
 export function UserRolesPanel({ currentUserId }: { currentUserId: string }) {
   const [users, setUsers] = useState<UserRow[]>([]);
@@ -21,6 +21,10 @@ export function UserRolesPanel({ currentUserId }: { currentUserId: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [fieldErr, setFieldErr] = useState<{ field: AuthField; message: string }>({ field: "", message: "" });
+  const showErr = (caught: unknown, fallback: string) => { const p = parsePanelError(caught, fallback); setError(p.message); setFieldErr(p); };
+  const fe = (f: AuthField) => fieldErr.field === f && fieldErr.message ? <span role="alert" className="mt-1 block text-xs text-destructive">{fieldErr.message}</span> : null;
+  const local = (f: AuthField, m: string) => { setError(m); setFieldErr({ field: f, message: m }); };
   const [formOpen, setFormOpen] = useState(false);
   const [draft, setDraft] = useState({ fullName: "", email: "", role: "atendimento" as Role, password: "" });
   const [creating, setCreating] = useState(false);
@@ -50,7 +54,7 @@ export function UserRolesPanel({ currentUserId }: { currentUserId: string }) {
     window.setTimeout(() => rowRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 50);
   }
   function openEdit(row: UserRow) {
-    setError(""); setNotice("");
+    setError(""); setNotice(""); setFieldErr({ field: "", message: "" });
     if (editingId === row.user_id) { close(row.user_id); return; }
     setEditingId(row.user_id);
     setEdit({ fullName: row.full_name ?? "", email: row.email ?? "", role: row.role ?? "" });
@@ -59,11 +63,11 @@ export function UserRolesPanel({ currentUserId }: { currentUserId: string }) {
 
   async function submitNew(event: React.FormEvent) {
     event.preventDefault();
-    setError(""); setNotice("");
+    setError(""); setNotice(""); setFieldErr({ field: "", message: "" });
     const email = draft.email.trim();
-    if (draft.fullName.trim().length < 2) { setError("Informe o nome (mínimo 2 letras)."); return; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError("E-mail inválido."); return; }
-    if (draft.password.length < 8) { setError("A senha provisória precisa ter pelo menos 8 caracteres."); return; }
+    if (draft.fullName.trim().length < 2) { local("fullName", "Informe o nome (mínimo 2 letras)."); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { local("email", "E-mail inválido ou domínio não aceito."); return; }
+    if (draft.password.length < 8) { local("password", "Senha precisa de no mínimo 8 caracteres."); return; }
     setCreating(true);
     try {
       await createUser({ data: { ...draft, email } });
@@ -71,15 +75,15 @@ export function UserRolesPanel({ currentUserId }: { currentUserId: string }) {
       setDraft({ fullName: "", email: "", role: "atendimento", password: "" });
       setFormOpen(false);
       await load();
-    } catch (caught) { setError(errText(caught, "Não foi possível criar o usuário.")); } finally { setCreating(false); }
+    } catch (caught) { showErr(caught, "Não foi possível criar o usuário."); } finally { setCreating(false); }
   }
 
   async function saveEdit(event: React.FormEvent, row: UserRow) {
     event.preventDefault();
-    setError(""); setNotice("");
+    setError(""); setNotice(""); setFieldErr({ field: "", message: "" });
     const email = edit.email.trim().toLowerCase();
-    if (edit.fullName.trim().length < 2) { setError("Informe o nome (mínimo 2 letras)."); return; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError("E-mail inválido."); return; }
+    if (edit.fullName.trim().length < 2) { local("fullName", "Informe o nome (mínimo 2 letras)."); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { local("email", "E-mail inválido ou domínio não aceito."); return; }
     const role = edit.role || null;
     if (row.user_id === currentUserId && row.role === "master" && role !== "master" &&
       !window.confirm("Você está removendo o seu próprio perfil master e perderá acesso às configurações. Confirmar?")) return;
@@ -88,20 +92,20 @@ export function UserRolesPanel({ currentUserId }: { currentUserId: string }) {
       const result = await updateUser({ data: { userId: row.user_id, fullName: edit.fullName.trim(), email, role } });
       setNotice(result.changed ? `Cadastro de ${edit.fullName.trim()} atualizado.` : "Nenhuma alteração para salvar.");
       close(row.user_id); await load();
-    } catch (caught) { setError(errText(caught, "Não foi possível salvar.")); } finally { setBusy(false); }
+    } catch (caught) { showErr(caught, "Não foi possível salvar."); } finally { setBusy(false); }
   }
 
   async function savePassword(row: UserRow) {
-    setError(""); setNotice("");
-    if (pw.password.length < 6) { setError("A senha precisa ter pelo menos 6 caracteres."); return; }
-    if (pw.password !== pw.confirm) { setError("As senhas não conferem."); return; }
+    setError(""); setNotice(""); setFieldErr({ field: "", message: "" });
+    if (pw.password.length < 6) { local("password", "Senha precisa de no mínimo 6 caracteres."); return; }
+    if (pw.password !== pw.confirm) { local("password", "As senhas não conferem."); return; }
     setBusy(true);
     try {
       await resetPassword({ data: { userId: row.user_id, password: pw.password, requireChange: pw.requireChange } });
       setNotice(`Senha de ${row.full_name || row.email || "usuário"} redefinida.${row.user_id !== currentUserId ? " As sessões abertas dele foram encerradas." : ""}`);
       setPw({ password: "", confirm: "", requireChange: false });
       close(row.user_id); await load();
-    } catch (caught) { setError(errText(caught, "Não foi possível redefinir a senha.")); } finally { setBusy(false); }
+    } catch (caught) { showErr(caught, "Não foi possível redefinir a senha."); } finally { setBusy(false); }
   }
 
   const nameOf = (id: string | null) => users.find((u) => u.user_id === id)?.full_name || users.find((u) => u.user_id === id)?.email || "—";
@@ -109,10 +113,10 @@ export function UserRolesPanel({ currentUserId }: { currentUserId: string }) {
   return <section className="space-y-3">
     <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold">Usuários e permissões</h3><Button size="sm" variant="outline" onClick={() => { setFormOpen((v) => !v); setError(""); }}><UserPlus /> Novo usuário</Button></div>
     {formOpen && <form noValidate onSubmit={submitNew} className="grid gap-3 rounded-md border p-4 sm:grid-cols-2" aria-label="Novo usuário">
-      <label className="text-sm">Nome<Input value={draft.fullName} onChange={(e) => setDraft({ ...draft, fullName: e.target.value })} maxLength={120} /></label>
-      <label className="text-sm">E-mail<Input type="email" value={draft.email} onChange={(e) => setDraft({ ...draft, email: e.target.value })} maxLength={255} /></label>
-      <label className="text-sm">Perfil<select className={selectClass} value={draft.role} onChange={(e) => setDraft({ ...draft, role: e.target.value as Role })}>{(Object.keys(roleNames) as Role[]).map((r) => <option key={r} value={r}>{roleNames[r]}</option>)}</select></label>
-      <label className="text-sm">Senha provisória<Input type="password" autoComplete="new-password" value={draft.password} onChange={(e) => setDraft({ ...draft, password: e.target.value })} /><span className="text-xs text-muted-foreground">Mínimo 8 caracteres. Não fica salva no painel; o usuário troca no primeiro acesso.</span></label>
+      <label className="text-sm">Nome<Input value={draft.fullName} onChange={(e) => setDraft({ ...draft, fullName: e.target.value })} maxLength={120} />{fe("fullName")}</label>
+      <label className="text-sm">E-mail<Input type="email" value={draft.email} onChange={(e) => setDraft({ ...draft, email: e.target.value })} maxLength={255} />{fe("email")}</label>
+      <label className="text-sm">Perfil<select className={selectClass} value={draft.role} onChange={(e) => setDraft({ ...draft, role: e.target.value as Role })}>{(Object.keys(roleNames) as Role[]).map((r) => <option key={r} value={r}>{roleNames[r]}</option>)}</select>{fe("role")}</label>
+      <label className="text-sm">Senha provisória<Input type="password" autoComplete="new-password" value={draft.password} onChange={(e) => setDraft({ ...draft, password: e.target.value })} />{fe("password")}<span className="text-xs text-muted-foreground">Mínimo 8 caracteres. Não fica salva no painel; o usuário troca no primeiro acesso.</span></label>
       <div className="flex gap-2 sm:col-span-2"><Button type="submit" disabled={creating}>{creating ? "Criando…" : "Criar usuário"}</Button><Button type="button" variant="outline" onClick={() => setFormOpen(false)}>Cancelar</Button></div>
     </form>}
     {error && <p role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>}
@@ -127,15 +131,16 @@ export function UserRolesPanel({ currentUserId }: { currentUserId: string }) {
         </div>
         {open && <div className="mt-3 space-y-4 rounded-md border bg-muted/30 p-3">
           <form noValidate onSubmit={(e) => saveEdit(e, row)} className="grid gap-3 sm:grid-cols-3" aria-label={`Editar ${row.full_name || row.email}`}>
-            <label className="text-sm">Nome<Input value={edit.fullName} onChange={(e) => setEdit({ ...edit, fullName: e.target.value })} maxLength={120} /></label>
-            <label className="text-sm">E-mail<Input type="email" value={edit.email} onChange={(e) => setEdit({ ...edit, email: e.target.value })} maxLength={255} /></label>
-            <label className="text-sm">Perfil<select className={selectClass} value={edit.role} onChange={(e) => setEdit({ ...edit, role: e.target.value as Role | "" })}><option value="">Sem acesso</option>{(Object.keys(roleNames) as Role[]).map((r) => <option key={r} value={r}>{roleNames[r]}</option>)}</select></label>
+            <label className="text-sm">Nome<Input value={edit.fullName} onChange={(e) => setEdit({ ...edit, fullName: e.target.value })} maxLength={120} />{editingId && fe("fullName")}</label>
+            <label className="text-sm">E-mail<Input type="email" value={edit.email} onChange={(e) => setEdit({ ...edit, email: e.target.value })} maxLength={255} />{fe("email")}</label>
+            <label className="text-sm">Perfil<select className={selectClass} value={edit.role} onChange={(e) => setEdit({ ...edit, role: e.target.value as Role | "" })}><option value="">Sem acesso</option>{(Object.keys(roleNames) as Role[]).map((r) => <option key={r} value={r}>{roleNames[r]}</option>)}</select>{fe("role")}</label>
             <div className="flex flex-wrap gap-2 sm:col-span-3"><Button type="submit" disabled={busy}>Salvar cadastro</Button><Button type="button" variant="outline" onClick={() => close(row.user_id)}>Cancelar</Button></div>
           </form>
           <div className="grid gap-3 border-t pt-3 sm:grid-cols-2" role="group" aria-label="Redefinir senha">
             <h4 className="font-semibold sm:col-span-2">Redefinir senha</h4>
             <PasswordInput label="Nova senha" value={pw.password} onChange={(v) => setPw({ ...pw, password: v })} />
             <PasswordInput label="Confirmar nova senha" value={pw.confirm} onChange={(v) => setPw({ ...pw, confirm: v })} />
+            {fe("password") && <div className="sm:col-span-2">{fe("password")}</div>}
             {isWeakPassword(pw.password) && <p className="text-xs text-muted-foreground sm:col-span-2">Senha fraca — permitida, mas recomende trocar depois.</p>}
             <label className="flex items-center gap-2 text-sm sm:col-span-2"><Checkbox checked={pw.requireChange} onCheckedChange={(v) => setPw({ ...pw, requireChange: v === true })} />Exigir que o usuário troque a senha no próximo acesso</label>
             <div className="sm:col-span-2"><Button type="button" variant="outline" disabled={busy} onClick={() => savePassword(row)}>Redefinir senha</Button></div>
