@@ -16,6 +16,8 @@ export type Database = {
     Tables: {
       appointments: {
         Row: {
+          archived_at: string | null
+          archived_by: string | null
           brand: string
           client_id: number | null
           contact: string
@@ -60,6 +62,8 @@ export type Database = {
           workshop: string
         }
         Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
           brand?: string
           client_id?: number | null
           contact?: string
@@ -104,6 +108,8 @@ export type Database = {
           workshop?: string
         }
         Update: {
+          archived_at?: string | null
+          archived_by?: string | null
           brand?: string
           client_id?: number | null
           contact?: string
@@ -586,6 +592,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      existing_sgloc_references: {
+        Args: { _refs: string[] }
+        Returns: string[]
+      }
       get_my_sgloc_status: {
         Args: never
         Returns: {
