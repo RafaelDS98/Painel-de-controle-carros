@@ -18,3 +18,5 @@
 - [x] Verificar migração de mecânicos e fluxos reais sem deixar dados de teste.
 - [x] Prioridade: atendimento não altera urgência (banco), toggle na ficha, ordenação "Prioridade" padrão e selo Urgente.
 - [x] Aba Usuários e permissões (master) com seleção de perfil.
+- [ ] Lote 4: filtros ativos sincronizados, detalhes de indicadores e histórico de placas em todas as listas.
+- [ ] Verificar TSC, testes e fluxo master no navegador; separar testes reais de leitura.

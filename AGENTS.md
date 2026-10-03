@@ -29,3 +29,4 @@
 - Exibição, filtros, ordenação, agrupamento e exportação passam pelas funções puras de src/lib/agenda-safety.ts, e as seções principais ficam em SectionBoundary — dado vazio ou estranho nunca derruba a tela.
 - Planilhas exportadas pelo SGLOC declaram dimensão errada; sempre recalcular o !ref com fixSheetRange (src/lib/sheet-range.ts) antes de ler — senão a leitura devolve zero linhas.
 - Usuários são criados só pela função de servidor createPanelUser (src/lib/admin-users.functions.ts), que confere no servidor se quem chama é master e usa a chave de serviço apenas lá; a troca da senha provisória no primeiro acesso usa a marca must_change_password nos metadados do usuário.
+- Indicadores e histórico do veículo usam os mesmos filtros do painel; seleção de placa é separada da busca textual e a faixa de filtros reflete ambos — permite remover um critério sem apagar os demais.
