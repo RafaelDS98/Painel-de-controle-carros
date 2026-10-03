@@ -62,6 +62,8 @@ import { SearchableSelect } from "@/components/searchable-select";
 import { weekdayIndex } from "@/lib/agenda-safety";
 import { SectionBoundary } from "@/components/section-boundary";
 import { customValues, statusColors, type FieldDefinition, type StatusOption, type CustomValues } from "@/lib/agenda-config";
+import { IndicatorDetails, type IndicatorGroup, type IndicatorAppointment } from "@/components/indicator-details";
+import { toast } from "sonner";
 
 type Appointment = {
   dbId: string;
@@ -265,6 +267,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const [reworksOnly, setReworksOnly] = useState(false);
   const [today, setToday] = useState(() => dateInBrazil(new Date()));
   const [search, setSearch] = useState("");
+  const [plateFilter, setPlateFilter] = useState("");
   const [contact, setContact] = useState("");
   const [workshop, setWorkshop] = useState("");
   const [model, setModel] = useState("");
@@ -275,9 +278,9 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const [kpiOpen, setKpiOpen] = useState<string | null>(null);
   const [gridStart, setGridStart] = useState<string | null>(null);
   const [kpiSearch, setKpiSearch] = useState("");
-  const [expandedContact, setExpandedContact] = useState<string | null>(null);
+  const [historyPlate, setHistoryPlate] = useState<string | null>(null);
+  const agendaRef = useRef<HTMLElement>(null);
   useEffect(() => { setGridStart(null); }, [startDate, endDate]);
-  useEffect(() => { setKpiSearch(""); setExpandedContact(null); }, [kpiOpen]);
   const [selected, setSelected] = useState<Appointment | null>(null);
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<{ key: keyof Appointment | "priority"; asc: boolean }>({ key: "priority", asc: true });
@@ -342,8 +345,8 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const baseFiltered = useMemo(() => appointments.filter((item) => {
     const qPlate = normalizePlate(search);
     const hit = !search.trim() || (qPlate !== "" && item.plate.includes(qPlate)) || textMatches(search, [item.plate, item.brand, item.contactNumber, item.contact, item.issue, item.model, item.workshop, item.note, ...fieldDefinitions.filter((field) => field.storage === "custom" && ["text", "textarea"].includes(field.field_type)).map((field) => item.customFields[field.field_key])]);
-    return hit && matchesFilter(item.contact, contact) && matchesFilter(item.workshop, workshop) && matchesFilter(item.model, model) && matchesFilter(item.operator, operator) && (!reworksOnly || Boolean(item.reworkOf));
-  }), [appointments, contact, model, operator, reworksOnly, search, workshop, fieldDefinitions]);
+    return hit && (!plateFilter || (plateFilter === EMPTY_OPTION ? !item.plate : normalizePlate(item.plate) === normalizePlate(plateFilter))) && matchesFilter(item.contact, contact) && matchesFilter(item.workshop, workshop) && matchesFilter(item.model, model) && matchesFilter(item.operator, operator) && (!reworksOnly || Boolean(item.reworkOf));
+  }), [appointments, contact, model, operator, plateFilter, reworksOnly, search, workshop, fieldDefinitions]);
   const filtered = useMemo(() => baseFiltered.filter((item) => inPeriod(item.date, startDate, endDate)), [baseFiltered, startDate, endDate]);
 
   const sorted = useMemo(() => [...filtered].sort((a, b) => {
@@ -378,8 +381,30 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const average = safeAverage(filtered.filter((item) => normalizeDate(item.date)).length, usedDays);
 
   function resetFilters() {
-    setSearch(""); setContact(""); setWorkshop(""); setModel(""); setOperator(""); setPeriodPreset("week"); const range = periodRange("week", today); setStartDate(range.start); setEndDate(range.end); setReworksOnly(false); setPage(1);
+    setSearch(""); setPlateFilter(""); setContact(""); setWorkshop(""); setModel(""); setOperator(""); setPeriodPreset("custom"); setStartDate(""); setEndDate(""); setReworksOnly(false); setPage(1);
   }
+
+  function applyDetailFilter(label: string, apply: () => void, undo: () => void) {
+    apply(); setPage(1); setKpiOpen(null); setHistoryPlate(null);
+    window.setTimeout(() => agendaRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 180);
+    toast(`Filtrando por: ${label}`, { action: { label: "Desfazer", onClick: () => { undo(); setPage(1); } } });
+  }
+  function filterPlate(value: string) {
+    const previous = plateFilter;
+    applyDetailFilter(`Placa: ${value === EMPTY_OPTION ? "Não informado" : value}`, () => setPlateFilter(value), () => setPlateFilter(previous));
+  }
+  function openVehicle(plate: string) { setKpiOpen(null); setLogOpen(false); setSelected(null); setHistoryPlate(plate || EMPTY_OPTION); }
+  const activeFilters = [
+    search && { key: "search", label: `Busca: ${search}`, remove: () => setSearch("") },
+    plateFilter && { key: "plate", label: `Placa: ${plateFilter === EMPTY_OPTION ? "Não informado" : plateFilter}`, remove: () => setPlateFilter("") },
+    contact && { key: "contact", label: `Cliente: ${contact === EMPTY_OPTION ? "Não informado" : contact}`, remove: () => setContact("") },
+    workshop && { key: "workshop", label: `Oficina: ${workshop === EMPTY_OPTION ? "Não informado" : workshop}`, remove: () => setWorkshop("") },
+    model && { key: "model", label: `Modelo: ${model === EMPTY_OPTION ? "Não informado" : model}`, remove: () => setModel("") },
+    operator && { key: "operator", label: `Operador: ${operator === EMPTY_OPTION ? "Não informado" : operator}`, remove: () => setOperator("") },
+    startDate && { key: "start", label: `De: ${formatDateBR(startDate)}`, remove: () => { setStartDate(""); setPeriodPreset("custom"); } },
+    endDate && { key: "end", label: `Até: ${formatDateBR(endDate)}`, remove: () => { setEndDate(""); setPeriodPreset("custom"); } },
+    reworksOnly && { key: "reworks", label: "Somente retrabalhos", remove: () => setReworksOnly(false) },
+  ].filter((filter): filter is { key: string; label: string; remove: () => void } => Boolean(filter));
 
   function changeSort(key: keyof Appointment | "priority") {
     setSort((current) => ({ key, asc: current.key === key ? !current.asc : true }));
@@ -647,22 +672,22 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const lastDate = orderedDates.at(-1);
   const loadedPeriod = firstDate && lastDate ? `${formatDateBR(firstDate)} — ${formatDateBR(lastDate)}` : "Sem dados";
   const selectedOriginal = selected?.reworkOf ? appointments.find((item) => item.dbId === selected.reworkOf) : undefined;
-  const kpiDetails = (() => {
-    if (kpiOpen === "Agendamentos") return sorted.map((item) => ({ key: item.dbId, title: item.plate || "Sem placa", detail: `${formatDateBR(item.date)} · ${item.status || "Não atualizada"}` }));
-    if (kpiOpen === "Retrabalhos no período") return sorted.filter((item) => item.reworkOf).map((item) => ({ key: item.dbId, title: item.plate || "Sem placa", detail: `${formatDateBR(item.date)} · ${item.status || "Não atualizada"}` }));
-    if (kpiOpen === "Veículos únicos") return countBy(filtered, (item) => item.plate).map((row) => ({ key: row.name, title: row.name, detail: `${row.value} agendamento(s)` }));
-    if (kpiOpen === "Clientes atendidos") {
-      return foldedOptions(filtered.map((item) => item.contact)).map((contact) => {
-        const rows = filtered.filter((item) => matchesFilter(item.contact, contact));
-        return { key: contact, title: contact === EMPTY_OPTION ? DASH : contact, detail: `${rows.length} agendamento(s) · ${new Set(rows.map((item) => item.plate)).size} veículo(s)` };
-      });
-    }
-    if (kpiOpen === "Oficinas acionadas") return countBy(filtered.filter((item) => item.workshop), (item) => item.workshop).map((row) => ({ key: row.name, title: row.name, detail: `${row.value} agendamento(s)` }));
-    if (kpiOpen === "Média por dia") return countBy(filtered.filter((item) => normalizeDate(item.date)), (item) => item.date).sort((a, b) => a.name.localeCompare(b.name)).map((row) => ({ key: row.name, title: formatDateBR(row.name), detail: `${row.value} agendamento(s)` }));
-    return [];
-  })();
+  const indicatorRow = (item: Appointment): IndicatorAppointment => ({
+    dbId: item.dbId, plate: item.plate, date: item.date, time: item.time, status: item.status, workshop: item.workshop,
+    reworkReason: item.reworkReason, original: item.reworkOf ? appointments.find((row) => row.dbId === item.reworkOf)?.plate || "Não informado" : undefined,
+  });
+  const grouped = (key: keyof Pick<Appointment, "plate" | "contact" | "workshop">): IndicatorGroup[] => foldedOptions(filtered.map((item) => item[key])).map((value) => {
+    const rows = filtered.filter((item) => key === "plate" ? (value === EMPTY_OPTION ? !item.plate : normalizePlate(item.plate) === normalizePlate(value)) : matchesFilter(item[key], value));
+    const previous = key === "plate" ? plateFilter : key === "contact" ? contact : workshop;
+    return { key: value, label: value === EMPTY_OPTION ? "Não informado" : value, rows: rows.map(indicatorRow),
+      filter: () => key === "plate" ? filterPlate(value) : applyDetailFilter(`${key === "contact" ? "Cliente" : "Oficina"}: ${value === EMPTY_OPTION ? "Não informado" : value}`,
+        () => key === "contact" ? setContact(value) : setWorkshop(value), () => key === "contact" ? setContact(previous) : setWorkshop(previous)) };
+  });
+  const indicatorGroups: IndicatorGroup[] = kpiOpen === "Veículos únicos" ? grouped("plate") : kpiOpen === "Clientes atendidos" ? grouped("contact") : kpiOpen === "Oficinas acionadas" ? grouped("workshop") :
+    kpiOpen === "Média por dia" ? [...new Set(filtered.map((item) => normalizeDate(item.date)).filter(Boolean))].sort().map((date) => ({ key: date, label: formatDateBR(date), rows: filtered.filter((item) => normalizeDate(item.date) === date).map(indicatorRow), filter: () => { const before = { startDate, endDate, periodPreset }; applyDetailFilter(`Dia: ${formatDateBR(date)}`, () => { setPeriodPreset("custom"); setStartDate(date); setEndDate(date); }, () => { setPeriodPreset(before.periodPreset); setStartDate(before.startDate); setEndDate(before.endDate); }); } })) :
+    kpiOpen === "Agendamentos" || kpiOpen === "Retrabalhos no período" ? sorted.filter((item) => kpiOpen === "Agendamentos" || item.reworkOf).map((item) => ({ key: item.dbId, label: `${item.plate || "Não informado"} · ${formatDateBR(item.date)}${item.reworkOf ? ` · Original: ${appointments.find((row) => row.dbId === item.reworkOf)?.plate || "Não informado"}` : ""}`, rows: [indicatorRow(item)], filter: () => filterPlate(item.plate || EMPTY_OPTION) })) : [];
 
-  const renderCard = (item: Appointment) => (<article key={item.dbId} className="overflow-hidden rounded-md border bg-card shadow-sm transition hover:-translate-y-0.5 hover:border-accent"><Button variant="ghost" onClick={() => setSelected(item)} className="h-auto w-full justify-start rounded-none p-3 text-left hover:bg-transparent"><span className="min-w-0 flex-1"><span className="flex items-center justify-between"><span className="text-xs font-bold text-accent-foreground">{dash(normalizeTime(item.time))}</span><span className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold", serviceCategory(item.issue) === "Revisão" ? "bg-service-review text-service-review-foreground" : "bg-service-repair text-service-repair-foreground")}>{serviceCategory(item.issue)}</span></span><span className="mt-2 block font-bold tracking-wide">{dash(item.plate)}</span><span className="block truncate text-xs font-normal text-muted-foreground">{dash(item.model)}</span><span className="mt-2 block truncate text-xs font-medium">{dash(item.contact)}</span><span className="mt-1 line-clamp-2 whitespace-normal text-[11px] font-normal leading-4 text-muted-foreground">{dash(item.issue)}</span><span className="mt-2 flex flex-wrap gap-1">{item.priorityUrgent && item.status !== completion && <UrgentBadge />}{item.reworkOf && <ReworkBadge />}{isEmergency(item.scheduleType) && <EmergencyBadge />}<DeadlineBadge item={item} completedAt={completedAtById[item.dbId]} today={today} completion={completion} /></span></span></Button><label className="relative block border-t"><span className="sr-only">Situação de {item.plate}</span><select value={item.status} disabled={Boolean(editBlockReason(item, currentUser.role))} title={editBlockReason(item, currentUser.role) ?? undefined} onChange={(event) => updateStatus(item.dbId, event.target.value as ServiceStatus)} className={cn("disabled:cursor-not-allowed disabled:opacity-70 h-9 w-full appearance-none border-0 px-3 pr-8 text-xs font-semibold outline-none focus:ring-2 focus:ring-inset focus:ring-ring", statusClasses(item.status, statuses))}><option value="">Atualizar situação</option>{serviceStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select><ChevronDown className="pointer-events-none absolute right-3 top-2.5 size-4 opacity-70" /></label></article>);
+  const renderCard = (item: Appointment) => (<article key={item.dbId} className="overflow-hidden rounded-md border bg-card shadow-sm transition hover:-translate-y-0.5 hover:border-accent"><div className="p-3"><div className="flex items-center justify-between"><span className="text-xs font-bold text-accent-foreground">{dash(normalizeTime(item.time))}</span><span className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold", serviceCategory(item.issue) === "Revisão" ? "bg-service-review text-service-review-foreground" : "bg-service-repair text-service-repair-foreground")}>{serviceCategory(item.issue)}</span></div><Button variant="link" className="mt-1 min-h-11 h-auto px-0 font-bold text-primary" onClick={() => openVehicle(item.plate)}>{item.plate || "Não informado"}<ChevronRight className="size-4" /></Button><p className="truncate text-xs text-muted-foreground">{dash(item.model)}</p><p className="mt-2 truncate text-xs font-medium">{dash(item.contact)}</p><p className="mt-1 line-clamp-2 whitespace-normal text-[11px] leading-4 text-muted-foreground">{dash(item.issue)}</p><div className="mt-2 flex flex-wrap gap-1">{item.priorityUrgent && item.status !== completion && <UrgentBadge />}{item.reworkOf && <ReworkBadge />}{isEmergency(item.scheduleType) && <EmergencyBadge />}<DeadlineBadge item={item} completedAt={completedAtById[item.dbId]} today={today} completion={completion} /></div><Button variant="ghost" size="sm" className="mt-2 w-full justify-between text-primary" onClick={() => setSelected(item)}>Abrir agendamento<ChevronRight className="size-4" /></Button></div><label className="relative block border-t"><span className="sr-only">Situação de {item.plate}</span><select value={item.status} disabled={Boolean(editBlockReason(item, currentUser.role))} title={editBlockReason(item, currentUser.role) ?? undefined} onChange={(event) => updateStatus(item.dbId, event.target.value as ServiceStatus)} className={cn("disabled:cursor-not-allowed disabled:opacity-70 h-9 w-full appearance-none border-0 px-3 pr-8 text-xs font-semibold outline-none focus:ring-2 focus:ring-inset focus:ring-ring", statusClasses(item.status, statuses))}><option value="">Atualizar situação</option>{serviceStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select><ChevronDown className="pointer-events-none absolute right-3 top-2.5 size-4 opacity-70" /></label></article>);
 
   return (
     <div className={cn("min-h-screen bg-background text-foreground", dark && "dark")}>
