@@ -43,6 +43,13 @@
       "when": 1791030823054,
       "tag": "0005_sgloc_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791031030620,
+      "tag": "0006_widen_known_column_field",
+      "breakpoints": true
     }
   ]
 }
