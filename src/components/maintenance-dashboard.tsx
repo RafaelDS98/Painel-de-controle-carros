@@ -321,10 +321,15 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   }
 
   async function loadAppointments() {
-    const { data, error } = await supabase.from("appointments").select(rowColumns).order("date").order("time");
-    if (error) { setLoadError("Não foi possível carregar a agenda. Verifique sua conexão e tente de novo."); return; }
+    const data: AppointmentRow[] = [];
+    for (let offset = 0; ; offset += 500) {
+      const result = await supabase.from("appointments").select(rowColumns).order("date").order("time").range(offset, offset + 499);
+      if (result.error) { setLoadError("Não foi possível carregar a agenda. Verifique sua conexão e tente de novo."); return; }
+      data.push(...(result.data ?? []));
+      if (!result.data || result.data.length < 500) break;
+    }
     setLoadError("");
-    const rows = (data ?? []).map(fromRow);
+    const rows = data.map(fromRow);
     setAppointments(rows);
     void loadCompletionLogs(rows);
   }
@@ -729,6 +734,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
             <SearchableSelect label="Todas as oficinas" value={workshop} options={option("workshop")} onChange={setWorkshop} />
           </div>
           <div className="mt-3 flex flex-col gap-3 md:flex-row">
+            <SearchableSelect label="Todas as placas" value={plateFilter} options={option("plate")} onChange={(value) => { setPlateFilter(value); setPage(1); }} />
             <SearchableSelect label="Todos os modelos" value={model} options={option("model")} onChange={setModel} />
             <SearchableSelect label="Todos os operadores" value={operator} options={option("operator")} onChange={setOperator} />
             <label className="flex min-h-10 items-center gap-2 text-sm text-foreground"><Checkbox checked={reworksOnly} onCheckedChange={(checked) => { setReworksOnly(checked === true); setPage(1); }} aria-label="Mostrar somente retrabalhos" />Mostrar somente retrabalhos</label>
