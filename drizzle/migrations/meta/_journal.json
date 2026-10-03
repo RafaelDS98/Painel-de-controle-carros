@@ -71,6 +71,13 @@
       "when": 1791041339948,
       "tag": "0009_appointments_archive",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791042752517,
+      "tag": "0010_fix_set_user_role_conflict",
+      "breakpoints": true
     }
   ]
 }
