@@ -108,7 +108,7 @@ export function UserRolesPanel({ currentUserId }: { currentUserId: string }) {
 
   return <section className="space-y-3">
     <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold">Usuários e permissões</h3><Button size="sm" variant="outline" onClick={() => { setFormOpen((v) => !v); setError(""); }}><UserPlus /> Novo usuário</Button></div>
-    {formOpen && <form onSubmit={submitNew} className="grid gap-3 rounded-md border p-4 sm:grid-cols-2" aria-label="Novo usuário">
+    {formOpen && <form noValidate onSubmit={submitNew} className="grid gap-3 rounded-md border p-4 sm:grid-cols-2" aria-label="Novo usuário">
       <label className="text-sm">Nome<Input value={draft.fullName} onChange={(e) => setDraft({ ...draft, fullName: e.target.value })} maxLength={120} /></label>
       <label className="text-sm">E-mail<Input type="email" value={draft.email} onChange={(e) => setDraft({ ...draft, email: e.target.value })} maxLength={255} /></label>
       <label className="text-sm">Perfil<select className={selectClass} value={draft.role} onChange={(e) => setDraft({ ...draft, role: e.target.value as Role })}>{(Object.keys(roleNames) as Role[]).map((r) => <option key={r} value={r}>{roleNames[r]}</option>)}</select></label>
@@ -126,7 +126,7 @@ export function UserRolesPanel({ currentUserId }: { currentUserId: string }) {
           <Button size="sm" variant={open ? "secondary" : "outline"} className="min-h-11 sm:min-h-9" aria-expanded={open} onClick={() => openEdit(row)}><Pencil /> Editar</Button>
         </div>
         {open && <div className="mt-3 space-y-4 rounded-md border bg-muted/30 p-3">
-          <form onSubmit={(e) => saveEdit(e, row)} className="grid gap-3 sm:grid-cols-3" aria-label={`Editar ${row.full_name || row.email}`}>
+          <form noValidate onSubmit={(e) => saveEdit(e, row)} className="grid gap-3 sm:grid-cols-3" aria-label={`Editar ${row.full_name || row.email}`}>
             <label className="text-sm">Nome<Input value={edit.fullName} onChange={(e) => setEdit({ ...edit, fullName: e.target.value })} maxLength={120} /></label>
             <label className="text-sm">E-mail<Input type="email" value={edit.email} onChange={(e) => setEdit({ ...edit, email: e.target.value })} maxLength={255} /></label>
             <label className="text-sm">Perfil<select className={selectClass} value={edit.role} onChange={(e) => setEdit({ ...edit, role: e.target.value as Role | "" })}><option value="">Sem acesso</option>{(Object.keys(roleNames) as Role[]).map((r) => <option key={r} value={r}>{roleNames[r]}</option>)}</select></label>
