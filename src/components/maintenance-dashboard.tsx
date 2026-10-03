@@ -764,7 +764,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
           {selected && <SectionBoundary name="a ficha do agendamento">
             <DialogHeader>
               <DialogTitle className="flex flex-wrap items-center gap-3"><span className="rounded-md bg-primary px-2 py-1 text-primary-foreground">{selected.plate}</span>{selected.model}{selected.priorityUrgent && selected.status !== completion && <UrgentBadge />}{selected.reworkOf && <ReworkBadge />}{isEmergency(selected.scheduleType) && <EmergencyBadge />}{(selected.sglocReference || selected.sglocSyncState !== "local_only") && <span className="inline-flex w-fit items-center rounded border bg-secondary px-2 py-0.5 text-[11px] font-semibold text-secondary-foreground">SGLOC: {sglocStateLabels[selected.sglocSyncState] ?? selected.sglocSyncState}</span>}</DialogTitle>
-              <DialogDescription>{selected.id ? `Agendamento #${selected.id} • ` : ""}{formatDateBR(selected.date)} às {selected.time}</DialogDescription>
+              <DialogDescription>{selected.id ? `Agendamento #${selected.id} • ` : ""}{formatDateBR(selected.date)} às {dash(normalizeTime(selected.time))}</DialogDescription>
             </DialogHeader>
             {selected.reworkOf && <div className="space-y-2 border-b pb-4">
               <Detail label="Motivo do retorno" value={selected.reworkReason ?? ""} />
