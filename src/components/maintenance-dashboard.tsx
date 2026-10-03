@@ -46,7 +46,7 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { AppointmentHistory, ChangeLogDialog } from "@/components/edit-history";
-import { AlertTriangle, History, Unlock } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, History, Unlock } from "lucide-react";
 import { AppointmentForm, columnForField, emptyFields, type AppointmentFields } from "@/components/appointment-form";
 import { ReworkForm, type ReworkFields } from "@/components/rework-form";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -170,18 +170,6 @@ const palette = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--ch
 
 
 
-function FilterSelect({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) {
-  return (
-    <label className="relative min-w-44 flex-1">
-      <span className="sr-only">{label}</span>
-      <select value={value} onChange={(event) => onChange(event.target.value)} className="h-10 w-full appearance-none rounded-md border border-input bg-background px-3 pr-8 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring">
-        <option value="">{label}</option>
-        {options.map((option) => <option key={option} value={option}>{option}</option>)}
-      </select>
-      <ChevronDown className="pointer-events-none absolute right-3 top-3 size-4 text-muted-foreground" />
-    </label>
-  );
-}
 
 function ChartPanel({ title, subtitle, children, className, empty }: { title: string; subtitle: string; children: React.ReactNode; className?: string; empty?: boolean }) {
   return (
@@ -288,6 +276,8 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const [gridStart, setGridStart] = useState<string | null>(null);
   const [kpiSearch, setKpiSearch] = useState("");
   const [expandedContact, setExpandedContact] = useState<string | null>(null);
+  useEffect(() => { setGridStart(null); }, [startDate, endDate]);
+  useEffect(() => { setKpiSearch(""); setExpandedContact(null); }, [kpiOpen]);
   const [selected, setSelected] = useState<Appointment | null>(null);
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<{ key: keyof Appointment | "priority"; asc: boolean }>({ key: "priority", asc: true });
@@ -756,7 +746,30 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
 
       <Dialog open={Boolean(kpiOpen)} onOpenChange={(open) => { if (!open) setKpiOpen(null); }}>
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl"><DialogHeader><DialogTitle>{kpiOpen}</DialogTitle><DialogDescription>Agendamentos no período filtrado</DialogDescription></DialogHeader>
-          {kpiDetails.length ? <ul className="divide-y">{kpiDetails.map((entry) => <li key={entry.key} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 text-sm"><span className="font-medium">{entry.title}</span><span className="text-muted-foreground">{entry.detail}</span></li>)}</ul> : <p className="text-sm text-muted-foreground">Nenhum registro no período.</p>}
+          {kpiOpen === "Veículos únicos" ? (() => {
+            const q = normalizePlate(kpiSearch);
+            const plates = countBy(filtered.filter((item) => item.plate), (item) => item.plate).filter((row) => !q || normalizePlate(row.name).includes(q));
+            return <div className="space-y-3">
+              <Input autoFocus value={kpiSearch} onChange={(e) => setKpiSearch(e.target.value)} placeholder="Buscar placa (ex.: ABC-1D23)" aria-label="Buscar placa" />
+              {plates.length ? <ul className="divide-y">{plates.map((row) => <li key={row.name}><button type="button" className="flex w-full flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 text-left text-sm hover:bg-muted/50" onClick={() => { setSearch(row.name); setPage(1); setKpiOpen(null); }}><span className="font-medium">{row.name}</span><span className="text-muted-foreground">{row.value} agendamento(s) · ver na agenda</span></button></li>)}</ul> : <p className="text-sm text-muted-foreground">Nenhuma placa encontrada.</p>}
+            </div>;
+          })() : kpiOpen === "Clientes atendidos" ? (() => {
+            const clients = foldedOptions(filtered.map((item) => item.contact)).filter((name) => textMatches(kpiSearch, [name === EMPTY_OPTION ? "Não informado" : name]));
+            return <div className="space-y-3">
+              <Input autoFocus value={kpiSearch} onChange={(e) => setKpiSearch(e.target.value)} placeholder="Buscar cliente" aria-label="Buscar cliente" />
+              {clients.length ? <ul className="divide-y">{clients.map((name) => {
+                const rows = filtered.filter((item) => matchesFilter(item.contact, name)).sort((a, b) => compareDateTime(a, b, true));
+                const open = expandedContact === name;
+                return <li key={name} className="py-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <button type="button" aria-expanded={open} className="flex min-w-0 flex-1 items-center gap-2 text-left text-sm" onClick={() => setExpandedContact(open ? null : name)}><ChevronDown className={cn("size-4 shrink-0 transition-transform", open && "rotate-180")} /><span className="truncate font-medium">{name === EMPTY_OPTION ? "Não informado" : name}</span><span className="shrink-0 text-muted-foreground">{rows.length} atendimento(s) · {new Set(rows.map((item) => item.plate)).size} veículo(s)</span></button>
+                    <Button size="sm" variant="outline" onClick={() => { setContact(name); setPage(1); setKpiOpen(null); }}>Ver na agenda</Button>
+                  </div>
+                  {open && <ul className="mt-2 space-y-1 border-l pl-4">{rows.map((item) => <li key={item.dbId}><button type="button" className="flex w-full flex-wrap gap-x-3 rounded px-2 py-1 text-left text-sm hover:bg-muted/50" onClick={() => { setKpiOpen(null); setSelected(item); }}><span className="font-semibold">{dash(item.plate)}</span><span>{formatDateBR(item.date)}</span><span>{dash(normalizeTime(item.time))}</span><span className="text-muted-foreground">{item.status || "Não atualizada"}</span></button></li>)}</ul>}
+                </li>;
+              })}</ul> : <p className="text-sm text-muted-foreground">Nenhum cliente encontrado.</p>}
+            </div>;
+          })() : kpiDetails.length ? <ul className="divide-y">{kpiDetails.map((entry) => <li key={entry.key} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 text-sm"><span className="font-medium">{entry.title}</span><span className="text-muted-foreground">{entry.detail}</span></li>)}</ul> : <p className="text-sm text-muted-foreground">Nenhum registro no período.</p>}
         </DialogContent>
       </Dialog>
 
