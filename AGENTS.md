@@ -24,3 +24,4 @@
 - Urgência só é alterada por gerente/master: o trigger de edição descarta a mudança de `priority_urgent` vinda de atendimento sem bloquear o resto — a tela apenas espelha. A ordenação por prioridade é calculada no navegador a partir da situação de conclusão configurada.
 - Perfis de usuários são listados e alterados só por funções protegidas no banco que exigem master e impedem alterar o próprio perfil — a tela não grava user_roles diretamente.
 - Urgência na criação também é filtrada no banco por trigger BEFORE INSERT (só gerente/master mantêm priority_urgent) — importações e chamadas diretas não burlam a regra.
+- Campos de controle do SGLOC (sgloc_*) só mudam por rotina de sistema ou master, garantido no trigger de edição; tokens do SGLOC ficam em sgloc_accounts, acessível só pelo servidor, e a tela lê o status pela função get_my_sgloc_status — evita expor credenciais.
