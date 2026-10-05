@@ -95,6 +95,7 @@ type Appointment = {
   editsUsed: number;
   editsAllowed: number;
   managerEditUsed: boolean;
+  managerEditsUsed: number;
   priorityUrgent: boolean;
   reworkOf: string | null;
   reworkReason: string | null;
