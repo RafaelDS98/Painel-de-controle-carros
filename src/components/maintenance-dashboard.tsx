@@ -46,7 +46,7 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { AppointmentHistory, ChangeLogDialog } from "@/components/edit-history";
-import { AlertTriangle, ChevronLeft, ChevronRight, History, Trash2, Unlock, UserCircle } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, History, Trash2, UserCircle } from "lucide-react";
 import { MyAccountDialog } from "@/components/my-account";
 import { useQueryClient } from "@tanstack/react-query";
 import { AppointmentForm, columnForField, emptyFields, type AppointmentFields } from "@/components/appointment-form";
@@ -70,7 +70,6 @@ import { IndicatorDetails, type IndicatorGroup, type IndicatorAppointment } from
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { pushAppointmentToSgloc } from "@/lib/sgloc/sgloc.functions";
-import { atendimentoAllowance, editLimitBlockReason } from "@/lib/edit-limits";
 import { buildAppointmentUpdate } from "@/lib/appointment-update";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -114,11 +113,6 @@ export type AppRole = "atendimento" | "gerente" | "master";
 export type CurrentUser = { id: string; name: string; role: AppRole; email?: string };
 const roleLabels: Record<AppRole, string> = { atendimento: "Atendimento", gerente: "Gerente", master: "Master" };
 
-let myEditLimit = 1;
-let atendimentoDefaultLimit = 1;
-function editBlockReason(item: Appointment, role: AppRole): string | null {
-  return editLimitBlockReason({ editsUsed: item.editsUsed, editsAllowed: item.editsAllowed, managerEditsUsed: item.managerEditsUsed }, role, myEditLimit);
-}
 
 type ServiceStatus = string;
 
@@ -366,22 +360,16 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   }
 
   async function loadConfig() {
-    const [statusResult, fieldResult] = await Promise.all([
+    const [statusResult, fieldResult, workshopResult] = await Promise.all([
       supabase.from("status_options").select("*").order("sort_order").order("created_at"),
       supabase.from("custom_field_definitions").select("*").order("sort_order").order("created_at"),
+      supabase.from("workshops").select("name").eq("active", true).order("name"),
     ]);
     if (statusResult.error || fieldResult.error) { setLoadError("Não foi possível carregar as configurações da agenda. Tente de novo."); return; }
     setStatuses(statusResult.data ?? []);
-    setFieldDefinitions(fieldResult.data ?? []);
+    const workshopNames = (workshopResult.data ?? []).map((row) => row.name);
+    setFieldDefinitions((fieldResult.data ?? []).map((field) => field.field_key === "workshop" && field.storage === "column" ? { ...field, field_type: "select", select_options: workshopNames } : field));
   }
-  const [, setLimitsTick] = useState(0);
-  useEffect(() => {
-    void (async () => {
-      try { const { data, error } = await supabase.rpc("get_my_edit_limit"); myEditLimit = !error && typeof data === "number" ? data : 1; } catch { myEditLimit = 1; }
-      try { const { data } = await supabase.from("edit_limit_defaults").select("max_edits").eq("role", "atendimento").maybeSingle(); atendimentoDefaultLimit = data?.max_edits ?? 1; } catch { atendimentoDefaultLimit = 1; }
-      setLimitsTick((t) => t + 1);
-    })();
-  }, []);
   useEffect(() => { void loadConfig(); void loadAppointments(); }, []);
   useEffect(() => { if (statuses.length) void loadCompletionLogs(appointments); }, [completion]);
 
@@ -505,8 +493,6 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
 
   async function saveAppointment(changes: Partial<AppointmentFields>): Promise<boolean> {
     if (!selected) return false;
-    const blocked = editBlockReason(selected, currentUser.role);
-    if (blocked) { setMessage(blocked); return false; }
     if (changes.status && !serviceStatuses.includes(changes.status)) { setMessage("Situação inválida."); return false; }
     const update = buildAppointmentUpdate(changes, selected.customFields, { canUrgent: currentUser.role !== "atendimento" }) as TablesUpdate<"appointments">;
     if (!Object.keys(update).length) return true;
@@ -583,12 +569,6 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   function openLinked(item: Appointment) {
     setSelected(item);
     setHistoryKey((key) => key + 1);
-  }
-
-  async function grantExtraEdit(item: Appointment) {
-    const { data, error } = await supabase.from("appointments").update({ creator_edits_allowed: item.editsAllowed + 1 }).eq("id", item.dbId).select(rowColumns).single();
-    if (error || !data) { setMessage(error?.message || "Não foi possível liberar a edição extra."); return; }
-    replaceRow(data); setMessage(`Edição extra liberada para ${item.plate}.`);
   }
 
   async function importFile(file?: File) {
@@ -851,7 +831,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader><DialogTitle>Novo agendamento</DialogTitle><DialogDescription>Dados do atendimento</DialogDescription></DialogHeader>
           {newOpen && <label className="mb-3 flex items-center gap-2 text-sm font-medium"><input type="checkbox" className="size-4 accent-destructive" checked={newUrgent && currentUser.role !== "atendimento"} disabled={currentUser.role === "atendimento"} onChange={(event) => setNewUrgent(event.target.checked)} />Marcar como urgente{currentUser.role === "atendimento" && <span className="text-xs font-normal text-muted-foreground">(somente gerente ou master)</span>}</label>}
-          {newOpen && <AppointmentForm initial={emptyFields} definitions={fieldDefinitions} onSave={createAppointment} />}
+          {newOpen && <AppointmentForm initial={emptyFields} definitions={fieldDefinitions} onSave={createAppointment} lockedColumns={currentUser.role === "atendimento" ? ["current_deadline"] : []} />}
         </DialogContent>
       </Dialog>
       <Dialog open={Boolean(reworkSource)} onOpenChange={(open) => { if (!open) setReworkSource(null); }}>
@@ -884,9 +864,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
               {selected.sglocLastError && <p>{selected.sglocLastError}</p>}
               <Button size="sm" variant="outline" onClick={() => void sendToSgloc(selected.dbId, "retry")}>Reenviar</Button>
             </div>}
-            {editBlockReason(selected, currentUser.role) && <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{editBlockReason(selected, currentUser.role)}</p>}
-            {currentUser.role !== "atendimento" && <div className="flex flex-wrap items-center gap-3"><Button variant="outline" disabled={selected.editsAllowed > 1} onClick={() => grantExtraEdit(selected)}><Unlock /> Liberar edição extra</Button><span className="text-xs text-muted-foreground">Atendimento: {selected.editsUsed} de {atendimentoAllowance(atendimentoDefaultLimit, selected.editsAllowed)} edição(ões) usada(s){selected.editsAllowed > 1 ? " • edição extra já liberada" : ""}</span></div>}
-            <AppointmentForm key={`${selected.dbId}-${historyKey}`} initial={fieldsFromAppointment(selected)} definitions={fieldDefinitions} editing blocked={editBlockReason(selected, currentUser.role)} onSave={saveAppointment} statusOptions={serviceStatuses} canUrgent={currentUser.role !== "atendimento"} onDirtyChange={(dirty) => { dirtyRef.current = dirty; }} />
+            <AppointmentForm key={`${selected.dbId}-${historyKey}`} initial={fieldsFromAppointment(selected)} definitions={fieldDefinitions} editing lockedColumns={currentUser.role === "atendimento" ? ["current_deadline"] : []} onSave={saveAppointment} statusOptions={serviceStatuses} canUrgent={currentUser.role !== "atendimento"} onDirtyChange={(dirty) => { dirtyRef.current = dirty; }} />
             <div className="flex flex-wrap gap-2 border-t pt-4"><Button variant="outline" onClick={() => openRework(selected)}><RotateCcw /> Registrar retrabalho</Button>{currentUser.role === "master" && <Button variant="destructive" onClick={() => void archiveAppointment(selected)}><Trash2 /> Excluir</Button>}</div>
             {(selected.osNumber !== null && fieldDefinitions.find((field) => field.field_key === "os_number")?.visible !== false) || selected.sglocReference ? <div className="grid gap-3 sm:grid-cols-2">
               {selected.osNumber !== null && fieldDefinitions.find((field) => field.field_key === "os_number")?.visible !== false && <Detail label="O.S Fornecedor" value={String(selected.osNumber)} />}

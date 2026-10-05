@@ -659,6 +659,12 @@ export type Database = {
         }
         Relationships: []
       }
+      workshops: {
+        Row: { active: boolean; created_at: string; created_by: string | null; id: string; name: string }
+        Insert: { active?: boolean; created_at?: string; created_by?: string | null; id?: string; name: string }
+        Update: { active?: boolean; created_at?: string; created_by?: string | null; id?: string; name?: string }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
