@@ -217,7 +217,7 @@ const pushInput = z.object({
   changed: z.array(z.string().max(40)).max(20).default([]),
 });
 
-export type PushResult = { status: "skipped" | "no_change" | "synced" | "failed"; message?: string; warning?: string };
+export type PushResult = { status: "skipped" | "no_change" | "synced" | "failed"; message?: string | undefined; warning?: string | undefined };
 
 /**
  * Envia criação (POST store) ou edição (PUT {id}) ao SGLOC com o token do usuário logado.

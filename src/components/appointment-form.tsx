@@ -19,7 +19,7 @@ export const emptyFields: AppointmentFields = {
   workshop: "", issue: "", note: "", operator: "", externalOrder: "", currentDeadline: "", brand: "", contactNumber: "", kmScheduled: "", customFields: {},
 };
 
-export const columnForField: Record<Exclude<keyof AppointmentFields, "customFields">, string> = {
+export const columnForField: Record<Exclude<keyof AppointmentFields, "customFields" | "status" | "priorityUrgent">, string> = {
   date: "date", time: "time", plate: "plate", store: "store", model: "model",
   contact: "contact", workshop: "workshop", issue: "issue", note: "note",
   operator: "operator", externalOrder: "external_order", currentDeadline: "current_deadline",
