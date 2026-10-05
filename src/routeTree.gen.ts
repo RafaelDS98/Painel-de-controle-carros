@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedHistoricosRouteImport } from './routes/_authenticated/historicos'
+import { Route as AuthenticatedVeiculoPlateRouteImport } from './routes/_authenticated/veiculo.$plate'
 import { Route as ApiPublicHooksSglocSyncRouteImport } from './routes/api/public/hooks/sgloc-sync'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
@@ -28,6 +30,17 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedHistoricosRoute = AuthenticatedHistoricosRouteImport.update({
+  id: '/historicos',
+  path: '/historicos',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedVeiculoPlateRoute =
+  AuthenticatedVeiculoPlateRouteImport.update({
+    id: '/veiculo/$plate',
+    path: '/veiculo/$plate',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const ApiPublicHooksSglocSyncRoute = ApiPublicHooksSglocSyncRouteImport.update({
   id: '/api/public/hooks/sgloc-sync',
   path: '/api/public/hooks/sgloc-sync',
@@ -37,30 +50,48 @@ const ApiPublicHooksSglocSyncRoute = ApiPublicHooksSglocSyncRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthRoute
+  '/historicos': typeof AuthenticatedHistoricosRoute
+  '/veiculo/$plate': typeof AuthenticatedVeiculoPlateRoute
   '/api/public/hooks/sgloc-sync': typeof ApiPublicHooksSglocSyncRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
+  '/historicos': typeof AuthenticatedHistoricosRoute
   '/': typeof AuthenticatedIndexRoute
+  '/veiculo/$plate': typeof AuthenticatedVeiculoPlateRoute
   '/api/public/hooks/sgloc-sync': typeof ApiPublicHooksSglocSyncRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/historicos': typeof AuthenticatedHistoricosRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/veiculo/$plate': typeof AuthenticatedVeiculoPlateRoute
   '/api/public/hooks/sgloc-sync': typeof ApiPublicHooksSglocSyncRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/api/public/hooks/sgloc-sync'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/historicos'
+    | '/veiculo/$plate'
+    | '/api/public/hooks/sgloc-sync'
   fileRoutesByTo: FileRoutesByTo
-  to: '/auth' | '/' | '/api/public/hooks/sgloc-sync'
+  to:
+    | '/auth'
+    | '/historicos'
+    | '/'
+    | '/veiculo/$plate'
+    | '/api/public/hooks/sgloc-sync'
   id:
     | '__root__'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/historicos'
     | '/_authenticated/'
+    | '/_authenticated/veiculo/$plate'
     | '/api/public/hooks/sgloc-sync'
   fileRoutesById: FileRoutesById
 }
@@ -93,6 +124,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/historicos': {
+      id: '/_authenticated/historicos'
+      path: '/historicos'
+      fullPath: '/historicos'
+      preLoaderRoute: typeof AuthenticatedHistoricosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/veiculo/$plate': {
+      id: '/_authenticated/veiculo/$plate'
+      path: '/veiculo/$plate'
+      fullPath: '/veiculo/$plate'
+      preLoaderRoute: typeof AuthenticatedVeiculoPlateRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/public/hooks/sgloc-sync': {
       id: '/api/public/hooks/sgloc-sync'
       path: '/api/public/hooks/sgloc-sync'
@@ -104,11 +149,15 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedHistoricosRoute: typeof AuthenticatedHistoricosRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedVeiculoPlateRoute: typeof AuthenticatedVeiculoPlateRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedHistoricosRoute: AuthenticatedHistoricosRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedVeiculoPlateRoute: AuthenticatedVeiculoPlateRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

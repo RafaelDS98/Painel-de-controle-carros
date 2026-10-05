@@ -45,7 +45,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { AppointmentHistory, ChangeLogDialog } from "@/components/edit-history";
+import { AppointmentHistory } from "@/components/edit-history";
+import { Link } from "@tanstack/react-router";
 import { AlertTriangle, ChevronLeft, ChevronRight, History, Trash2, UserCircle } from "lucide-react";
 import { MyAccountDialog } from "@/components/my-account";
 import { useQueryClient } from "@tanstack/react-query";
@@ -263,7 +264,6 @@ function UrgentBadge() {
 const rowColumns = "id, sheet_id, registered_at, date, time, plate, store, model, contact, workshop, issue, note, operator, external_order, status, original_deadline, current_deadline, creator_edits_used, creator_edits_allowed, manager_edit_used, manager_edits_used, priority_urgent, rework_of, rework_reason, custom_fields, brand, contact_number, km_scheduled, os_number, schedule_type, sgloc_reference, sgloc_sync_state, sgloc_last_error, archived_at";
 
 export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: () => void; currentUser: CurrentUser }) {
-  const [logOpen, setLogOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const queryClientForAccount = useQueryClient();
@@ -444,7 +444,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     if (previous && normalizePlate(previous) === normalizePlate(value)) { toggleDetailFilter(`Placa: ${value === EMPTY_OPTION ? "Não informado" : value}`, true, () => {}, () => {}, () => setPlateFilter("")); return; }
     applyDetailFilter(`Placa: ${value === EMPTY_OPTION ? "Não informado" : value}`, () => setPlateFilter(value), () => setPlateFilter(previous));
   }
-  function openVehicle(plate: string) { setKpiOpen(null); setLogOpen(false); setSelected(null); setHistoryPlate(plate || EMPTY_OPTION); }
+  function openVehicle(plate: string) { setKpiOpen(null); setSelected(null); setHistoryPlate(plate || EMPTY_OPTION); }
   const activeFilters = [
     search && { key: "search", label: `Busca: ${search}`, remove: () => setSearch("") },
     plateFilter && { key: "plate", label: `Placa: ${plateFilter === EMPTY_OPTION ? "Não informado" : plateFilter}`, remove: () => setPlateFilter("") },
@@ -736,7 +736,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
           <div className="flex items-center gap-2">
             <button type="button" onClick={() => setAccountOpen(true)} title="Minha conta" className="mr-2 min-h-11 rounded-md px-2 text-right text-sm hover:bg-primary-foreground/10"><p className="font-semibold"><UserCircle className="mr-1 inline size-4" />{currentUser.name}</p><p className="text-xs text-primary-foreground/70">{roleLabels[currentUser.role]} · Minha conta</p></button>
             <MyAccountDialog open={accountOpen} onOpenChange={setAccountOpen} userId={currentUser.id} email={currentUser.email ?? ""} name={currentUser.name} onSaved={() => void queryClientForAccount.invalidateQueries({ queryKey: ["profile", currentUser.id] })} />
-            <Button variant="secondary" onClick={() => setLogOpen(true)}><History /> Log de alterações</Button>
+            <Button asChild variant="secondary"><Link to="/historicos"><History /> Históricos</Link></Button>
             <Button variant="secondary" onClick={() => setNewOpen(true)}><Plus /> Novo agendamento</Button>
              {currentUser.role === "master" && <Button variant="secondary" onClick={() => setSettingsOpen(true)}><Settings /> Configurações</Button>}
             {currentUser.role === "master" && <Button variant="secondary" onClick={() => setTrashOpen(true)}><Trash2 /> Lixeira</Button>}
@@ -879,7 +879,6 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
           </SectionBoundary>}
         </DialogContent>
       </Dialog>
-      <ChangeLogDialog open={logOpen} onOpenChange={setLogOpen} onPlateClick={openVehicle} />
       <Toaster richColors position="bottom-right" />
       {currentUser.role === "master" && <TrashDialog open={trashOpen} onOpenChange={setTrashOpen} onRestored={() => void loadAppointments()} />}
       {currentUser.role === "master" && <AgendaSettings open={settingsOpen} onOpenChange={setSettingsOpen} statuses={statuses} fields={fieldDefinitions} currentUserId={currentUser.id} onRefresh={async () => { await loadConfig(); await loadAppointments(); }} />}
