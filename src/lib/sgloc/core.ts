@@ -291,7 +291,6 @@ export function matchSupplier(name: string | null | undefined, suppliers: { supp
 /** Mensagem curta de falha de envio em português (422 inclui a mensagem do SGLOC). */
 export function pushErrorMessage(e: unknown): string {
   if (e instanceof SglocError) {
-    if (e.kind === "validation") return `SGLOC recusou os dados (422): ${sglocMessage(e.diagnostic ? null : null) || e.message}`.slice(0, 300);
     if (e.kind === "unauthorized" || e.kind === "expired") return "Conexão com o SGLOC expirou. Reconecte em Minha conta > Conta SGLOC.";
     return e.message.slice(0, 300);
   }

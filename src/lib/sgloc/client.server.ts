@@ -1,12 +1,12 @@
 /** Cliente SGLOC — SOMENTE servidor. Nunca registra senha, token, Authorization nem corpo com dados pessoais. */
 import { classifyHttp, classifyNetwork, describeResponseDetail, SglocError, validateBaseUrl } from "./core";
 
-export type SglocSettings = { enabled: boolean; base_url: string | null; request_timeout_seconds: number };
+export type SglocSettings = { enabled: boolean; base_url: string | null; request_timeout_seconds: number; write_enabled: boolean };
 
 export async function loadSettings(): Promise<SglocSettings> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data } = await supabaseAdmin.from("sgloc_settings").select("enabled, base_url, request_timeout_seconds").eq("id", true).maybeSingle();
-  return { enabled: data?.enabled ?? false, base_url: data?.base_url ?? null, request_timeout_seconds: data?.request_timeout_seconds ?? 15 };
+  const { data } = await supabaseAdmin.from("sgloc_settings").select("enabled, base_url, request_timeout_seconds, write_enabled").eq("id", true).maybeSingle();
+  return { enabled: data?.enabled ?? false, base_url: data?.base_url ?? null, request_timeout_seconds: data?.request_timeout_seconds ?? 15, write_enabled: data?.write_enabled ?? false };
 }
 
 /** Garante integração ligada e URL válida antes de qualquer chamada de rede. */
@@ -28,7 +28,7 @@ function logCall(method: string, path: string, status: number | string, latency:
  * `classify=false` devolve qualquer status HTTP sem lançar erro (usado no teste de alcance).
  */
 export async function sglocFetch(opts: {
-  baseUrl: string; timeoutSeconds: number; method: "GET" | "POST"; path: string;
+  baseUrl: string; timeoutSeconds: number; method: "GET" | "POST" | "PUT"; path: string;
   query?: Record<string, string | number> | undefined; token?: string; json?: unknown; classify?: boolean;
 }): Promise<SglocResponse> {
   const url = new URL(opts.path ? `${opts.baseUrl}/${opts.path.replace(/^\/+/, "")}` : opts.baseUrl);
