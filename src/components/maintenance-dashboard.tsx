@@ -70,6 +70,7 @@ import { IndicatorDetails, type IndicatorGroup, type IndicatorAppointment } from
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { pushAppointmentToSgloc } from "@/lib/sgloc/sgloc.functions";
+import { atendimentoAllowance, editLimitBlockReason } from "@/lib/edit-limits";
 import { buildAppointmentUpdate } from "@/lib/appointment-update";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -112,10 +113,10 @@ export type AppRole = "atendimento" | "gerente" | "master";
 export type CurrentUser = { id: string; name: string; role: AppRole; email?: string };
 const roleLabels: Record<AppRole, string> = { atendimento: "Atendimento", gerente: "Gerente", master: "Master" };
 
+let myEditLimit = 1;
+let atendimentoDefaultLimit = 1;
 function editBlockReason(item: Appointment, role: AppRole): string | null {
-  if (role === "master") return null;
-  if (role === "gerente") return item.managerEditUsed ? "Limite de 1 edição do gerente já foi usado neste agendamento." : null;
-  return item.editsUsed >= item.editsAllowed ? `Limite de ${item.editsAllowed} edição(ões) já foi usado pelo atendimento neste agendamento.` : null;
+  return editLimitBlockReason({ editsUsed: item.editsUsed, editsAllowed: item.editsAllowed, managerEditsUsed: item.managerEditsUsed }, role, myEditLimit);
 }
 
 type ServiceStatus = string;
@@ -123,7 +124,7 @@ type ServiceStatus = string;
 type AppointmentRow = {
   id: string; sheet_id: string; registered_at: string | null; date: string | null; time: string; plate: string; store: string;
   model: string; contact: string; workshop: string; issue: string; note: string; operator: string; external_order: string; status: string;
-  creator_edits_used: number; creator_edits_allowed: number; manager_edit_used: boolean; priority_urgent: boolean;
+  creator_edits_used: number; creator_edits_allowed: number; manager_edit_used: boolean; manager_edits_used?: number | null; priority_urgent: boolean;
   original_deadline: string | null; current_deadline: string | null;
   rework_of: string | null; rework_reason: string | null; custom_fields: unknown;
   brand?: string | null; contact_number?: string | null; km_scheduled?: number | null; os_number?: number | null;
@@ -136,7 +137,7 @@ function fromRow(row: AppointmentRow): Appointment {
     store: row.store, model: row.model, contact: row.contact, workshop: row.workshop, issue: row.issue, note: row.note,
     operator: row.operator, externalOrder: row.external_order, status: row.status,
     originalDeadline: row.original_deadline, currentDeadline: row.current_deadline,
-    editsUsed: row.creator_edits_used, editsAllowed: row.creator_edits_allowed, managerEditUsed: row.manager_edit_used, priorityUrgent: row.priority_urgent,
+    editsUsed: row.creator_edits_used, editsAllowed: row.creator_edits_allowed, managerEditUsed: row.manager_edit_used, managerEditsUsed: row.manager_edits_used ?? (row.manager_edit_used ? 1 : 0), priorityUrgent: row.priority_urgent,
     reworkOf: row.rework_of, reworkReason: row.rework_reason, customFields: customValues(row.custom_fields),
     brand: safeText(row.brand), contactNumber: safeText(row.contact_number), kmScheduled: row.km_scheduled ?? null,
     osNumber: row.os_number ?? null, scheduleType: safeText(row.schedule_type) || "N", sglocReference: safeText(row.sgloc_reference),
@@ -264,7 +265,7 @@ function UrgentBadge() {
   return <span className="inline-flex w-fit items-center gap-1 rounded border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-[11px] font-semibold text-destructive"><AlertTriangle className="size-3" />Urgente</span>;
 }
 
-const rowColumns = "id, sheet_id, registered_at, date, time, plate, store, model, contact, workshop, issue, note, operator, external_order, status, original_deadline, current_deadline, creator_edits_used, creator_edits_allowed, manager_edit_used, priority_urgent, rework_of, rework_reason, custom_fields, brand, contact_number, km_scheduled, os_number, schedule_type, sgloc_reference, sgloc_sync_state, sgloc_last_error, archived_at";
+const rowColumns = "id, sheet_id, registered_at, date, time, plate, store, model, contact, workshop, issue, note, operator, external_order, status, original_deadline, current_deadline, creator_edits_used, creator_edits_allowed, manager_edit_used, manager_edits_used, priority_urgent, rework_of, rework_reason, custom_fields, brand, contact_number, km_scheduled, os_number, schedule_type, sgloc_reference, sgloc_sync_state, sgloc_last_error, archived_at";
 
 export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: () => void; currentUser: CurrentUser }) {
   const [logOpen, setLogOpen] = useState(false);
@@ -373,6 +374,14 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     setStatuses(statusResult.data ?? []);
     setFieldDefinitions(fieldResult.data ?? []);
   }
+  const [, setLimitsTick] = useState(0);
+  useEffect(() => {
+    void (async () => {
+      try { const { data, error } = await supabase.rpc("get_my_edit_limit"); myEditLimit = !error && typeof data === "number" ? data : 1; } catch { myEditLimit = 1; }
+      try { const { data } = await supabase.from("edit_limit_defaults").select("max_edits").eq("role", "atendimento").maybeSingle(); atendimentoDefaultLimit = data?.max_edits ?? 1; } catch { atendimentoDefaultLimit = 1; }
+      setLimitsTick((t) => t + 1);
+    })();
+  }, []);
   useEffect(() => { void loadConfig(); void loadAppointments(); }, []);
   useEffect(() => { if (statuses.length) void loadCompletionLogs(appointments); }, [completion]);
 
@@ -876,7 +885,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
               <Button size="sm" variant="outline" onClick={() => void sendToSgloc(selected.dbId, "retry")}>Reenviar</Button>
             </div>}
             {editBlockReason(selected, currentUser.role) && <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{editBlockReason(selected, currentUser.role)}</p>}
-            {currentUser.role !== "atendimento" && <div className="flex flex-wrap items-center gap-3"><Button variant="outline" disabled={selected.editsAllowed > 1} onClick={() => grantExtraEdit(selected)}><Unlock /> Liberar edição extra</Button><span className="text-xs text-muted-foreground">Atendimento: {selected.editsUsed} de {selected.editsAllowed} edição(ões) usada(s){selected.editsAllowed > 1 ? " • edição extra já liberada" : ""}</span></div>}
+            {currentUser.role !== "atendimento" && <div className="flex flex-wrap items-center gap-3"><Button variant="outline" disabled={selected.editsAllowed > 1} onClick={() => grantExtraEdit(selected)}><Unlock /> Liberar edição extra</Button><span className="text-xs text-muted-foreground">Atendimento: {selected.editsUsed} de {atendimentoAllowance(atendimentoDefaultLimit, selected.editsAllowed)} edição(ões) usada(s){selected.editsAllowed > 1 ? " • edição extra já liberada" : ""}</span></div>}
             <AppointmentForm key={`${selected.dbId}-${historyKey}`} initial={fieldsFromAppointment(selected)} definitions={fieldDefinitions} editing blocked={editBlockReason(selected, currentUser.role)} onSave={saveAppointment} statusOptions={serviceStatuses} canUrgent={currentUser.role !== "atendimento"} onDirtyChange={(dirty) => { dirtyRef.current = dirty; }} />
             <div className="flex flex-wrap gap-2 border-t pt-4"><Button variant="outline" onClick={() => openRework(selected)}><RotateCcw /> Registrar retrabalho</Button>{currentUser.role === "master" && <Button variant="destructive" onClick={() => void archiveAppointment(selected)}><Trash2 /> Excluir</Button>}</div>
             {(selected.osNumber !== null && fieldDefinitions.find((field) => field.field_key === "os_number")?.visible !== false) || selected.sglocReference ? <div className="grid gap-3 sm:grid-cols-2">
