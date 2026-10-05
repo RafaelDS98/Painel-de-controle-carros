@@ -70,7 +70,7 @@ import { IndicatorDetails, type IndicatorGroup, type IndicatorAppointment } from
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { pushAppointmentToSgloc } from "@/lib/sgloc/sgloc.functions";
-import { atendimentoAllowance, editLimitBlockReason } from "@/lib/edit-limits";
+import { canManageDeadline, deadlineBlockReason } from "@/lib/edit-limits";
 import { buildAppointmentUpdate } from "@/lib/appointment-update";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -96,6 +96,8 @@ type Appointment = {
   editsAllowed: number;
   managerEditUsed: boolean;
   managerEditsUsed: number;
+  deadlineChangesUsed: number;
+  deadlineChangesAllowed: number;
   priorityUrgent: boolean;
   reworkOf: string | null;
   reworkReason: string | null;
@@ -110,14 +112,12 @@ type Appointment = {
   sglocLastError: string;
 };
 
-export type AppRole = "atendimento" | "gerente" | "master";
+export type AppRole = "atendimento" | "oficina" | "gerente" | "master";
 export type CurrentUser = { id: string; name: string; role: AppRole; email?: string };
-const roleLabels: Record<AppRole, string> = { atendimento: "Atendimento", gerente: "Gerente", master: "Master" };
+const roleLabels: Record<AppRole, string> = { atendimento: "Atendimento", oficina: "Oficina", gerente: "Gerente", master: "Master" };
 
-let myEditLimit = 1;
-let atendimentoDefaultLimit = 1;
-function editBlockReason(item: Appointment, role: AppRole): string | null {
-  return editLimitBlockReason({ editsUsed: item.editsUsed, editsAllowed: item.editsAllowed, managerEditsUsed: item.managerEditsUsed }, role, myEditLimit);
+function deadlineBlock(item: Appointment, role: AppRole): string | null {
+  return deadlineBlockReason({ deadlineChangesUsed: item.deadlineChangesUsed, deadlineChangesAllowed: item.deadlineChangesAllowed }, role);
 }
 
 type ServiceStatus = string;
@@ -125,7 +125,7 @@ type ServiceStatus = string;
 type AppointmentRow = {
   id: string; sheet_id: string; registered_at: string | null; date: string | null; time: string; plate: string; store: string;
   model: string; contact: string; workshop: string; issue: string; note: string; operator: string; external_order: string; status: string;
-  creator_edits_used: number; creator_edits_allowed: number; manager_edit_used: boolean; manager_edits_used?: number | null; priority_urgent: boolean;
+  creator_edits_used: number; creator_edits_allowed: number; manager_edit_used: boolean; manager_edits_used?: number | null; deadline_changes_used?: number | null; deadline_changes_allowed?: number | null; priority_urgent: boolean;
   original_deadline: string | null; current_deadline: string | null;
   rework_of: string | null; rework_reason: string | null; custom_fields: unknown;
   brand?: string | null; contact_number?: string | null; km_scheduled?: number | null; os_number?: number | null;
@@ -138,7 +138,7 @@ function fromRow(row: AppointmentRow): Appointment {
     store: row.store, model: row.model, contact: row.contact, workshop: row.workshop, issue: row.issue, note: row.note,
     operator: row.operator, externalOrder: row.external_order, status: row.status,
     originalDeadline: row.original_deadline, currentDeadline: row.current_deadline,
-    editsUsed: row.creator_edits_used, editsAllowed: row.creator_edits_allowed, managerEditUsed: row.manager_edit_used, managerEditsUsed: row.manager_edits_used ?? (row.manager_edit_used ? 1 : 0), priorityUrgent: row.priority_urgent,
+    editsUsed: row.creator_edits_used, editsAllowed: row.creator_edits_allowed, managerEditUsed: row.manager_edit_used, managerEditsUsed: row.manager_edits_used ?? (row.manager_edit_used ? 1 : 0), deadlineChangesUsed: row.deadline_changes_used ?? 0, deadlineChangesAllowed: row.deadline_changes_allowed ?? 1, priorityUrgent: row.priority_urgent,
     reworkOf: row.rework_of, reworkReason: row.rework_reason, customFields: customValues(row.custom_fields),
     brand: safeText(row.brand), contactNumber: safeText(row.contact_number), kmScheduled: row.km_scheduled ?? null,
     osNumber: row.os_number ?? null, scheduleType: safeText(row.schedule_type) || "N", sglocReference: safeText(row.sgloc_reference),
@@ -265,7 +265,7 @@ function UrgentBadge() {
   return <span className="inline-flex w-fit items-center gap-1 rounded border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-[11px] font-semibold text-destructive"><AlertTriangle className="size-3" />Urgente</span>;
 }
 
-const rowColumns = "id, sheet_id, registered_at, date, time, plate, store, model, contact, workshop, issue, note, operator, external_order, status, original_deadline, current_deadline, creator_edits_used, creator_edits_allowed, manager_edit_used, manager_edits_used, priority_urgent, rework_of, rework_reason, custom_fields, brand, contact_number, km_scheduled, os_number, schedule_type, sgloc_reference, sgloc_sync_state, sgloc_last_error, archived_at";
+const rowColumns = "id, sheet_id, registered_at, date, time, plate, store, model, contact, workshop, issue, note, operator, external_order, status, original_deadline, current_deadline, creator_edits_used, creator_edits_allowed, manager_edit_used, manager_edits_used, deadline_changes_used, deadline_changes_allowed, priority_urgent, rework_of, rework_reason, custom_fields, brand, contact_number, km_scheduled, os_number, schedule_type, sgloc_reference, sgloc_sync_state, sgloc_last_error, archived_at";
 
 export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: () => void; currentUser: CurrentUser }) {
   const [logOpen, setLogOpen] = useState(false);
@@ -377,8 +377,6 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const [, setLimitsTick] = useState(0);
   useEffect(() => {
     void (async () => {
-      try { const { data, error } = await supabase.rpc("get_my_edit_limit"); myEditLimit = !error && typeof data === "number" ? data : 1; } catch { myEditLimit = 1; }
-      try { const { data } = await supabase.from("edit_limit_defaults").select("max_edits").eq("role", "atendimento").maybeSingle(); atendimentoDefaultLimit = data?.max_edits ?? 1; } catch { atendimentoDefaultLimit = 1; }
       setLimitsTick((t) => t + 1);
     })();
   }, []);
@@ -505,10 +503,10 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
 
   async function saveAppointment(changes: Partial<AppointmentFields>): Promise<boolean> {
     if (!selected) return false;
-    const blocked = editBlockReason(selected, currentUser.role);
+    const blocked = "currentDeadline" in changes ? deadlineBlock(selected, currentUser.role) : null;
     if (blocked) { setMessage(blocked); return false; }
     if (changes.status && !serviceStatuses.includes(changes.status)) { setMessage("Situação inválida."); return false; }
-    const update = buildAppointmentUpdate(changes, selected.customFields, { canUrgent: currentUser.role !== "atendimento" }) as TablesUpdate<"appointments">;
+    const update = buildAppointmentUpdate(changes, selected.customFields, { canUrgent: canManageDeadline(currentUser.role) }) as TablesUpdate<"appointments">;
     if (!Object.keys(update).length) return true;
     const { data, error } = await updateAppointmentRow(selected.dbId, update);
     if (error || !data) { setMessage(error?.message || "Não foi possível salvar as alterações."); return false; }
@@ -585,10 +583,10 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     setHistoryKey((key) => key + 1);
   }
 
-  async function grantExtraEdit(item: Appointment) {
-    const { data, error } = await supabase.from("appointments").update({ creator_edits_allowed: item.editsAllowed + 1 }).eq("id", item.dbId).select(rowColumns).single();
-    if (error || !data) { setMessage(error?.message || "Não foi possível liberar a edição extra."); return; }
-    replaceRow(data); setMessage(`Edição extra liberada para ${item.plate}.`);
+  async function grantDeadlineChange(item: Appointment) {
+    const { data, error } = await supabase.from("appointments").update({ deadline_changes_allowed: Math.max(item.deadlineChangesAllowed, item.deadlineChangesUsed) + 1 }).eq("id", item.dbId).select(rowColumns).single();
+    if (error || !data) { setMessage(error?.message || "Não foi possível liberar a alteração da previsão."); return; }
+    replaceRow(data); setMessage(`Nova alteração da previsão liberada para ${item.plate}.`);
   }
 
   async function importFile(file?: File) {
@@ -756,10 +754,10 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
             <button type="button" onClick={() => setAccountOpen(true)} title="Minha conta" className="mr-2 min-h-11 rounded-md px-2 text-right text-sm hover:bg-primary-foreground/10"><p className="font-semibold"><UserCircle className="mr-1 inline size-4" />{currentUser.name}</p><p className="text-xs text-primary-foreground/70">{roleLabels[currentUser.role]} · Minha conta</p></button>
             <MyAccountDialog open={accountOpen} onOpenChange={setAccountOpen} userId={currentUser.id} email={currentUser.email ?? ""} name={currentUser.name} onSaved={() => void queryClientForAccount.invalidateQueries({ queryKey: ["profile", currentUser.id] })} />
             <Button variant="secondary" onClick={() => setLogOpen(true)}><History /> Log de alterações</Button>
-            <Button variant="secondary" onClick={() => setNewOpen(true)}><Plus /> Novo agendamento</Button>
+            {currentUser.role !== "oficina" && <Button variant="secondary" onClick={() => setNewOpen(true)}><Plus /> Novo agendamento</Button>}
              {currentUser.role === "master" && <Button variant="secondary" onClick={() => setSettingsOpen(true)}><Settings /> Configurações</Button>}
             {currentUser.role === "master" && <Button variant="secondary" onClick={() => setTrashOpen(true)}><Trash2 /> Lixeira</Button>}
-            <Button variant="secondary" onClick={() => inputRef.current?.click()}><Upload /> Importar agenda</Button>
+            {currentUser.role !== "oficina" && <Button variant="secondary" onClick={() => inputRef.current?.click()}><Upload /> Importar agenda</Button>}
             <input ref={inputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(event) => importFile(event.target.files?.[0])} />
             <Button variant="ghost" size="icon" onClick={() => setDark((value) => !value)} className="text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground" aria-label="Alternar tema">{dark ? <Sun /> : <Moon />}</Button>
             {onSignOut && <Button variant="ghost" size="icon" onClick={onSignOut} className="text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground" aria-label="Sair"><LogOut /></Button>}
@@ -884,10 +882,10 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
               {selected.sglocLastError && <p>{selected.sglocLastError}</p>}
               <Button size="sm" variant="outline" onClick={() => void sendToSgloc(selected.dbId, "retry")}>Reenviar</Button>
             </div>}
-            {editBlockReason(selected, currentUser.role) && <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{editBlockReason(selected, currentUser.role)}</p>}
-            {currentUser.role !== "atendimento" && <div className="flex flex-wrap items-center gap-3"><Button variant="outline" disabled={selected.editsAllowed > 1} onClick={() => grantExtraEdit(selected)}><Unlock /> Liberar edição extra</Button><span className="text-xs text-muted-foreground">Atendimento: {selected.editsUsed} de {atendimentoAllowance(atendimentoDefaultLimit, selected.editsAllowed)} edição(ões) usada(s){selected.editsAllowed > 1 ? " • edição extra já liberada" : ""}</span></div>}
-            <AppointmentForm key={`${selected.dbId}-${historyKey}`} initial={fieldsFromAppointment(selected)} definitions={fieldDefinitions} editing blocked={editBlockReason(selected, currentUser.role)} onSave={saveAppointment} statusOptions={serviceStatuses} canUrgent={currentUser.role !== "atendimento"} onDirtyChange={(dirty) => { dirtyRef.current = dirty; }} />
-            <div className="flex flex-wrap gap-2 border-t pt-4"><Button variant="outline" onClick={() => openRework(selected)}><RotateCcw /> Registrar retrabalho</Button>{currentUser.role === "master" && <Button variant="destructive" onClick={() => void archiveAppointment(selected)}><Trash2 /> Excluir</Button>}</div>
+            {deadlineBlock(selected, currentUser.role) && <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{deadlineBlock(selected, currentUser.role)}</p>}
+            {canManageDeadline(currentUser.role) && <div className="flex flex-wrap items-center gap-3"><Button variant="outline" disabled={selected.deadlineChangesAllowed > selected.deadlineChangesUsed} onClick={() => grantDeadlineChange(selected)}><Unlock /> Liberar nova alteração da previsão</Button><span className="text-xs text-muted-foreground">Previsão (atendimento/oficina): {selected.deadlineChangesUsed} de {selected.deadlineChangesAllowed} alteração(ões) usada(s)</span></div>}
+            <AppointmentForm key={`${selected.dbId}-${historyKey}`} initial={fieldsFromAppointment(selected)} definitions={fieldDefinitions} editing blocked={null} deadlineLocked={Boolean(deadlineBlock(selected, currentUser.role))} onSave={saveAppointment} statusOptions={serviceStatuses} canUrgent={canManageDeadline(currentUser.role)} onDirtyChange={(dirty) => { dirtyRef.current = dirty; }} />
+            <div className="flex flex-wrap gap-2 border-t pt-4">{currentUser.role !== "oficina" && <Button variant="outline" onClick={() => openRework(selected)}><RotateCcw /> Registrar retrabalho</Button>}{currentUser.role === "master" && <Button variant="destructive" onClick={() => void archiveAppointment(selected)}><Trash2 /> Excluir</Button>}</div>
             {(selected.osNumber !== null && fieldDefinitions.find((field) => field.field_key === "os_number")?.visible !== false) || selected.sglocReference ? <div className="grid gap-3 sm:grid-cols-2">
               {selected.osNumber !== null && fieldDefinitions.find((field) => field.field_key === "os_number")?.visible !== false && <Detail label="O.S Fornecedor" value={String(selected.osNumber)} />}
               {selected.sglocReference && <Detail label="ID SGLOC" value={selected.sglocReference} />}
