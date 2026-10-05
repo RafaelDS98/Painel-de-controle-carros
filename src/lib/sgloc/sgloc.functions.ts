@@ -27,6 +27,7 @@ async function safeError(op: string, caught: unknown): Promise<Error> {
 const settingsInput = z.object({
   baseUrl: z.string().trim().max(300),
   enabled: z.boolean(),
+  writeEnabled: z.boolean().default(false),
   timeoutSeconds: z.number().int().min(3, "Tempo limite mínimo: 3 segundos.").max(60, "Tempo limite máximo: 60 segundos."),
 });
 
@@ -47,11 +48,11 @@ export const saveSglocSettings = createServerFn({ method: "POST" })
     if (data.enabled && !baseUrl) throw new Error("Informe a URL base antes de ativar a integração.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.from("sgloc_settings").upsert({
-      id: true, base_url: baseUrl, enabled: data.enabled, request_timeout_seconds: data.timeoutSeconds,
+      id: true, base_url: baseUrl, enabled: data.enabled, write_enabled: data.writeEnabled, request_timeout_seconds: data.timeoutSeconds,
       updated_at: new Date().toISOString(), updated_by: context.userId,
     });
     if (error) throw await safeError("saveSettings", error);
-    return { baseUrl, enabled: data.enabled, timeoutSeconds: data.timeoutSeconds };
+    return { baseUrl, enabled: data.enabled, writeEnabled: data.writeEnabled, timeoutSeconds: data.timeoutSeconds };
   });
 
 const connectInput = z.object({
@@ -208,4 +209,86 @@ export const runSglocProbe = createServerFn({ method: "POST" })
     } catch (e) { await on401(e); await record(fromError("page2", "Segunda página", e)); }
 
     return { runId, runAt, steps };
+  });
+
+const pushInput = z.object({
+  appointmentId: z.string().uuid(),
+  origin: z.enum(["create", "update", "retry"]),
+  changed: z.array(z.string().max(40)).max(20).default([]),
+});
+
+export type PushResult = { status: "skipped" | "no_change" | "synced" | "failed"; message?: string; warning?: string };
+
+/**
+ * Envia criação (POST store) ou edição (PUT {id}) ao SGLOC com o token do usuário logado.
+ * Só roda com integração e escrita ativas. Falha nunca desfaz o agendamento do painel: marca push_failed.
+ */
+export const pushAppointmentToSgloc = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => {
+    const p = pushInput.safeParse(data);
+    if (!p.success) throw new Error("Dados inválidos.");
+    return p.data;
+  })
+  .handler(async ({ data, context }): Promise<PushResult> => {
+    await assertApproved(context);
+    // Leitura com RLS do usuário: confirma que ele enxerga o agendamento.
+    const { data: row, error } = await context.supabase.from("appointments")
+      .select("id, date, time, plate, km_scheduled, contact, contact_number, issue, note, workshop, external_order, sgloc_reference, archived_at")
+      .eq("id", data.appointmentId).maybeSingle();
+    if (error || !row) throw new Error("Agendamento não encontrado.");
+    if (row.archived_at) return { status: "skipped", message: "Agendamento na Lixeira não é enviado ao SGLOC." };
+    const core = await import("./core");
+    const client = await import("./client.server");
+    const settings = await client.loadSettings();
+    if (!settings.enabled || !settings.write_enabled) return { status: "skipped" };
+    const isUpdate = Boolean(row.sgloc_reference);
+    if (data.origin === "update" && !isUpdate) return { status: "skipped" };
+    const changed = data.origin === "retry" ? [...core.SENDABLE_COLUMNS] : data.changed;
+    if (isUpdate && !changed.some((c) => (core.SENDABLE_COLUMNS as readonly string[]).includes(c))) return { status: "no_change" };
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const mark = (update: Record<string, unknown>) => supabaseAdmin.from("appointments").update(update as never).eq("id", row.id);
+    let warning: string | undefined;
+    try {
+      const baseUrl = client.assertUsable(settings);
+      let supplierId: number | null = null;
+      if (changed.includes("workshop") && (row.workshop ?? "").trim()) {
+        const { data: sup } = await supabaseAdmin.from("sgloc_suppliers").select("supplier_id, name");
+        supplierId = core.matchSupplier(row.workshop, sup ?? []);
+        if (supplierId === null) warning = "Oficina sem código SGLOC: o fornecedor não foi enviado.";
+      }
+      const src = { ...row, supplierId };
+      const token = await client.getUserToken(context.userId);
+      const t = settings.request_timeout_seconds;
+      if (isUpdate) {
+        const body = core.buildUpdateBody(src, changed);
+        if (!Object.keys(body).length) return { status: "no_change", warning };
+        await client.sglocFetch({ baseUrl, timeoutSeconds: t, method: "PUT", path: `api/agendamanutencao/${encodeURIComponent(String(row.sgloc_reference))}`, token, json: body })
+          .catch(async (e) => { if (e instanceof core.SglocError && e.kind === "unauthorized") await client.markExpired(context.userId); throw e; });
+        await mark({ sgloc_sync_state: "synced", sgloc_synced_at: new Date().toISOString(), sgloc_last_error: null });
+        return { status: "synced", warning };
+      }
+      const body = core.buildCreateBody(src, core.todayInSaoPaulo());
+      const missing = core.missingForCreate(body);
+      if (missing) throw new core.SglocError("validation", missing);
+      const res = await client.sglocFetch({ baseUrl, timeoutSeconds: t, method: "POST", path: "api/agendamanutencao/store", token, json: body })
+        .catch(async (e) => { if (e instanceof core.SglocError && e.kind === "unauthorized") await client.markExpired(context.userId); throw e; });
+      const env = core.readObject(res.body);
+      const item = core.readItem(env["data"] ?? env);
+      if (item.id === null) throw new core.SglocError("not_json", "O SGLOC aceitou o envio, mas não devolveu o ID do agendamento.");
+      const update: Record<string, unknown> = { sgloc_reference: String(item.id), sgloc_sync_state: "synced", sgloc_synced_at: new Date().toISOString(), sgloc_last_error: null };
+      if (item.operador_id !== null) update["operator_id"] = item.operador_id;
+      if (item.loja_id !== null) update["store_id"] = item.loja_id;
+      if (item.marca) update["brand"] = item.marca;
+      if (item.modelo) update["model"] = item.modelo;
+      const { error: upErr } = await mark(update);
+      if (upErr) { console.error(`[sgloc] push gravação local falhou cód=${errorCode()}`); return { status: "synced", warning: "Enviado ao SGLOC, mas o ID não pôde ser gravado no painel." }; }
+      return { status: "synced", warning };
+    } catch (caught) {
+      const message = core.pushErrorMessage(caught);
+      console.info(`[sgloc] push ${isUpdate ? "PUT" : "POST"} falhou tipo=${caught instanceof core.SglocError ? caught.kind : "erro"}`);
+      await mark({ sgloc_sync_state: "push_failed", sgloc_last_error: message });
+      return { status: "failed", message, warning };
+    }
   });
