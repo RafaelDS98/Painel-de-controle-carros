@@ -29,7 +29,12 @@ export type Database = {
           current_deadline: string | null
           custom_fields: Json
           date: string | null
+          deadline_changes_allowed: number
+          deadline_changes_used: number
           external_order: string
+          forwarded_at: string | null
+          forwarded_by: string | null
+          forwarded_workshop_id: string | null
           id: string
           issue: string
           km_scheduled: number | null
@@ -76,7 +81,12 @@ export type Database = {
           current_deadline?: string | null
           custom_fields?: Json
           date?: string | null
+          deadline_changes_allowed?: number
+          deadline_changes_used?: number
           external_order?: string
+          forwarded_at?: string | null
+          forwarded_by?: string | null
+          forwarded_workshop_id?: string | null
           id?: string
           issue?: string
           km_scheduled?: number | null
@@ -123,7 +133,12 @@ export type Database = {
           current_deadline?: string | null
           custom_fields?: Json
           date?: string | null
+          deadline_changes_allowed?: number
+          deadline_changes_used?: number
           external_order?: string
+          forwarded_at?: string | null
+          forwarded_by?: string | null
+          forwarded_workshop_id?: string | null
           id?: string
           issue?: string
           km_scheduled?: number | null
@@ -162,6 +177,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_forwarded_workshop_id_fkey"
+            columns: ["forwarded_workshop_id"]
+            isOneToOne: false
+            referencedRelation: "workshops"
             referencedColumns: ["id"]
           },
           {
@@ -359,6 +381,51 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+        }
+        Relationships: []
+      }
+      saved_views: {
+        Row: {
+          created_at: string
+          filters: Json
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          filters?: Json
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          filters?: Json
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      sectors: {
+        Row: {
+          created_at: string
+          id: string
+          modules: string[]
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          modules?: string[]
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          modules?: string[]
+          name?: string
         }
         Relationships: []
       }
@@ -659,6 +726,76 @@ export type Database = {
         }
         Relationships: []
       }
+      user_sectors: {
+        Row: {
+          sector_id: string
+          user_id: string
+        }
+        Insert: {
+          sector_id: string
+          user_id: string
+        }
+        Update: {
+          sector_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_sectors_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "sectors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workshop_users: {
+        Row: {
+          user_id: string
+          workshop_id: string
+        }
+        Insert: {
+          user_id: string
+          workshop_id: string
+        }
+        Update: {
+          user_id?: string
+          workshop_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workshop_users_workshop_id_fkey"
+            columns: ["workshop_id"]
+            isOneToOne: false
+            referencedRelation: "workshops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workshops: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -670,6 +807,7 @@ export type Database = {
         Returns: string[]
       }
       get_my_edit_limit: { Args: never; Returns: number }
+      get_my_modules: { Args: never; Returns: string[] }
       get_my_sgloc_status: {
         Args: never
         Returns: {
@@ -679,6 +817,7 @@ export type Database = {
         }[]
       }
       has_access: { Args: { _user_id: string }; Returns: boolean }
+      has_module: { Args: { _module: string; _uid: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -721,9 +860,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      user_modules: { Args: { _uid: string }; Returns: string[] }
     }
     Enums: {
-      app_role: "atendimento" | "gerente" | "master"
+      app_role: "atendimento" | "gerente" | "master" | "oficina"
       contact_type: "ligação" | "mensagem"
     }
     CompositeTypes: {
@@ -852,7 +992,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["atendimento", "gerente", "master"],
+      app_role: ["atendimento", "gerente", "master", "oficina"],
       contact_type: ["ligação", "mensagem"],
     },
   },
