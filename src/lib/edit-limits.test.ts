@@ -1,20 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { atendimentoAllowance, editLimitBlockReason } from "./edit-limits";
+import { canManageDeadline, deadlineBlockReason, editLimitBlockReason } from "./edit-limits";
 
-describe("edit limits", () => {
-  it("master ilimitado", () => {
-    expect(editLimitBlockReason({ editsUsed: 99, editsAllowed: 1, managerEditsUsed: 99 }, "master", 1)).toBeNull();
+describe("previsão de entrega", () => {
+  it("atendimento e oficina alteram 1 vez", () => {
+    for (const role of ["atendimento", "oficina"] as const) {
+      expect(deadlineBlockReason({ deadlineChangesUsed: 0, deadlineChangesAllowed: 1 }, role)).toBeNull();
+      expect(deadlineBlockReason({ deadlineChangesUsed: 1, deadlineChangesAllowed: 1 }, role)).toBe("Já houve 1 alteração da previsão. Peça autorização ao gerente ou master.");
+    }
   });
-  it("atendimento soma extras liberadas", () => {
-    expect(atendimentoAllowance(2, 2)).toBe(3);
-    expect(editLimitBlockReason({ editsUsed: 2, editsAllowed: 2, managerEditsUsed: 0 }, "atendimento", 2)).toBeNull();
-    expect(editLimitBlockReason({ editsUsed: 3, editsAllowed: 2, managerEditsUsed: 0 }, "atendimento", 2)).toContain("3 edição");
+  it("liberação extra permite nova alteração", () => {
+    expect(deadlineBlockReason({ deadlineChangesUsed: 1, deadlineChangesAllowed: 2 }, "oficina")).toBeNull();
   });
-  it("atendimento padrão 1", () => {
-    expect(editLimitBlockReason({ editsUsed: 1, editsAllowed: 1, managerEditsUsed: 0 }, "atendimento", 1)).not.toBeNull();
+  it("gerente e master sem limite", () => {
+    expect(deadlineBlockReason({ deadlineChangesUsed: 9, deadlineChangesAllowed: 1 }, "gerente")).toBeNull();
+    expect(deadlineBlockReason({ deadlineChangesUsed: 9, deadlineChangesAllowed: 1 }, "master")).toBeNull();
+    expect(canManageDeadline("atendimento")).toBe(false);
   });
-  it("gerente usa contador próprio", () => {
-    expect(editLimitBlockReason({ editsUsed: 5, editsAllowed: 1, managerEditsUsed: 1 }, "gerente", 2)).toBeNull();
-    expect(editLimitBlockReason({ editsUsed: 0, editsAllowed: 1, managerEditsUsed: 2 }, "gerente", 2)).toContain("2 edição");
+  it("demais campos nunca bloqueiam", () => {
+    expect(editLimitBlockReason()).toBeNull();
   });
 });
