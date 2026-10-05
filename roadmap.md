@@ -20,3 +20,5 @@
 - [x] Aba Usuários e permissões (master) com seleção de perfil.
 - [x] Lote 4: filtros ativos sincronizados, detalhes de indicadores e histórico de placas em todas as listas.
 - [x] Verificar TSC, testes e fluxo master no navegador; separar testes reais de leitura.
+- [ ] Limite de edições configurável pelo master (perfil e usuário).
+- [ ] Cor livre nas Situações (seletor de cor).
