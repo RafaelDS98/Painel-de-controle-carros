@@ -33,3 +33,5 @@
 - Erros de criação/edição/senha de usuários passam por src/lib/auth-errors.ts (tradução, campo e código curto) e o erro técnico vai ao log do servidor sem senha — o master vê o motivo sem expor segredos.
 - Excluir agendamento = arquivar (archived_at/archived_by), só master, garantido no trigger de edição e na RLS de leitura; o painel carrega só ativos por activeOnly (src/lib/agenda-safety.ts) e a deduplicação de importação usa existing_sgloc_references (inclui arquivados) — nada é apagado e nada some de uma tela só.
 - A ficha grava Situação, Urgente e demais campos num único UPDATE montado por buildAppointmentUpdate (src/lib/appointment-update.ts) — cada Salvar conta uma só edição no limite.
+- Limites de edição vêm de edit_limit_defaults/edit_limit_overrides via edit_limit_for, calculados no trigger na hora da edição e alterados só pelas funções set_edit_limit_* (master, com user_admin_log); a tela espelha em src/lib/edit-limits.ts — mudar limite não toca agendamentos.
+- Cores de situação aceitam token antigo ou #RRGGBB em color_token e são sempre exibidas por statusColorProps (src/lib/agenda-config.ts) — um só lugar decide contraste e fallback neutro.
