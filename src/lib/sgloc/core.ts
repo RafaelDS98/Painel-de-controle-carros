@@ -104,7 +104,7 @@ export function composeLoginError(e: SglocError): string {
 /* ---------------- Leitura tolerante ---------------- */
 
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
-export const str = (v: unknown): string | null => (typeof v === "string" ? v : typeof v === "number" && Number.isFinite(v) ? String(v) : null);
+export const str = (v: unknown): string | null => (typeof v === "string" ? (v.trim() === "" ? null : v) : typeof v === "number" && Number.isFinite(v) ? String(v) : null);
 export const num = (v: unknown): number | null => {
   if (typeof v === "number" && Number.isFinite(v)) return v;
   if (typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v))) return Number(v);
@@ -220,3 +220,83 @@ export function tokenState(expiresAt: string | null | undefined, now = Date.now(
   const t = Date.parse(expiresAt);
   return Number.isNaN(t) || t > now + 30_000 ? "connected" : "expired";
 }
+
+/* ---------------- Envio (criação/edição) — montagem pura dos corpos ---------------- */
+
+/** Campos do painel que podem subir ao SGLOC (nome da coluna em appointments). */
+export const SENDABLE_COLUMNS = ["date", "time", "plate", "km_scheduled", "contact", "contact_number", "issue", "note", "workshop", "external_order"] as const;
+export type SendableColumn = (typeof SENDABLE_COLUMNS)[number];
+
+export type PushSource = {
+  date?: string | null; time?: string | null; plate?: string | null; km_scheduled?: number | null;
+  contact?: string | null; contact_number?: string | null; issue?: string | null; note?: string | null;
+  external_order?: string | null; supplierId?: number | null;
+};
+
+const clip = (v: string | null | undefined, max: number) => { const t = (v ?? "").trim(); return t ? t.slice(0, max) : null; };
+export const sglocPlate = (v: string | null | undefined) => { const t = (v ?? "").toUpperCase().replace(/[^A-Z0-9]/g, ""); return t.length === 7 ? t : null; };
+export const sglocHour = (v: string | null | undefined) => { const m = (v ?? "").trim().match(/^(\d{1,2}):(\d{2})/); if (!m) return null; const h = Number(m[1]); const mi = Number(m[2]); return h < 24 && mi < 60 ? `${String(h).padStart(2, "0")}:${m[2]}` : null; };
+const sglocDate = (v: string | null | undefined) => (/^\d{4}-\d{2}-\d{2}$/.test((v ?? "").trim()) ? (v as string).trim() : null);
+
+/** Data de hoje (Y-m-d) no fuso America/Sao_Paulo. */
+export function todayInSaoPaulo(now = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+}
+
+function fieldValue(col: SendableColumn, s: PushSource): [string, string | number] | null {
+  let key: string; let v: string | number | null;
+  switch (col) {
+    case "date": key = "data_agenda"; v = sglocDate(s.date); break;
+    case "time": key = "hora"; v = sglocHour(s.time); break;
+    case "plate": key = "placa"; v = sglocPlate(s.plate); break;
+    case "km_scheduled": key = "km_agendamento"; v = typeof s.km_scheduled === "number" && Number.isInteger(s.km_scheduled) && s.km_scheduled >= 0 ? s.km_scheduled : null; break;
+    case "contact": key = "contato"; v = clip(s.contact, 40); break;
+    case "contact_number": key = "contato_numero"; v = clip(s.contact_number, 30); break;
+    case "issue": key = "problema"; v = clip(s.issue, 200); break;
+    case "note": key = "obs"; v = clip(s.note, 200); break;
+    case "workshop": key = "fornecedor_id"; v = typeof s.supplierId === "number" ? s.supplierId : null; break;
+    case "external_order": key = "os_externa"; v = clip(s.external_order, 10); break;
+  }
+  return v === null ? null : [key, v];
+}
+
+/** Corpo do POST store. Nunca envia loja, confirmado ou realizado; omite vazios. */
+export function buildCreateBody(s: PushSource, today: string): Record<string, string | number> {
+  const body: Record<string, string | number> = { data: today };
+  for (const col of SENDABLE_COLUMNS) { const f = fieldValue(col, s); if (f) body[f[0]] = f[1]; }
+  return body;
+}
+
+/** Faltando algum obrigatório do store (placa, data_agenda, hora)? Devolve a mensagem ou null. */
+export function missingForCreate(body: Record<string, unknown>): string | null {
+  const miss = [["placa", "placa com 7 caracteres"], ["data_agenda", "data do atendimento"], ["hora", "hora"]].filter(([k]) => body[k as string] === undefined).map(([, l]) => l);
+  return miss.length ? `Faltam dados obrigatórios para o SGLOC: ${miss.join(", ")}.` : null;
+}
+
+/** Corpo do PUT: só os campos enviáveis alterados (outros são ignorados). */
+export function buildUpdateBody(s: PushSource, changed: readonly string[]): Record<string, string | number> {
+  const body: Record<string, string | number> = {};
+  for (const col of SENDABLE_COLUMNS) { if (!changed.includes(col)) continue; const f = fieldValue(col, s); if (f) body[f[0]] = f[1]; }
+  return body;
+}
+
+/** Compara nomes ignorando maiúsculas, acentos e espaços extras. */
+export const foldName = (v: string | null | undefined) => (v ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim().toLowerCase();
+export function matchSupplier(name: string | null | undefined, suppliers: { supplier_id: number; name: string }[]): number | null {
+  const key = foldName(name);
+  if (!key) return null;
+  return suppliers.find((s) => foldName(s.name) === key)?.supplier_id ?? null;
+}
+
+/** Mensagem curta de falha de envio em português (422 inclui a mensagem do SGLOC). */
+export function pushErrorMessage(e: unknown): string {
+  if (e instanceof SglocError) {
+    if (e.kind === "validation") return `SGLOC recusou os dados (422): ${sglocMessage(e.diagnostic ? null : null) || e.message}`.slice(0, 300);
+    if (e.kind === "unauthorized" || e.kind === "expired") return "Conexão com o SGLOC expirou. Reconecte em Minha conta > Conta SGLOC.";
+    return e.message.slice(0, 300);
+  }
+  return "Falha inesperada ao enviar ao SGLOC.";
+}
+
+/** Valor de enumeração vindo do SGLOC (confirmado/realizado): vazio/nulo vira "não informado". */
+export const enumLabel = (v: unknown) => str(v) ?? "não informado";
