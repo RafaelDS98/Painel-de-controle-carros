@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,8 @@ export function AgendaSettings({ open, onOpenChange, statuses, fields, onRefresh
   const closeStatus = () => { const id = statusDraft?.id; setStatusDraft(null); scrollBack(id); };
   const closeField = () => { const id = fieldDraft?.id; setFieldDraft(null); scrollBack(id); };
   const [error, setError] = useState("");
+  const errorRef = useRef<HTMLParagraphElement | null>(null);
+  useEffect(() => { if (error) errorRef.current?.scrollIntoView({ block: "center", behavior: "smooth" }); }, [error]);
   const [confirmDelete, setConfirmDelete] = useState<{ type: "status" | "field"; id: string; label: string } | null>(null);
   async function perform(action: () => PromiseLike<{ error: { message: string } | null }>) {
     setBusy(true); setError("");
@@ -81,7 +83,7 @@ export function AgendaSettings({ open, onOpenChange, statuses, fields, onRefresh
         <Button role="tab" aria-selected={tab === "users"} variant={tab === "users" ? "default" : "outline"} onClick={() => { setTab("users"); setError(""); setStatusDraft(null); setFieldDraft(null); }}>Usuários e permissões</Button>
         <Button role="tab" aria-selected={tab === "sgloc"} variant={tab === "sgloc" ? "default" : "outline"} onClick={() => { setTab("sgloc"); setError(""); setStatusDraft(null); setFieldDraft(null); }}>SGLOC</Button>
       </div>
-      {error && <p role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>}
+      {error && <p ref={errorRef} role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>}
       {confirmDelete && <div role="alertdialog" aria-label="Confirmar remoção" className="flex flex-wrap items-center gap-3 border-b pb-3 text-sm"><span>Remover “{confirmDelete.label}”?</span><Button size="sm" variant="destructive" disabled={busy} onClick={remove}>Remover</Button><Button size="sm" variant="outline" onClick={() => setConfirmDelete(null)}>Cancelar</Button></div>}
       {tab === "sgloc" ? <SglocSettingsPanel /> : tab === "workshops" ? <WorkshopsPanel onChanged={onRefresh} /> : tab === "users" ? <UserRolesPanel currentUserId={currentUserId} /> : tab === "statuses" ? <section className="space-y-3">
         <div className="flex items-center justify-between"><h3 className="font-semibold">Situações</h3><Button size="sm" variant="outline" onClick={() => { setStatusDraft({ label: "", color_token: "status-blue", sort_order: (Math.max(0, ...statuses.map((row) => row.sort_order)) + 1), is_completion: false }); setError(""); }}><Plus /> Nova situação</Button></div>

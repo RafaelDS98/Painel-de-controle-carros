@@ -36,3 +36,4 @@
 - Sem limite de edições: qualquer perfil com acesso edita e tudo vai para o edit_log; o trigger só trava arquivar/restaurar (master), campos sgloc_* (sistema/master), Urgência (gerente/master) e Previsão de Entrega (gerente/master, erro explícito). Colunas creator_edits_*/manager_edit* e tabelas edit_limit_* ficam sem uso — não reintroduzir contagem.
 - Local/Oficina é lista de seleção alimentada por `workshops` (cadastro em Configurações > Oficinas, só master pela tela); a lista é injetada em `loadConfig` e valores antigos fora da lista continuam exibidos na ficha.
 - color_token aceita token antigo ou #RRGGBB, exibido só por statusColorProps (src/lib/agenda-config.ts) — contraste e neutro num só lugar.
+- Não existe CHECK fixo em appointments.status (bloqueava renomear/criar situações); a lista válida é status_options e o app valida a escolha. A faixa SglocSyncBar mostra última sincronização/aviso de falha (gerente/master) e "Sincronizar agora" (master).
