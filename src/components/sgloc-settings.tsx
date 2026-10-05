@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { runSglocProbe, saveSglocSettings, type ProbeStep } from "@/lib/sgloc/sgloc.functions";
+import { SglocSyncPanel } from "./sgloc-sync-panel";
 
 type Result = { runAt: string; steps: ProbeStep[] };
 
@@ -55,7 +56,7 @@ export function SglocSettingsPanel() {
 
   if (!loaded) return <p className="text-sm text-muted-foreground">Carregando…</p>;
   return <section className="space-y-4">
-    <p className="rounded-md border bg-muted px-3 py-2 text-sm">Com "Escrita no SGLOC ativa" desligada, nada é enviado ao SGLOC. Ligada, agendamentos criados no painel e edições de agendamentos que vieram do SGLOC são enviados com a conta SGLOC de quem salvou. Não há sincronização automática.</p>
+    <p className="rounded-md border bg-muted px-3 py-2 text-sm">Com "Escrita no SGLOC ativa" desligada, nada é enviado ao SGLOC. Ligada, agendamentos criados no painel e edições de agendamentos que vieram do SGLOC são enviados com a conta SGLOC de quem salvou. A leitura automática da agenda do SGLOC fica configurada abaixo.</p>
     <form onSubmit={onSave} className="space-y-3">
       <label className="block text-sm">URL base do SGLOC<Input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://servidor.exemplo.com.br" maxLength={300} inputMode="url" /></label>
       <label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} className="h-4 w-4" />Integração ativa</label>
@@ -76,5 +77,6 @@ export function SglocSettingsPanel() {
         <details className="mt-1"><summary className="cursor-pointer text-xs text-muted-foreground">Detalhes (mascarados)</summary><pre className="mt-1 max-h-64 overflow-auto whitespace-pre-wrap break-all text-xs">{JSON.stringify(s.summary, null, 2)}</pre></details>
       </li>)}</ul>
     </div>}
+    <SglocSyncPanel base={{ baseUrl, enabled, writeEnabled, timeoutSeconds: Number(timeout) || 15 }} />
   </section>;
 }

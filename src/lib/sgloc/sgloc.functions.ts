@@ -29,6 +29,11 @@ const settingsInput = z.object({
   enabled: z.boolean(),
   writeEnabled: z.boolean().default(false),
   timeoutSeconds: z.number().int().min(3, "Tempo limite mínimo: 3 segundos.").max(60, "Tempo limite máximo: 60 segundos."),
+  intervalMinutes: z.number().int("Intervalo deve ser em minutos inteiros.").min(15, "Intervalo mínimo: 15 minutos.").max(1440, "Intervalo máximo: 24 horas (1440 minutos).").optional(),
+  windowDaysBack: z.number().int().min(0, "Dias para trás: mínimo 0.").max(60, "Dias para trás: máximo 60.").optional(),
+  windowDaysAhead: z.number().int().min(0, "Dias para frente: mínimo 0.").max(180, "Dias para frente: máximo 180.").optional(),
+  syncUserId: z.string().uuid().nullable().optional(),
+  syncLive: z.boolean().optional(),
 });
 
 export const saveSglocSettings = createServerFn({ method: "POST" })
@@ -47,12 +52,87 @@ export const saveSglocSettings = createServerFn({ method: "POST" })
     }
     if (data.enabled && !baseUrl) throw new Error("Informe a URL base antes de ativar a integração.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin.from("sgloc_settings").upsert({
+    if (data.syncUserId) {
+      const { data: acc } = await supabaseAdmin.from("sgloc_accounts").select("user_id").eq("user_id", data.syncUserId).maybeSingle();
+      if (!acc) throw new Error("O usuário escolhido não tem conta SGLOC conectada.");
+    }
+    if (data.syncLive) {
+      const { data: cur } = await supabaseAdmin.from("sgloc_settings").select("sync_live").eq("id", true).maybeSingle();
+      if (!cur?.sync_live) {
+        const { data: sim } = await supabaseAdmin.from("sgloc_sync_runs").select("id").eq("dry_run", true).eq("status", "success")
+          .gte("started_at", new Date(Date.now() - 24 * 3600_000).toISOString()).limit(1).maybeSingle();
+        if (!sim) throw new Error("Rode uma simulação concluída (últimas 24 h) antes de ligar a sincronização de verdade.");
+      }
+    }
+    const row: Record<string, unknown> = {
       id: true, base_url: baseUrl, enabled: data.enabled, write_enabled: data.writeEnabled, request_timeout_seconds: data.timeoutSeconds,
       updated_at: new Date().toISOString(), updated_by: context.userId,
-    });
+    };
+    if (data.intervalMinutes !== undefined) row["interval_minutes"] = data.intervalMinutes;
+    if (data.windowDaysBack !== undefined) row["window_days_back"] = data.windowDaysBack;
+    if (data.windowDaysAhead !== undefined) row["window_days_ahead"] = data.windowDaysAhead;
+    if (data.syncUserId !== undefined) row["sync_user_id"] = data.syncUserId;
+    if (data.syncLive !== undefined) row["sync_live"] = data.syncLive;
+    const { error } = await supabaseAdmin.from("sgloc_settings").upsert(row as never);
     if (error) throw await safeError("saveSettings", error);
     return { baseUrl, enabled: data.enabled, writeEnabled: data.writeEnabled, timeoutSeconds: data.timeoutSeconds };
+  });
+
+/** Usuários com conta SGLOC conectada (para escolher a conta da rotina). Só master. */
+export const listSglocConnectedUsers = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertMaster(context);
+    const { data, error } = await context.supabase.rpc("list_sgloc_connected_users");
+    if (error) throw await safeError("listConnected", error);
+    return ((data ?? []) as { user_id: string; full_name: string | null; sgloc_email: string; token_expires_at: string | null }[])
+      .map((u) => ({ userId: u.user_id, name: u.full_name ?? "", sglocEmail: u.sgloc_email, expiresAt: u.token_expires_at }));
+  });
+
+/** Situação da sincronização: última execução, última simulação, próxima prevista e aviso da conta. Só master. */
+export const getSglocSyncStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertMaster(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { loadSyncSettings, lastCompletedStart } = await import("./sync.server");
+    const { nextRunAt } = await import("./sync-core");
+    const { tokenState } = await import("./core");
+    const s = await loadSyncSettings();
+    const cols = "id, started_at, finished_at, status, trigger_source, dry_run, fetched, inserted, updated, linked, protected, ambiguous, not_returned, skipped, errors, error_detail, sample";
+    const { data: last } = await supabaseAdmin.from("sgloc_sync_runs").select(cols).order("started_at", { ascending: false }).limit(1).maybeSingle();
+    const { data: lastSim } = await supabaseAdmin.from("sgloc_sync_runs").select(cols).eq("dry_run", true).neq("status", "running").order("started_at", { ascending: false }).limit(1).maybeSingle();
+    let accountWarning: string | null = null;
+    if (!s?.sync_user_id) accountWarning = "Nenhuma conta SGLOC designada para a sincronização.";
+    else {
+      const { data: acc } = await supabaseAdmin.from("sgloc_accounts").select("token_expires_at").eq("user_id", s.sync_user_id).maybeSingle();
+      if (!acc) accountWarning = "A conta designada não está conectada ao SGLOC.";
+      else if (tokenState(acc.token_expires_at) === "expired") accountWarning = "A conexão SGLOC da conta designada expirou; ela precisa reconectar em Minha conta.";
+    }
+    const tick = { enabled: Boolean(s?.enabled), base_url: s?.base_url ?? null, interval_minutes: s?.interval_minutes ?? 480, sync_user_id: s?.sync_user_id ?? null };
+    return {
+      settings: { intervalMinutes: s?.interval_minutes ?? 480, windowDaysBack: s?.window_days_back ?? 7, windowDaysAhead: s?.window_days_ahead ?? 45,
+        syncUserId: s?.sync_user_id ?? null, syncLive: Boolean(s?.sync_live) },
+      last: last ?? null, lastSimulation: lastSim ?? null,
+      nextRunAt: nextRunAt(tick, await lastCompletedStart("schedule")), accountWarning,
+    };
+  });
+
+/** "Simular agora" / "Sincronizar agora" (manual). Só master; 1 a cada 30 s; sem sobreposição. */
+export const runSglocSyncNow = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => z.object({ simulate: z.boolean() }).parse(data))
+  .handler(async ({ data, context }) => {
+    await assertMaster(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: last } = await supabaseAdmin.from("sgloc_sync_runs").select("started_at").order("started_at", { ascending: false }).limit(1).maybeSingle();
+    if (last?.started_at && Date.now() - Date.parse(last.started_at) < 30_000) {
+      const wait = Math.ceil((30_000 - (Date.now() - Date.parse(last.started_at))) / 1000);
+      throw new Error(`Aguarde ${wait} s para rodar de novo (limite: 1 execução a cada 30 segundos).`);
+    }
+    const { runSglocSync, SyncBusyError } = await import("./sync.server");
+    try { return await runSglocSync({ trigger: "manual", simulate: data.simulate, actorId: context.userId }); }
+    catch (e) { if (e instanceof SyncBusyError) throw new Error(e.message); throw await safeError("syncNow", e); }
   });
 
 const connectInput = z.object({

@@ -435,6 +435,8 @@ export type Database = {
           id: boolean
           interval_minutes: number
           request_timeout_seconds: number
+          sync_live: boolean
+          sync_user_id: string | null
           updated_at: string | null
           updated_by: string | null
           window_days_ahead: number
@@ -447,6 +449,8 @@ export type Database = {
           id?: boolean
           interval_minutes?: number
           request_timeout_seconds?: number
+          sync_live?: boolean
+          sync_user_id?: string | null
           updated_at?: string | null
           updated_by?: string | null
           window_days_ahead?: number
@@ -459,6 +463,8 @@ export type Database = {
           id?: boolean
           interval_minutes?: number
           request_timeout_seconds?: number
+          sync_live?: boolean
+          sync_user_id?: string | null
           updated_at?: string | null
           updated_by?: string | null
           window_days_ahead?: number
@@ -508,13 +514,19 @@ export type Database = {
       }
       sgloc_sync_runs: {
         Row: {
+          ambiguous: number
           created_by: string | null
+          dry_run: boolean
           error_detail: Json
           errors: number
           fetched: number
           finished_at: string | null
           id: string
           inserted: number
+          linked: number
+          not_returned: number
+          protected: number
+          sample: Json
           skipped: number
           started_at: string | null
           status: string
@@ -522,13 +534,19 @@ export type Database = {
           updated: number
         }
         Insert: {
+          ambiguous?: number
           created_by?: string | null
+          dry_run?: boolean
           error_detail?: Json
           errors?: number
           fetched?: number
           finished_at?: string | null
           id?: string
           inserted?: number
+          linked?: number
+          not_returned?: number
+          protected?: number
+          sample?: Json
           skipped?: number
           started_at?: string | null
           status?: string
@@ -536,13 +554,19 @@ export type Database = {
           updated?: number
         }
         Update: {
+          ambiguous?: number
           created_by?: string | null
+          dry_run?: boolean
           error_detail?: Json
           errors?: number
           fetched?: number
           finished_at?: string | null
           id?: string
           inserted?: number
+          linked?: number
+          not_returned?: number
+          protected?: number
+          sample?: Json
           skipped?: number
           started_at?: string | null
           status?: string
@@ -661,6 +685,15 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      list_sgloc_connected_users: {
+        Args: never
+        Returns: {
+          full_name: string
+          sgloc_email: string
+          token_expires_at: string
+          user_id: string
+        }[]
       }
       list_users_with_roles: {
         Args: never
