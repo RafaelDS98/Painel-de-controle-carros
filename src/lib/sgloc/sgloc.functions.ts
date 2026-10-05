@@ -274,8 +274,7 @@ export const pushAppointmentToSgloc = createServerFn({ method: "POST" })
       if (missing) throw new core.SglocError("validation", missing);
       const res = await client.sglocFetch({ baseUrl, timeoutSeconds: t, method: "POST", path: "api/agendamanutencao/store", token, json: body })
         .catch(async (e) => { if (e instanceof core.SglocError && e.kind === "unauthorized") await client.markExpired(context.userId); throw e; });
-      const env = core.readObject(res.body);
-      const item = core.readItem(env["data"] ?? env);
+      const item = core.readItem(core.readObject(res.body));
       if (item.id === null) throw new core.SglocError("not_json", "O SGLOC aceitou o envio, mas não devolveu o ID do agendamento.");
       const update: Record<string, unknown> = { sgloc_reference: String(item.id), sgloc_sync_state: "synced", sgloc_synced_at: new Date().toISOString(), sgloc_last_error: null };
       if (item.operador_id !== null) update["operator_id"] = item.operador_id;
