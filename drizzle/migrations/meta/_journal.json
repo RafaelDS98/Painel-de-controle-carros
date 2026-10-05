@@ -78,6 +78,13 @@
       "when": 1791042752517,
       "tag": "0010_fix_set_user_role_conflict",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791211059494,
+      "tag": "0011_sgloc_write_enabled",
+      "breakpoints": true
     }
   ]
 }

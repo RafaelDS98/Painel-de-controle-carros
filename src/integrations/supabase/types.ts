@@ -394,6 +394,7 @@ export type Database = {
           updated_by: string | null
           window_days_ahead: number
           window_days_back: number
+          write_enabled: boolean
         }
         Insert: {
           base_url?: string | null
@@ -405,6 +406,7 @@ export type Database = {
           updated_by?: string | null
           window_days_ahead?: number
           window_days_back?: number
+          write_enabled?: boolean
         }
         Update: {
           base_url?: string | null
@@ -416,6 +418,7 @@ export type Database = {
           updated_by?: string | null
           window_days_ahead?: number
           window_days_back?: number
+          write_enabled?: boolean
         }
         Relationships: []
       }

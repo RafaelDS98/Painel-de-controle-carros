@@ -1,0 +1,1 @@
+ALTER TABLE public.sgloc_settings ADD COLUMN IF NOT EXISTS write_enabled boolean NOT NULL DEFAULT false;

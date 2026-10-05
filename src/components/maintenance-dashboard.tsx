@@ -68,6 +68,9 @@ import { SectionBoundary } from "@/components/section-boundary";
 import { customValues, statusColors, type FieldDefinition, type StatusOption, type CustomValues } from "@/lib/agenda-config";
 import { IndicatorDetails, type IndicatorGroup, type IndicatorAppointment } from "@/components/indicator-details";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { pushAppointmentToSgloc } from "@/lib/sgloc/sgloc.functions";
+import { buildAppointmentUpdate } from "@/lib/appointment-update";
 import { Toaster } from "@/components/ui/sonner";
 
 type Appointment = {
@@ -102,6 +105,7 @@ type Appointment = {
   scheduleType: string;
   sglocReference: string;
   sglocSyncState: string;
+  sglocLastError: string;
 };
 
 export type AppRole = "atendimento" | "gerente" | "master";
@@ -123,7 +127,7 @@ type AppointmentRow = {
   original_deadline: string | null; current_deadline: string | null;
   rework_of: string | null; rework_reason: string | null; custom_fields: unknown;
   brand?: string | null; contact_number?: string | null; km_scheduled?: number | null; os_number?: number | null;
-  schedule_type?: string | null; sgloc_reference?: string | null; sgloc_sync_state?: string | null; archived_at?: string | null;
+  schedule_type?: string | null; sgloc_reference?: string | null; sgloc_sync_state?: string | null; sgloc_last_error?: string | null; archived_at?: string | null;
 };
 
 function fromRow(row: AppointmentRow): Appointment {
@@ -137,6 +141,7 @@ function fromRow(row: AppointmentRow): Appointment {
     brand: safeText(row.brand), contactNumber: safeText(row.contact_number), kmScheduled: row.km_scheduled ?? null,
     osNumber: row.os_number ?? null, scheduleType: safeText(row.schedule_type) || "N", sglocReference: safeText(row.sgloc_reference),
     sglocSyncState: safeText(row.sgloc_sync_state) || "local_only",
+    sglocLastError: safeText(row.sgloc_last_error),
   };
 }
 
@@ -147,6 +152,7 @@ function fieldsFromAppointment(item: Appointment): AppointmentFields {
     issue: item.issue, note: item.note, operator: item.operator,
     externalOrder: item.externalOrder, currentDeadline: item.currentDeadline ?? "", customFields: item.customFields,
     brand: item.brand, contactNumber: item.contactNumber, kmScheduled: item.kmScheduled === null ? "" : String(item.kmScheduled),
+    status: item.status, priorityUrgent: item.priorityUrgent,
   };
 }
 
@@ -258,7 +264,7 @@ function UrgentBadge() {
   return <span className="inline-flex w-fit items-center gap-1 rounded border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-[11px] font-semibold text-destructive"><AlertTriangle className="size-3" />Urgente</span>;
 }
 
-const rowColumns = "id, sheet_id, registered_at, date, time, plate, store, model, contact, workshop, issue, note, operator, external_order, status, original_deadline, current_deadline, creator_edits_used, creator_edits_allowed, manager_edit_used, priority_urgent, rework_of, rework_reason, custom_fields, brand, contact_number, km_scheduled, os_number, schedule_type, sgloc_reference, sgloc_sync_state, archived_at";
+const rowColumns = "id, sheet_id, registered_at, date, time, plate, store, model, contact, workshop, issue, note, operator, external_order, status, original_deadline, current_deadline, creator_edits_used, creator_edits_allowed, manager_edit_used, priority_urgent, rework_of, rework_reason, custom_fields, brand, contact_number, km_scheduled, os_number, schedule_type, sgloc_reference, sgloc_sync_state, sgloc_last_error, archived_at";
 
 export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: () => void; currentUser: CurrentUser }) {
   const [logOpen, setLogOpen] = useState(false);
@@ -468,46 +474,41 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     return supabase.from("appointments").update(update).eq("id", id).select(rowColumns).single();
   }
 
-  async function updateStatus(dbId: string, status: ServiceStatus) {
-    const item = appointments.find((a) => a.dbId === dbId);
-    if (!item) return;
-    const blocked = editBlockReason(item, currentUser.role);
-    if (blocked) { setMessage(blocked); return; }
-    if (status && !serviceStatuses.includes(status)) return;
-    const { data, error } = await updateAppointmentRow(dbId, { status });
-    if (error || !data) { setMessage(error?.message || "Não foi possível salvar a situação."); return; }
-    replaceRow(data);
-    void loadCompletionLogs(appointments.map((row) => row.dbId === dbId ? fromRow(data) : row));
+  const pushSgloc = useServerFn(pushAppointmentToSgloc);
+  const dirtyRef = useRef(false);
+  const sendableKeys: Record<string, string> = { date: "date", time: "time", plate: "plate", kmScheduled: "km_scheduled", contact: "contact", contactNumber: "contact_number", issue: "issue", note: "note", workshop: "workshop", externalOrder: "external_order" };
+
+  async function refreshRow(id: string) {
+    const { data } = await supabase.from("appointments").select(rowColumns).eq("id", id).maybeSingle();
+    if (data) replaceRow(data);
   }
 
-  async function updateUrgent(item: Appointment, value: boolean) {
-    if (currentUser.role === "atendimento") return;
-    const blocked = editBlockReason(item, currentUser.role);
-    if (blocked) { setMessage(blocked); return; }
-    const { data, error } = await updateAppointmentRow(item.dbId, { priority_urgent: value });
-    if (error || !data) { setMessage(error?.message || "Não foi possível alterar a prioridade."); return; }
-    replaceRow(data);
+  /** Envia ao SGLOC sem desfazer nada no painel; mostra o resultado. */
+  async function sendToSgloc(id: string, origin: "create" | "update" | "retry", changed: string[] = []) {
+    try {
+      const result = await pushSgloc({ data: { appointmentId: id, origin, changed } });
+      if (result.warning) toast.warning(result.warning);
+      if (result.status === "synced") toast.success("Enviado ao SGLOC.");
+      if (result.status === "failed") toast.error(`SGLOC: falha no envio. ${result.message ?? ""}`);
+      if (result.status === "synced" || result.status === "failed") await refreshRow(id);
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Não foi possível enviar ao SGLOC."); }
   }
 
   async function saveAppointment(changes: Partial<AppointmentFields>): Promise<boolean> {
     if (!selected) return false;
     const blocked = editBlockReason(selected, currentUser.role);
     if (blocked) { setMessage(blocked); return false; }
-    const update: TablesUpdate<"appointments"> = {};
-    for (const [key, value] of Object.entries(changes)) {
-      if (key === "customFields") { update.custom_fields = { ...selected.customFields, ...(value as CustomValues) }; continue; }
-      if (key === "currentDeadline") update.current_deadline = String(value || "") || null;
-      else if (key === "kmScheduled") update.km_scheduled = parseKm(value) ?? null;
-      else if (key === "plate") update.plate = normalizePlate(value);
-      else if (typeof value === "string") Object.assign(update, { [columnForField[key as keyof typeof columnForField]]: value.trim() });
-      else Object.assign(update, { [columnForField[key as keyof typeof columnForField]]: value });
-    }
+    if (changes.status && !serviceStatuses.includes(changes.status)) { setMessage("Situação inválida."); return false; }
+    const update = buildAppointmentUpdate(changes, selected.customFields, { canUrgent: currentUser.role !== "atendimento" }) as TablesUpdate<"appointments">;
     if (!Object.keys(update).length) return true;
     const { data, error } = await updateAppointmentRow(selected.dbId, update);
     if (error || !data) { setMessage(error?.message || "Não foi possível salvar as alterações."); return false; }
     replaceRow(data);
     if (data.status === completion) void loadCompletionLogs(appointments.map((row) => row.dbId === data.id ? fromRow(data) : row));
+    dirtyRef.current = false;
     setMessage("Alterações salvas.");
+    const changedSendable = Object.keys(changes).map((key) => sendableKeys[key]).filter((v): v is string => Boolean(v));
+    if (data.sgloc_reference && changedSendable.length) void sendToSgloc(data.id, "update", changedSendable);
     return true;
   }
 
@@ -528,7 +529,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     values.custom_fields = fields.customFields ?? {};
     for (const [key, value] of Object.entries(fields)) {
       if (key === "kmScheduled") { values.km_scheduled = parseKm(value) ?? null; continue; }
-      if (key !== "customFields" && key !== "currentDeadline" && key !== "date" && key !== "time" && key !== "plate")
+      if (key !== "customFields" && key !== "status" && key !== "priorityUrgent" && key !== "currentDeadline" && key !== "date" && key !== "time" && key !== "plate")
         Object.assign(values, { [columnForField[key as keyof typeof columnForField]]: typeof value === "string" ? value.trim() : "" });
     }
     const { data, error } = await supabase.from("appointments").insert(values).select(rowColumns).single();
@@ -538,6 +539,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     resetFilters();
     await loadAppointments();
     setMessage(`Agendamento de ${plate} criado com sucesso.`);
+    void sendToSgloc(data.id, "create");
     return true;
   }
 
@@ -734,7 +736,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     kpiOpen === "Média por dia" ? [...new Set(filtered.map((item) => normalizeDate(item.date)).filter((date): date is string => Boolean(date)))].sort().map((date) => ({ key: date, label: formatDateBR(date), rows: filtered.filter((item) => normalizeDate(item.date) === date).map(indicatorRow), filter: () => { const before = { startDate, endDate, periodPreset }; toggleDetailFilter(`Dia: ${formatDateBR(date)}`, startDate === date && endDate === date, () => { setPeriodPreset("custom"); setStartDate(date); setEndDate(date); }, () => { setPeriodPreset(before.periodPreset); setStartDate(before.startDate); setEndDate(before.endDate); }, () => { setPeriodPreset("custom"); setStartDate(""); setEndDate(""); }); } })) :
     kpiOpen === "Agendamentos" || kpiOpen === "Retrabalhos no período" ? sorted.filter((item) => kpiOpen === "Agendamentos" || item.reworkOf).map((item) => ({ key: item.dbId, label: `${item.plate || "Não informado"} · ${formatDateBR(item.date)}${item.reworkOf ? ` · Original: ${appointments.find((row) => row.dbId === item.reworkOf)?.plate || "Não informado"}` : ""}`, rows: [indicatorRow(item)], filter: () => filterPlate(item.plate || EMPTY_OPTION) })) : [];
 
-  const renderCard = (item: Appointment) => (<article key={item.dbId} className="overflow-hidden rounded-md border bg-card shadow-sm transition hover:-translate-y-0.5 hover:border-accent"><div className="p-3"><div className="flex items-center justify-between"><span className="text-xs font-bold text-accent-foreground">{dash(normalizeTime(item.time))}</span><span className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold", serviceCategory(item.issue) === "Revisão" ? "bg-service-review text-service-review-foreground" : "bg-service-repair text-service-repair-foreground")}>{serviceCategory(item.issue)}</span></div><Button variant="link" className="mt-1 min-h-11 h-auto px-0 font-bold text-primary" onClick={() => openVehicle(item.plate)}>{item.plate || "Não informado"}<ChevronRight className="size-4" /></Button><p className="truncate text-xs text-muted-foreground">{dash(item.model)}</p><p className="mt-2 truncate text-xs font-medium">{dash(item.contact)}</p><p className="mt-1 line-clamp-2 whitespace-normal text-[11px] leading-4 text-muted-foreground">{dash(item.issue)}</p><div className="mt-2 flex flex-wrap gap-1">{item.priorityUrgent && item.status !== completion && <UrgentBadge />}{item.reworkOf && <ReworkBadge />}{isEmergency(item.scheduleType) && <EmergencyBadge />}<DeadlineBadge item={item} completedAt={completedAtById[item.dbId]} today={today} completion={completion} /></div><Button variant="ghost" size="sm" className="mt-2 w-full justify-between text-primary" onClick={() => setSelected(item)}>Abrir agendamento<ChevronRight className="size-4" /></Button></div><label className="relative block border-t"><span className="sr-only">Situação de {item.plate}</span><select value={item.status} disabled={Boolean(editBlockReason(item, currentUser.role))} title={editBlockReason(item, currentUser.role) ?? undefined} onChange={(event) => updateStatus(item.dbId, event.target.value as ServiceStatus)} className={cn("disabled:cursor-not-allowed disabled:opacity-70 h-9 w-full appearance-none border-0 px-3 pr-8 text-xs font-semibold outline-none focus:ring-2 focus:ring-inset focus:ring-ring", statusClasses(item.status, statuses))}><option value="">Atualizar situação</option>{serviceStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select><ChevronDown className="pointer-events-none absolute right-3 top-2.5 size-4 opacity-70" /></label></article>);
+  const renderCard = (item: Appointment) => (<article key={item.dbId} className="overflow-hidden rounded-md border bg-card shadow-sm transition hover:-translate-y-0.5 hover:border-accent"><div className="p-3"><div className="flex items-center justify-between"><span className="text-xs font-bold text-accent-foreground">{dash(normalizeTime(item.time))}</span><span className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold", serviceCategory(item.issue) === "Revisão" ? "bg-service-review text-service-review-foreground" : "bg-service-repair text-service-repair-foreground")}>{serviceCategory(item.issue)}</span></div><Button variant="link" className="mt-1 min-h-11 h-auto px-0 font-bold text-primary" onClick={() => openVehicle(item.plate)}>{item.plate || "Não informado"}<ChevronRight className="size-4" /></Button><p className="truncate text-xs text-muted-foreground">{dash(item.model)}</p><p className="mt-2 truncate text-xs font-medium">{dash(item.contact)}</p><p className="mt-1 line-clamp-2 whitespace-normal text-[11px] leading-4 text-muted-foreground">{dash(item.issue)}</p><div className="mt-2 flex flex-wrap gap-1">{item.priorityUrgent && item.status !== completion && <UrgentBadge />}{item.reworkOf && <ReworkBadge />}{isEmergency(item.scheduleType) && <EmergencyBadge />}<DeadlineBadge item={item} completedAt={completedAtById[item.dbId]} today={today} completion={completion} /></div><Button variant="ghost" size="sm" className="mt-2 w-full justify-between text-primary" onClick={() => setSelected(item)}>Abrir agendamento<ChevronRight className="size-4" /></Button></div><div className={cn("border-t px-3 py-2 text-xs font-semibold", statusClasses(item.status, statuses))}>{item.status || "Situação não atualizada"}</div></article>);
 
   return (
     <div className={cn("min-h-screen overflow-x-hidden bg-background text-foreground", dark && "dark")}>
@@ -849,7 +851,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
           {reworkSource && <ReworkForm key={reworkSource.dbId} initial={{ date: "", time: "", plate: reworkSource.plate, model: reworkSource.model, contact: reworkSource.contact, workshop: reworkSource.workshop, operator: reworkSource.operator, reason: "" }} onSave={createRework} />}
         </DialogContent>
       </Dialog>
-      <Dialog open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}>
+      <Dialog open={Boolean(selected)} onOpenChange={(open) => { if (open) return; if (dirtyRef.current && !window.confirm("Há alterações não salvas nesta ficha. Fechar e descartar?")) return; dirtyRef.current = false; setSelected(null); }}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           {selected && <SectionBoundary name="a ficha do agendamento">
             <DialogHeader>
@@ -868,15 +870,14 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
                 {selected.currentDeadline ? <Detail label={selected.originalDeadline === selected.currentDeadline ? "Previsão de entrega" : "Prazo atual"} value={formatDateBR(selected.currentDeadline)} /> : <Detail label={selected.originalDeadline ? "Prazo atual" : "Previsão de entrega"} value="" />}
               </div>
             </div>
-            <label><span className="mb-1.5 block text-xs font-medium uppercase text-muted-foreground">Situação do veículo</span>
-              <select value={selected.status} disabled={Boolean(editBlockReason(selected, currentUser.role))} onChange={(event) => updateStatus(selected.dbId, event.target.value as ServiceStatus)} className={cn("disabled:cursor-not-allowed disabled:opacity-70 h-10 w-full rounded-md border px-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-ring", statusClasses(selected.status, statuses))}>
-                <option value="">Não atualizada</option>{serviceStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
-              </select>
-            </label>
-            <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" className="size-4 accent-destructive" checked={selected.priorityUrgent} disabled={currentUser.role === "atendimento" || Boolean(editBlockReason(selected, currentUser.role))} onChange={(event) => void updateUrgent(selected, event.target.checked)} />Marcar como urgente{currentUser.role === "atendimento" && <span className="text-xs font-normal text-muted-foreground">(somente gerente ou master)</span>}</label>
+            {selected.sglocSyncState === "push_failed" && <div role="alert" className="space-y-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              <p className="font-semibold">SGLOC: falha no envio</p>
+              {selected.sglocLastError && <p>{selected.sglocLastError}</p>}
+              <Button size="sm" variant="outline" onClick={() => void sendToSgloc(selected.dbId, "retry")}>Reenviar</Button>
+            </div>}
             {editBlockReason(selected, currentUser.role) && <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{editBlockReason(selected, currentUser.role)}</p>}
             {currentUser.role !== "atendimento" && <div className="flex flex-wrap items-center gap-3"><Button variant="outline" disabled={selected.editsAllowed > 1} onClick={() => grantExtraEdit(selected)}><Unlock /> Liberar edição extra</Button><span className="text-xs text-muted-foreground">Atendimento: {selected.editsUsed} de {selected.editsAllowed} edição(ões) usada(s){selected.editsAllowed > 1 ? " • edição extra já liberada" : ""}</span></div>}
-            <AppointmentForm key={`${selected.dbId}-${historyKey}`} initial={fieldsFromAppointment(selected)} definitions={fieldDefinitions} editing blocked={editBlockReason(selected, currentUser.role)} onSave={saveAppointment} />
+            <AppointmentForm key={`${selected.dbId}-${historyKey}`} initial={fieldsFromAppointment(selected)} definitions={fieldDefinitions} editing blocked={editBlockReason(selected, currentUser.role)} onSave={saveAppointment} statusOptions={serviceStatuses} canUrgent={currentUser.role !== "atendimento"} onDirtyChange={(dirty) => { dirtyRef.current = dirty; }} />
             <div className="flex flex-wrap gap-2 border-t pt-4"><Button variant="outline" onClick={() => openRework(selected)}><RotateCcw /> Registrar retrabalho</Button>{currentUser.role === "master" && <Button variant="destructive" onClick={() => void archiveAppointment(selected)}><Trash2 /> Excluir</Button>}</div>
             {(selected.osNumber !== null && fieldDefinitions.find((field) => field.field_key === "os_number")?.visible !== false) || selected.sglocReference ? <div className="grid gap-3 sm:grid-cols-2">
               {selected.osNumber !== null && fieldDefinitions.find((field) => field.field_key === "os_number")?.visible !== false && <Detail label="O.S Fornecedor" value={String(selected.osNumber)} />}
