@@ -106,6 +106,13 @@
       "when": 1791211972026,
       "tag": "0014_status_rename_archived",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1791225129306,
+      "tag": "0015_sgloc_auto_sync",
+      "breakpoints": true
     }
   ]
 }
