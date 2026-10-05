@@ -33,7 +33,8 @@ export function normalizeHex(v: unknown): string | null {
 }
 function luminance(hex: string) {
   const ch = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
-  return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2];
+  const [r = 0, g = 0, b = 0] = ch;
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 const LIGHT_TEXT = "#FFFFFF";
 const DARK_TEXT = "#111827";
