@@ -16,6 +16,9 @@ export type Database = {
     Tables: {
       appointments: {
         Row: {
+          forwarded_at: string | null
+          forwarded_by: string | null
+          forwarded_workshop_id: string | null
           archived_at: string | null
           archived_by: string | null
           brand: string
@@ -63,6 +66,9 @@ export type Database = {
           workshop: string
         }
         Insert: {
+          forwarded_at?: string | null
+          forwarded_by?: string | null
+          forwarded_workshop_id?: string | null
           archived_at?: string | null
           archived_by?: string | null
           brand?: string
@@ -110,6 +116,9 @@ export type Database = {
           workshop?: string
         }
         Update: {
+          forwarded_at?: string | null
+          forwarded_by?: string | null
+          forwarded_workshop_id?: string | null
           archived_at?: string | null
           archived_by?: string | null
           brand?: string
@@ -360,6 +369,24 @@ export type Database = {
           full_name?: string | null
           id?: string
         }
+        Relationships: []
+      }
+      sectors: {
+        Row: { created_at: string; id: string; modules: string[]; name: string }
+        Insert: { created_at?: string; id?: string; modules?: string[]; name: string }
+        Update: { created_at?: string; id?: string; modules?: string[]; name?: string }
+        Relationships: []
+      }
+      user_sectors: {
+        Row: { sector_id: string; user_id: string }
+        Insert: { sector_id: string; user_id: string }
+        Update: { sector_id?: string; user_id?: string }
+        Relationships: []
+      }
+      workshop_users: {
+        Row: { user_id: string; workshop_id: string }
+        Insert: { user_id: string; workshop_id: string }
+        Update: { user_id?: string; workshop_id?: string }
         Relationships: []
       }
       saved_views: {
@@ -682,6 +709,9 @@ export type Database = {
         Returns: string[]
       }
       get_my_edit_limit: { Args: never; Returns: number }
+      get_my_modules: { Args: never; Returns: string[] }
+      user_modules: { Args: { _uid: string }; Returns: string[] }
+      has_module: { Args: { _module: string; _uid: string }; Returns: boolean }
       get_my_sgloc_status: {
         Args: never
         Returns: {
@@ -735,7 +765,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "atendimento" | "gerente" | "master"
+      app_role: "atendimento" | "gerente" | "master" | "oficina"
       contact_type: "ligação" | "mensagem"
     }
     CompositeTypes: {
@@ -864,7 +894,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["atendimento", "gerente", "master"],
+      app_role: ["atendimento", "gerente", "master", "oficina"],
       contact_type: ["ligação", "mensagem"],
     },
   },

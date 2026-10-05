@@ -13,6 +13,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedHistoricosRouteImport } from './routes/_authenticated/historicos'
+import { Route as AuthenticatedOficinaRouteImport } from './routes/_authenticated/oficina'
 import { Route as AuthenticatedVeiculoPlateRouteImport } from './routes/_authenticated/veiculo.$plate'
 import { Route as ApiPublicHooksSglocSyncRouteImport } from './routes/api/public/hooks/sgloc-sync'
 
@@ -35,6 +36,11 @@ const AuthenticatedHistoricosRoute = AuthenticatedHistoricosRouteImport.update({
   path: '/historicos',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedOficinaRoute = AuthenticatedOficinaRouteImport.update({
+  id: '/oficina',
+  path: '/oficina',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedVeiculoPlateRoute =
   AuthenticatedVeiculoPlateRouteImport.update({
     id: '/veiculo/$plate',
@@ -51,12 +57,14 @@ export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthRoute
   '/historicos': typeof AuthenticatedHistoricosRoute
+  '/oficina': typeof AuthenticatedOficinaRoute
   '/veiculo/$plate': typeof AuthenticatedVeiculoPlateRoute
   '/api/public/hooks/sgloc-sync': typeof ApiPublicHooksSglocSyncRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/historicos': typeof AuthenticatedHistoricosRoute
+  '/oficina': typeof AuthenticatedOficinaRoute
   '/': typeof AuthenticatedIndexRoute
   '/veiculo/$plate': typeof AuthenticatedVeiculoPlateRoute
   '/api/public/hooks/sgloc-sync': typeof ApiPublicHooksSglocSyncRoute
@@ -66,6 +74,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/historicos': typeof AuthenticatedHistoricosRoute
+  '/_authenticated/oficina': typeof AuthenticatedOficinaRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/veiculo/$plate': typeof AuthenticatedVeiculoPlateRoute
   '/api/public/hooks/sgloc-sync': typeof ApiPublicHooksSglocSyncRoute
@@ -76,12 +85,14 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/historicos'
+    | '/oficina'
     | '/veiculo/$plate'
     | '/api/public/hooks/sgloc-sync'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
     | '/historicos'
+    | '/oficina'
     | '/'
     | '/veiculo/$plate'
     | '/api/public/hooks/sgloc-sync'
@@ -90,6 +101,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/historicos'
+    | '/_authenticated/oficina'
     | '/_authenticated/'
     | '/_authenticated/veiculo/$plate'
     | '/api/public/hooks/sgloc-sync'
@@ -131,6 +143,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHistoricosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/oficina': {
+      id: '/_authenticated/oficina'
+      path: '/oficina'
+      fullPath: '/oficina'
+      preLoaderRoute: typeof AuthenticatedOficinaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/veiculo/$plate': {
       id: '/_authenticated/veiculo/$plate'
       path: '/veiculo/$plate'
@@ -150,12 +169,14 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedHistoricosRoute: typeof AuthenticatedHistoricosRoute
+  AuthenticatedOficinaRoute: typeof AuthenticatedOficinaRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedVeiculoPlateRoute: typeof AuthenticatedVeiculoPlateRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedHistoricosRoute: AuthenticatedHistoricosRoute,
+  AuthenticatedOficinaRoute: AuthenticatedOficinaRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedVeiculoPlateRoute: AuthenticatedVeiculoPlateRoute,
 }

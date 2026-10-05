@@ -11,5 +11,5 @@ export const Route = createFileRoute("/_authenticated/veiculo/$plate")({
 function Page() {
   const { user } = Route.useRouteContext();
   const { plate } = Route.useParams();
-  return <ProfileGate user={user}>{() => <VehicleHistoryPage plate={plateFromParam(plate)} />}</ProfileGate>;
+  return <ProfileGate user={user} module="historicos">{() => <VehicleHistoryPage plate={plateFromParam(plate)} />}</ProfileGate>;
 }

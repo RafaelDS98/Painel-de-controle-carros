@@ -47,6 +47,7 @@ import {
 import { cn } from "@/lib/utils";
 import { AppointmentHistory } from "@/components/edit-history";
 import { Link } from "@tanstack/react-router";
+import type { ModuleKey } from "@/lib/modules";
 import { AlertTriangle, ChevronLeft, ChevronRight, History, SlidersHorizontal, Trash2, UserCircle } from "lucide-react";
 import { MyAccountDialog } from "@/components/my-account";
 import { useQueryClient } from "@tanstack/react-query";
@@ -111,11 +112,12 @@ type Appointment = {
   sglocReference: string;
   sglocSyncState: string;
   sglocLastError: string;
+  forwardedWorkshopId: string | null;
 };
 
-export type AppRole = "atendimento" | "gerente" | "master";
+export type AppRole = "atendimento" | "gerente" | "master" | "oficina";
 export type CurrentUser = { id: string; name: string; role: AppRole; email?: string };
-const roleLabels: Record<AppRole, string> = { atendimento: "Atendimento", gerente: "Gerente", master: "Master" };
+const roleLabels: Record<AppRole, string> = { atendimento: "Atendimento", gerente: "Gerente", master: "Master", oficina: "Oficina" };
 
 
 type ServiceStatus = string;
@@ -127,7 +129,7 @@ type AppointmentRow = {
   original_deadline: string | null; current_deadline: string | null;
   rework_of: string | null; rework_reason: string | null; custom_fields: unknown;
   brand?: string | null; contact_number?: string | null; km_scheduled?: number | null; os_number?: number | null;
-  schedule_type?: string | null; sgloc_reference?: string | null; sgloc_sync_state?: string | null; sgloc_last_error?: string | null; archived_at?: string | null;
+  schedule_type?: string | null; sgloc_reference?: string | null; sgloc_sync_state?: string | null; sgloc_last_error?: string | null; archived_at?: string | null; forwarded_workshop_id?: string | null;
 };
 
 function fromRow(row: AppointmentRow): Appointment {
@@ -142,6 +144,7 @@ function fromRow(row: AppointmentRow): Appointment {
     osNumber: row.os_number ?? null, scheduleType: safeText(row.schedule_type) || "N", sglocReference: safeText(row.sgloc_reference),
     sglocSyncState: safeText(row.sgloc_sync_state) || "local_only",
     sglocLastError: safeText(row.sgloc_last_error),
+    forwardedWorkshopId: row.forwarded_workshop_id ?? null,
   };
 }
 
@@ -263,9 +266,9 @@ function UrgentBadge() {
   return <span className="inline-flex w-fit items-center gap-1 rounded border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-[11px] font-semibold text-destructive"><AlertTriangle className="size-3" />Urgente</span>;
 }
 
-const rowColumns = "id, sheet_id, registered_at, date, time, plate, store, model, contact, workshop, issue, note, operator, external_order, status, original_deadline, current_deadline, creator_edits_used, creator_edits_allowed, manager_edit_used, manager_edits_used, priority_urgent, rework_of, rework_reason, custom_fields, brand, contact_number, km_scheduled, os_number, schedule_type, sgloc_reference, sgloc_sync_state, sgloc_last_error, archived_at";
+const rowColumns = "id, sheet_id, registered_at, date, time, plate, store, model, contact, workshop, issue, note, operator, external_order, status, original_deadline, current_deadline, creator_edits_used, creator_edits_allowed, manager_edit_used, manager_edits_used, priority_urgent, rework_of, rework_reason, custom_fields, brand, contact_number, km_scheduled, os_number, schedule_type, sgloc_reference, sgloc_sync_state, sgloc_last_error, archived_at, forwarded_workshop_id";
 
-export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: () => void; currentUser: CurrentUser }) {
+export function MaintenanceDashboard({ onSignOut, currentUser, modules = ["agenda", "historicos"] }: { onSignOut?: () => void; currentUser: CurrentUser; modules?: ModuleKey[] }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const queryClientForAccount = useQueryClient();
@@ -279,6 +282,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const [newOpen, setNewOpen] = useState(false);
   const [reworkSource, setReworkSource] = useState<Appointment | null>(null);
   const [reworksOnly, setReworksOnly] = useState(false);
+  const [workshopList, setWorkshopList] = useState<{ id: string; name: string }[]>([]);
   const [advanced, setAdvanced] = useState<AdvancedFilters>({});
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [views, setViews] = useState<SavedView[]>([]);
@@ -369,11 +373,12 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     const [statusResult, fieldResult, workshopResult] = await Promise.all([
       supabase.from("status_options").select("*").order("sort_order").order("created_at"),
       supabase.from("custom_field_definitions").select("*").order("sort_order").order("created_at"),
-      supabase.from("workshops").select("name").eq("active", true).order("name"),
+      supabase.from("workshops").select("id, name").eq("active", true).order("name"),
     ]);
     if (statusResult.error || fieldResult.error) { setLoadError("Não foi possível carregar as configurações da agenda. Tente de novo."); return; }
     setStatuses(statusResult.data ?? []);
     const workshopNames = (workshopResult.data ?? []).map((row) => row.name);
+    setWorkshopList(workshopResult.data ?? []);
     setFieldDefinitions((fieldResult.data ?? []).map((field) => field.field_key === "workshop" && field.storage === "column" ? { ...field, field_type: "select", select_options: workshopNames } : field));
   }
   useEffect(() => { void loadConfig(); void loadAppointments(); }, []);
@@ -595,6 +600,17 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     setHistoryKey((key) => key + 1);
   }
 
+  async function forwardToWorkshop(item: Appointment, workshopId: string | null) {
+    const target = workshopId ? workshopList.find((entry) => entry.id === workshopId) : null;
+    if (workshopId && !target) { setMessage("Escolha uma oficina da lista."); return; }
+    const update: TablesUpdate<"appointments"> = target ? { forwarded_workshop_id: target.id, workshop: target.name } : { forwarded_workshop_id: null };
+    const { data, error } = await supabase.from("appointments").update(update).eq("id", item.dbId).select(rowColumns).single();
+    if (error || !data) { setMessage(error?.message || "Não foi possível atualizar o encaminhamento."); return; }
+    replaceRow(data); setHistoryKey((key) => key + 1);
+    setMessage(target ? `${item.plate} encaminhado para ${target.name}.` : `${item.plate} retirado da oficina.`);
+    if (target && data.sgloc_reference && item.workshop !== target.name) void sendToSgloc(data.id, "update", ["workshop"]);
+  }
+
   async function importFile(file?: File) {
     if (!file) return;
     try {
@@ -759,7 +775,8 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
           <div className="flex items-center gap-2">
             <button type="button" onClick={() => setAccountOpen(true)} title="Minha conta" className="mr-2 min-h-11 rounded-md px-2 text-right text-sm hover:bg-primary-foreground/10"><p className="font-semibold"><UserCircle className="mr-1 inline size-4" />{currentUser.name}</p><p className="text-xs text-primary-foreground/70">{roleLabels[currentUser.role]} · Minha conta</p></button>
             <MyAccountDialog open={accountOpen} onOpenChange={setAccountOpen} userId={currentUser.id} email={currentUser.email ?? ""} name={currentUser.name} onSaved={() => void queryClientForAccount.invalidateQueries({ queryKey: ["profile", currentUser.id] })} />
-            <Button asChild variant="secondary"><Link to="/historicos"><History /> Históricos</Link></Button>
+            {modules.includes("historicos") && <Button asChild variant="secondary"><Link to="/historicos"><History /> Históricos</Link></Button>}
+            {modules.includes("oficina") && <Button asChild variant="secondary"><Link to="/oficina"><Wrench /> Oficina</Link></Button>}
             <Button variant="secondary" onClick={() => setNewOpen(true)}><Plus /> Novo agendamento</Button>
              {currentUser.role === "master" && <Button variant="secondary" onClick={() => setSettingsOpen(true)}><Settings /> Configurações</Button>}
             {currentUser.role === "master" && <Button variant="secondary" onClick={() => setTrashOpen(true)}><Trash2 /> Lixeira</Button>}
@@ -891,6 +908,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
               {selected.sglocLastError && <p>{selected.sglocLastError}</p>}
               <Button size="sm" variant="outline" onClick={() => void sendToSgloc(selected.dbId, "retry")}>Reenviar</Button>
             </div>}
+            <ForwardToWorkshop key={`fw-${selected.dbId}-${selected.forwardedWorkshopId ?? ""}`} current={selected.forwardedWorkshopId} workshops={workshopList} onForward={(id) => forwardToWorkshop(selected, id)} />
             <AppointmentForm key={`${selected.dbId}-${historyKey}`} initial={fieldsFromAppointment(selected)} definitions={fieldDefinitions} editing lockedColumns={currentUser.role === "atendimento" ? ["current_deadline"] : []} onSave={saveAppointment} statusOptions={serviceStatuses} canUrgent={currentUser.role !== "atendimento"} onDirtyChange={(dirty) => { dirtyRef.current = dirty; }} />
             <div className="flex flex-wrap gap-2 border-t pt-4"><Button variant="outline" onClick={() => openRework(selected)}><RotateCcw /> Registrar retrabalho</Button>{currentUser.role === "master" && <Button variant="destructive" onClick={() => void archiveAppointment(selected)}><Trash2 /> Excluir</Button>}</div>
             {(selected.osNumber !== null && fieldDefinitions.find((field) => field.field_key === "os_number")?.visible !== false) || selected.sglocReference ? <div className="grid gap-3 sm:grid-cols-2">
@@ -913,4 +931,19 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
 
 function Detail({ label, value }: { label: string; value: string }) {
   return <div><p className="text-xs font-medium uppercase text-muted-foreground">{label}</p><p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6">{dash(value)}</p></div>;
+}
+function ForwardToWorkshop({ current, workshops, onForward }: { current: string | null; workshops: { id: string; name: string }[]; onForward: (workshopId: string | null) => Promise<void> }) {
+  const [choice, setChoice] = useState(current ?? "");
+  const [busy, setBusy] = useState(false);
+  const currentName = workshops.find((entry) => entry.id === current)?.name;
+  async function run(id: string | null) { setBusy(true); try { await onForward(id); } finally { setBusy(false); } }
+  return <section aria-label="Encaminhar para oficina" className="space-y-2 rounded-md border bg-muted/30 p-3 text-sm">
+    <p className="font-semibold">Oficina</p>
+    <p className="text-xs text-muted-foreground">{current ? `Encaminhado para ${currentName ?? "uma oficina inativa"}. A oficina enxerga este veículo.` : "A oficina só vê o veículo depois que ele é encaminhado."}</p>
+    <div className="flex flex-wrap items-center gap-2">
+      <select aria-label="Oficina de destino" value={choice} onChange={(event) => setChoice(event.target.value)} className="h-10 min-w-48 flex-1 rounded-md border border-input bg-background px-3 text-sm"><option value="">Selecione a oficina</option>{workshops.map((entry) => <option key={entry.id} value={entry.id}>{entry.name}</option>)}</select>
+      <Button type="button" disabled={busy || !choice || choice === current} onClick={() => void run(choice)}>{choice && choice === current ? "Já encaminhado" : "Encaminhar para oficina"}</Button>
+      {current && <Button type="button" variant="outline" disabled={busy} onClick={() => void run(null)}>Retirar da oficina</Button>}
+    </div>
+  </section>;
 }

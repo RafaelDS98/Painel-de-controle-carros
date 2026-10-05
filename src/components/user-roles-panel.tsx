@@ -9,10 +9,10 @@ import { Pencil, UserPlus } from "lucide-react";
 import { PasswordInput, isWeakPassword } from "@/components/my-account";
 import { parsePanelError, type AuthField } from "@/lib/auth-errors";
 
-type Role = "atendimento" | "gerente" | "master";
+type Role = "atendimento" | "gerente" | "master" | "oficina";
 type UserRow = { user_id: string; full_name: string | null; email: string | null; role: Role | null };
 type LogRow = { id: string; changed_at: string; actor_id: string | null; target_label: string; action: string; detail: string };
-const roleNames: Record<Role, string> = { atendimento: "Atendimento", gerente: "Gerente", master: "Master" };
+const roleNames: Record<Role, string> = { atendimento: "Atendimento", gerente: "Gerente", master: "Master", oficina: "Oficina" };
 const selectClass = "h-10 w-full rounded-md border border-input bg-background px-2 text-sm text-foreground disabled:opacity-60";
 
 export function UserRolesPanel({ currentUserId }: { currentUserId: string }) {

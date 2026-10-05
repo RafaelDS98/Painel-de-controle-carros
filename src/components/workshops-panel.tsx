@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 const normalizeText = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
 
 type Workshop = { id: string; name: string; active: boolean };
+type Member = { user_id: string; full_name: string | null; email: string | null; role: string | null };
 
 /** Cadastro das oficinas/locais usados na lista de seleção dos formulários. */
 export function WorkshopsPanel({ onChanged }: { onChanged: () => Promise<void> }) {
@@ -13,10 +14,15 @@ export function WorkshopsPanel({ onChanged }: { onChanged: () => Promise<void> }
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [links, setLinks] = useState<{ user_id: string; workshop_id: string }[]>([]);
 
   async function load() {
     const { data, error: failure } = await supabase.from("workshops").select("id, name, active").order("name");
     if (failure) setError(failure.message); else setRows(data ?? []);
+    const [users, linked] = await Promise.all([supabase.rpc("list_users_with_roles"), supabase.from("workshop_users").select("user_id, workshop_id")]);
+    setMembers(((users.data ?? []) as Member[]).filter((user) => user.role === "oficina"));
+    setLinks(linked.data ?? []);
   }
   useEffect(() => { void load(); }, []);
 
@@ -56,6 +62,14 @@ export function WorkshopsPanel({ onChanged }: { onChanged: () => Promise<void> }
       <span className={`min-w-0 flex-1 font-medium ${row.active ? "" : "text-muted-foreground line-through"}`}>{row.name}</span>
       <Button size="sm" variant="outline" disabled={busy} onClick={() => void run(() => supabase.from("workshops").update({ active: !row.active }).eq("id", row.id))}>{row.active ? "Desativar" : "Ativar"}</Button>
       <Button size="sm" variant="ghost" disabled={busy} onClick={() => void remove(row)}>Remover</Button>
+      <div className="flex w-full flex-wrap items-center gap-2 text-xs" aria-label={`Usuários da oficina ${row.name}`}>
+        <span className="text-muted-foreground">Usuários (perfil Oficina):</span>
+        {links.filter((link) => link.workshop_id === row.id).map((link) => { const member = members.find((entry) => entry.user_id === link.user_id); return <Button key={link.user_id} size="sm" variant="secondary" disabled={busy} aria-label={`Desvincular ${member?.full_name || member?.email || "usuário"}`} onClick={() => void run(() => supabase.from("workshop_users").delete().eq("user_id", link.user_id).eq("workshop_id", row.id))}>{member?.full_name || member?.email || "Usuário"} ✕</Button>; })}
+        <select aria-label={`Vincular usuário à oficina ${row.name}`} value="" disabled={busy} onChange={(e) => { const id = e.target.value; if (id) void run(() => supabase.from("workshop_users").insert({ user_id: id, workshop_id: row.id })); }} className="h-8 rounded-md border border-input bg-background px-2 text-xs">
+          <option value="">Vincular usuário…</option>
+          {members.filter((member) => !links.some((link) => link.user_id === member.user_id && link.workshop_id === row.id)).map((member) => <option key={member.user_id} value={member.user_id}>{member.full_name || member.email || "Sem nome"}</option>)}
+        </select>
+      </div>
     </div>)}
     {!rows.length && <p className="text-sm text-muted-foreground">Nenhuma oficina cadastrada.</p>}
   </section>;

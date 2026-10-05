@@ -24,7 +24,7 @@ function fail(op: string, error: unknown, context: "create" | "update" | "passwo
   return panelError(t.field, prefix + t.message, code);
 }
 
-const roleEnum = z.enum(["atendimento", "gerente", "master"], { message: "Perfil inválido." });
+const roleEnum = z.enum(["atendimento", "gerente", "master", "oficina"], { message: "Perfil inválido." });
 const input = z.object({
   fullName: z.string().trim().min(2, "Informe o nome (mínimo 2 letras).").max(120),
   email: z.string().trim().toLowerCase().email("E-mail inválido ou domínio não aceito.").max(255),

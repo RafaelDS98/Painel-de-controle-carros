@@ -12,7 +12,7 @@ export const fieldLabels: Record<string, string> = {
   priority_urgent: "Urgente", rework_of: "Retrabalho de", rework_reason: "Motivo do retrabalho", sgloc_reference: "ID SGLOC",
   store_id: "Loja (código)", brand: "Marca", contact_number: "Telefone do contato", operator_id: "Operador (código)",
   schedule_type: "Tipo", os_number: "O.S Fornecedor", supplier_id: "Fornecedor (código)", km_scheduled: "KM do agendamento",
-  client_id: "Cliente (código)", sgloc_performed: "Realizado no SGLOC", sgloc_confirmed: "Confirmado no SGLOC",
+  client_id: "Cliente (código)", forwarded_workshop: "Encaminhado para oficina", sgloc_performed: "Realizado no SGLOC", sgloc_confirmed: "Confirmado no SGLOC",
 };
 
 export type LogRow = {
