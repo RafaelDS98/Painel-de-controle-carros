@@ -47,7 +47,7 @@ import {
 import { cn } from "@/lib/utils";
 import { AppointmentHistory } from "@/components/edit-history";
 import { Link } from "@tanstack/react-router";
-import { AlertTriangle, ChevronLeft, ChevronRight, History, Trash2, UserCircle } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, History, SlidersHorizontal, Trash2, UserCircle } from "lucide-react";
 import { MyAccountDialog } from "@/components/my-account";
 import { useQueryClient } from "@tanstack/react-query";
 import { AppointmentForm, columnForField, emptyFields, type AppointmentFields } from "@/components/appointment-form";
@@ -59,6 +59,8 @@ import { periodRange, weekRange, pendingDeliveries, type PeriodPreset } from "@/
 import { ContactRegister } from "@/components/contact-register";
 import { AgendaSettings } from "@/components/agenda-settings";
 import { SglocSyncBar } from "@/components/sgloc-sync-bar";
+import { AdvancedFilterDrawer, type SavedView } from "@/components/advanced-filter-drawer";
+import { activeAdvancedCount, buildAdvancedFields, fieldValue, matchesAdvanced, sanitizeAdvanced, type AdvancedFilters } from "@/lib/advanced-filter";
 import { isEmergency, normalizeDate, normalizePlate, normalizeTime, parseKm, safeText, sglocStateLabels, stripHtml } from "@/lib/normalize";
 import { DASH, EMPTY_OPTION, NO_DATE_GROUP, clampPage, compareDateTime, compareText, countBy, dash, exportHeaders, exportRows, foldedOptions, formatDateBR, groupWeek, inPeriod, matchesFilter, safeAverage, serviceCategory, textMatches, toCsv, buildImportRecords, dropExistingReferences, activeOnly, archiveConfirmText } from "@/lib/agenda-safety";
 import { TrashDialog } from "@/components/trash-dialog";
@@ -277,6 +279,9 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const [newOpen, setNewOpen] = useState(false);
   const [reworkSource, setReworkSource] = useState<Appointment | null>(null);
   const [reworksOnly, setReworksOnly] = useState(false);
+  const [advanced, setAdvanced] = useState<AdvancedFilters>({});
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [views, setViews] = useState<SavedView[]>([]);
   const [today, setToday] = useState(() => dateInBrazil(new Date()));
   const [search, setSearch] = useState("");
   const [plateFilter, setPlateFilter] = useState("");
@@ -374,12 +379,29 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   useEffect(() => { void loadConfig(); void loadAppointments(); }, []);
   useEffect(() => { if (statuses.length) void loadCompletionLogs(appointments); }, [completion]);
 
+  const advancedFields = useMemo(() => buildAdvancedFields(fieldDefinitions), [fieldDefinitions]);
+  const advancedOptions = (key: string) => key === "status" ? serviceStatuses : appointments.map((item) => fieldValue(item as never, key));
+  async function loadViews() {
+    const { data } = await supabase.from("saved_views").select("id, name, filters").eq("user_id", currentUser.id).order("name");
+    setViews((data ?? []) as SavedView[]);
+  }
+  useEffect(() => { void loadViews(); }, []);
+  const viewSnapshot = () => ({ search, plateFilter, contact, workshop, model, operator, reworksOnly, advanced, periodPreset, startDate, endDate });
+  function applyView(view: SavedView) {
+    const raw = (view.filters && typeof view.filters === "object" ? view.filters : {}) as Record<string, unknown>;
+    const text = (value: unknown) => (typeof value === "string" ? value : "");
+    setSearch(text(raw["search"])); setPlateFilter(text(raw["plateFilter"])); setContact(text(raw["contact"])); setWorkshop(text(raw["workshop"])); setModel(text(raw["model"])); setOperator(text(raw["operator"]));
+    setReworksOnly(raw["reworksOnly"] === true); setAdvanced(sanitizeAdvanced(raw["advanced"], advancedFields)); setChartSel({});
+    if (raw["periodPreset"] === "today" || raw["periodPreset"] === "week" || raw["periodPreset"] === "month") setPeriodPreset(raw["periodPreset"]);
+    else { setPeriodPreset("custom"); setStartDate(text(raw["startDate"])); setEndDate(text(raw["endDate"])); }
+    setPage(1); setAdvancedOpen(false); toast(`Visão aplicada: ${view.name}`);
+  }
   const option = (key: keyof Appointment) => foldedOptions(appointments.map((item) => item[key]));
   const baseFiltered = useMemo(() => appointments.filter((item) => {
     const qPlate = normalizePlate(search);
     const hit = !search.trim() || (qPlate !== "" && item.plate.includes(qPlate)) || textMatches(search, [item.plate, item.brand, item.contactNumber, item.contact, item.issue, item.model, item.workshop, item.note, ...fieldDefinitions.filter((field) => field.storage === "custom" && ["text", "textarea"].includes(field.field_type)).map((field) => item.customFields[field.field_key])]);
-    return hit && (!plateFilter || (plateFilter === EMPTY_OPTION ? !item.plate : normalizePlate(item.plate) === normalizePlate(plateFilter))) && matchesFilter(item.contact, contact) && matchesFilter(item.workshop, workshop) && matchesFilter(item.model, model) && matchesFilter(item.operator, operator) && (!reworksOnly || Boolean(item.reworkOf));
-  }), [appointments, contact, model, operator, plateFilter, reworksOnly, search, workshop, fieldDefinitions]);
+    return hit && (!plateFilter || (plateFilter === EMPTY_OPTION ? !item.plate : normalizePlate(item.plate) === normalizePlate(plateFilter))) && matchesFilter(item.contact, contact) && matchesFilter(item.workshop, workshop) && matchesFilter(item.model, model) && matchesFilter(item.operator, operator) && (!reworksOnly || Boolean(item.reworkOf)) && matchesAdvanced(item as never, advanced, advancedFields);
+  }), [appointments, contact, model, operator, plateFilter, reworksOnly, search, workshop, fieldDefinitions, advanced, advancedFields]);
   const periodFiltered = useMemo(() => baseFiltered.filter((item) => inPeriod(item.date, startDate, endDate)), [baseFiltered, startDate, endDate]);
   // Seleção dos gráficos (filtro cruzado): vale para KPIs, balões, lista e grade; cada gráfico ignora a própria seleção.
   const filtered = useMemo(() => applySelection(periodFiltered, chartSel), [periodFiltered, chartSel]);
@@ -417,7 +439,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const average = safeAverage(filtered.filter((item) => normalizeDate(item.date)).length, usedDays);
 
   function resetFilters() {
-    setSearch(""); setPlateFilter(""); setContact(""); setWorkshop(""); setModel(""); setOperator(""); setPeriodPreset("custom"); setStartDate(""); setEndDate(""); setReworksOnly(false); setChartSel({}); setPage(1);
+    setSearch(""); setPlateFilter(""); setContact(""); setWorkshop(""); setModel(""); setOperator(""); setPeriodPreset("custom"); setStartDate(""); setEndDate(""); setReworksOnly(false); setAdvanced({}); setChartSel({}); setPage(1);
   }
 
   function applyDetailFilter(label: string, apply: () => void, undo: () => void) {
@@ -454,6 +476,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     operator && { key: "operator", label: `Operador: ${operator === EMPTY_OPTION ? "Não informado" : operator}`, remove: () => setOperator("") },
     startDate && { key: "start", label: `De: ${formatDateBR(startDate)}`, remove: () => { setStartDate(""); setPeriodPreset("custom"); } },
     endDate && { key: "end", label: `Até: ${formatDateBR(endDate)}`, remove: () => { setEndDate(""); setPeriodPreset("custom"); } },
+    ...Object.entries(advanced).filter(([, values]) => values.length).map(([key, values]) => ({ key: `adv-${key}`, label: `${advancedFields.find((field) => field.key === key)?.label ?? key}: ${values.map((value) => (value === EMPTY_OPTION ? "Não informado" : value)).join(", ")}`, remove: () => setAdvanced((current) => { const { [key]: _gone, ...rest } = current; return rest; }) })),
     reworksOnly && { key: "reworks", label: "Somente retrabalhos", remove: () => setReworksOnly(false) },
   ].filter((filter): filter is { key: string; label: string; remove: () => void } => Boolean(filter));
 
@@ -776,6 +799,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
             <SearchableSelect label="Todos os modelos" value={model} options={option("model")} onChange={setModel} />
             <SearchableSelect label="Todos os operadores" value={operator} options={option("operator")} onChange={setOperator} />
             <label className="flex min-h-10 items-center gap-2 text-sm text-foreground"><Checkbox checked={reworksOnly} onCheckedChange={(checked) => { setReworksOnly(checked === true); setPage(1); }} aria-label="Mostrar somente retrabalhos" />Mostrar somente retrabalhos</label>
+            <Button variant="outline" onClick={() => setAdvancedOpen(true)}><SlidersHorizontal /> Filtros avançados{activeAdvancedCount(advanced) > 0 ? ` (${activeAdvancedCount(advanced)})` : ""}</Button>
             <Button variant="outline" onClick={resetFilters}><RotateCcw /> Limpar tudo</Button>
           </div>
           <div className="mt-3 flex flex-wrap gap-1" role="group" aria-label="Período da agenda">{([ ["today", "Hoje"], ["week", "Esta semana"], ["month", "Este mês"], ["custom", "Personalizado"] ] as const).map(([key, label]) => <Button key={key} size="sm" variant={periodPreset === key ? "default" : "outline"} aria-pressed={periodPreset === key} onClick={() => { setPeriodPreset(key); setPage(1); }}>{label}</Button>)}</div>
@@ -881,6 +905,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
       </Dialog>
       <Toaster richColors position="bottom-right" />
       {currentUser.role === "master" && <TrashDialog open={trashOpen} onOpenChange={setTrashOpen} onRestored={() => void loadAppointments()} />}
+      <AdvancedFilterDrawer open={advancedOpen} onOpenChange={setAdvancedOpen} userId={currentUser.id} fields={advancedFields} optionsFor={advancedOptions} value={advanced} onChange={(next) => { setAdvanced(next); setPage(1); }} views={views} onViewsChanged={loadViews} onApplyView={applyView} snapshot={viewSnapshot} />
       {currentUser.role === "master" && <AgendaSettings open={settingsOpen} onOpenChange={setSettingsOpen} statuses={statuses} fields={fieldDefinitions} currentUserId={currentUser.id} onRefresh={async () => { await loadConfig(); await loadAppointments(); }} />}
     </div>
   );

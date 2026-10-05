@@ -362,6 +362,12 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_views: {
+        Row: { created_at: string; filters: Json; id: string; name: string; user_id: string }
+        Insert: { created_at?: string; filters?: Json; id?: string; name: string; user_id: string }
+        Update: { created_at?: string; filters?: Json; id?: string; name?: string; user_id?: string }
+        Relationships: []
+      }
       sgloc_accounts: {
         Row: {
           sgloc_email: string
