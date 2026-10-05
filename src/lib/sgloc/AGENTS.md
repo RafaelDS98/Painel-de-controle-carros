@@ -1,2 +1,3 @@
 # Conector SGLOC
 - O conector SGLOC fica em src/lib/sgloc (core.ts puro; client.server.ts só servidor; sgloc.functions.ts com master/usuário conferido no servidor); tokens SGLOC são cifrados (AES-GCM, chave SGLOC_TOKEN_KEY) em sgloc_accounts, inacessível ao cliente, e relatórios de teste só guardam dados mascarados — evita vazar credenciais e dados pessoais.
+- Escrita no SGLOC só com sgloc_settings.enabled e write_enabled; pushAppointmentToSgloc monta o corpo pelas funções puras de core.ts (só campos enviáveis alterados) e falha nunca desfaz o painel, só marca push_failed — o painel continua sendo a fonte e o envio pode ser reenviado.

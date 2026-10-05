@@ -32,3 +32,4 @@
 - Usuários e senhas são editados só por updatePanelUser/resetPanelPassword (master conferido no servidor); a redefinição encerra sessões via revoke_user_sessions (só service_role) e registra user_admin_log sem senha — trilha auditável sem expor credenciais.
 - Erros de criação/edição/senha de usuários passam por src/lib/auth-errors.ts (tradução, campo e código curto) e o erro técnico vai ao log do servidor sem senha — o master vê o motivo sem expor segredos.
 - Excluir agendamento = arquivar (archived_at/archived_by), só master, garantido no trigger de edição e na RLS de leitura; o painel carrega só ativos por activeOnly (src/lib/agenda-safety.ts) e a deduplicação de importação usa existing_sgloc_references (inclui arquivados) — nada é apagado e nada some de uma tela só.
+- A ficha grava Situação, Urgente e demais campos num único UPDATE montado por buildAppointmentUpdate (src/lib/appointment-update.ts) — cada Salvar conta uma só edição no limite.
