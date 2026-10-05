@@ -34,6 +34,7 @@ export type Database = {
           issue: string
           km_scheduled: number | null
           manager_edit_used: boolean
+          manager_edits_used: number
           model: string
           note: string
           operator: string
@@ -80,6 +81,7 @@ export type Database = {
           issue?: string
           km_scheduled?: number | null
           manager_edit_used?: boolean
+          manager_edits_used?: number
           model?: string
           note?: string
           operator?: string
@@ -126,6 +128,7 @@ export type Database = {
           issue?: string
           km_scheduled?: number | null
           manager_edit_used?: boolean
+          manager_edits_used?: number
           model?: string
           note?: string
           operator?: string
@@ -251,6 +254,48 @@ export type Database = {
           storage?: string
           updated_at?: string
           visible?: boolean
+        }
+        Relationships: []
+      }
+      edit_limit_defaults: {
+        Row: {
+          max_edits: number
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          max_edits: number
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          max_edits?: number
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      edit_limit_overrides: {
+        Row: {
+          max_edits: number
+          updated_at: string
+          updated_by: string | null
+          user_id: string
+        }
+        Insert: {
+          max_edits: number
+          updated_at?: string
+          updated_by?: string | null
+          user_id: string
+        }
+        Update: {
+          max_edits?: number
+          updated_at?: string
+          updated_by?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -595,10 +640,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      edit_limit_for: { Args: { _uid: string }; Returns: number }
       existing_sgloc_references: {
         Args: { _refs: string[] }
         Returns: string[]
       }
+      get_my_edit_limit: { Args: never; Returns: number }
       get_my_sgloc_status: {
         Args: never
         Returns: {
@@ -626,6 +673,14 @@ export type Database = {
         }[]
       }
       revoke_user_sessions: { Args: { _user_id: string }; Returns: undefined }
+      set_edit_limit_default: {
+        Args: { _max: number; _role: Database["public"]["Enums"]["app_role"] }
+        Returns: undefined
+      }
+      set_edit_limit_override: {
+        Args: { _max: number; _user_id: string }
+        Returns: undefined
+      }
       set_user_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

@@ -85,6 +85,20 @@
       "when": 1791211059494,
       "tag": "0011_sgloc_write_enabled",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791211671796,
+      "tag": "0012_configurable_edit_limits",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791211727994,
+      "tag": "0013_status_color_free_hex",
+      "breakpoints": true
     }
   ]
 }

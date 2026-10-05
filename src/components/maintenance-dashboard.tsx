@@ -65,11 +65,12 @@ import { fixSheetRange } from "@/lib/sheet-range";
 import { SearchableSelect } from "@/components/searchable-select";
 import { weekdayIndex } from "@/lib/agenda-safety";
 import { SectionBoundary } from "@/components/section-boundary";
-import { customValues, statusColors, type FieldDefinition, type StatusOption, type CustomValues } from "@/lib/agenda-config";
+import { customValues, statusColorProps, type FieldDefinition, type StatusOption, type CustomValues } from "@/lib/agenda-config";
 import { IndicatorDetails, type IndicatorGroup, type IndicatorAppointment } from "@/components/indicator-details";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { pushAppointmentToSgloc } from "@/lib/sgloc/sgloc.functions";
+import { atendimentoAllowance, editLimitBlockReason } from "@/lib/edit-limits";
 import { buildAppointmentUpdate } from "@/lib/appointment-update";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -94,6 +95,7 @@ type Appointment = {
   editsUsed: number;
   editsAllowed: number;
   managerEditUsed: boolean;
+  managerEditsUsed: number;
   priorityUrgent: boolean;
   reworkOf: string | null;
   reworkReason: string | null;
@@ -112,10 +114,10 @@ export type AppRole = "atendimento" | "gerente" | "master";
 export type CurrentUser = { id: string; name: string; role: AppRole; email?: string };
 const roleLabels: Record<AppRole, string> = { atendimento: "Atendimento", gerente: "Gerente", master: "Master" };
 
+let myEditLimit = 1;
+let atendimentoDefaultLimit = 1;
 function editBlockReason(item: Appointment, role: AppRole): string | null {
-  if (role === "master") return null;
-  if (role === "gerente") return item.managerEditUsed ? "Limite de 1 edição do gerente já foi usado neste agendamento." : null;
-  return item.editsUsed >= item.editsAllowed ? `Limite de ${item.editsAllowed} edição(ões) já foi usado pelo atendimento neste agendamento.` : null;
+  return editLimitBlockReason({ editsUsed: item.editsUsed, editsAllowed: item.editsAllowed, managerEditsUsed: item.managerEditsUsed }, role, myEditLimit);
 }
 
 type ServiceStatus = string;
@@ -123,7 +125,7 @@ type ServiceStatus = string;
 type AppointmentRow = {
   id: string; sheet_id: string; registered_at: string | null; date: string | null; time: string; plate: string; store: string;
   model: string; contact: string; workshop: string; issue: string; note: string; operator: string; external_order: string; status: string;
-  creator_edits_used: number; creator_edits_allowed: number; manager_edit_used: boolean; priority_urgent: boolean;
+  creator_edits_used: number; creator_edits_allowed: number; manager_edit_used: boolean; manager_edits_used?: number | null; priority_urgent: boolean;
   original_deadline: string | null; current_deadline: string | null;
   rework_of: string | null; rework_reason: string | null; custom_fields: unknown;
   brand?: string | null; contact_number?: string | null; km_scheduled?: number | null; os_number?: number | null;
@@ -136,7 +138,7 @@ function fromRow(row: AppointmentRow): Appointment {
     store: row.store, model: row.model, contact: row.contact, workshop: row.workshop, issue: row.issue, note: row.note,
     operator: row.operator, externalOrder: row.external_order, status: row.status,
     originalDeadline: row.original_deadline, currentDeadline: row.current_deadline,
-    editsUsed: row.creator_edits_used, editsAllowed: row.creator_edits_allowed, managerEditUsed: row.manager_edit_used, priorityUrgent: row.priority_urgent,
+    editsUsed: row.creator_edits_used, editsAllowed: row.creator_edits_allowed, managerEditUsed: row.manager_edit_used, managerEditsUsed: row.manager_edits_used ?? (row.manager_edit_used ? 1 : 0), priorityUrgent: row.priority_urgent,
     reworkOf: row.rework_of, reworkReason: row.rework_reason, customFields: customValues(row.custom_fields),
     brand: safeText(row.brand), contactNumber: safeText(row.contact_number), kmScheduled: row.km_scheduled ?? null,
     osNumber: row.os_number ?? null, scheduleType: safeText(row.schedule_type) || "N", sglocReference: safeText(row.sgloc_reference),
@@ -201,9 +203,8 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
   return <div className="rounded-md border bg-popover px-3 py-2 text-xs shadow-lg"><p className="font-medium text-popover-foreground">{label || payload[0]?.payload?.name}</p><p className="mt-1 text-muted-foreground">{payload[0]?.value} agendamento(s)</p></div>;
 }
 
-function statusClasses(status: ServiceStatus, statuses: StatusOption[]) {
-  if (!status) return "border-input bg-background text-muted-foreground";
-  return statusColors[statuses.find((option) => option.label === status)?.color_token ?? ""] ?? "border-input bg-muted text-foreground";
+function statusProps(status: ServiceStatus, statuses: StatusOption[]) {
+  return statusColorProps(status ? statuses.find((option) => option.label === status)?.color_token : undefined);
 }
 
 type DeadlineState = "overdue" | "today" | "onTime" | "deliveredOnTime" | "deliveredLate";
@@ -264,7 +265,7 @@ function UrgentBadge() {
   return <span className="inline-flex w-fit items-center gap-1 rounded border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-[11px] font-semibold text-destructive"><AlertTriangle className="size-3" />Urgente</span>;
 }
 
-const rowColumns = "id, sheet_id, registered_at, date, time, plate, store, model, contact, workshop, issue, note, operator, external_order, status, original_deadline, current_deadline, creator_edits_used, creator_edits_allowed, manager_edit_used, priority_urgent, rework_of, rework_reason, custom_fields, brand, contact_number, km_scheduled, os_number, schedule_type, sgloc_reference, sgloc_sync_state, sgloc_last_error, archived_at";
+const rowColumns = "id, sheet_id, registered_at, date, time, plate, store, model, contact, workshop, issue, note, operator, external_order, status, original_deadline, current_deadline, creator_edits_used, creator_edits_allowed, manager_edit_used, manager_edits_used, priority_urgent, rework_of, rework_reason, custom_fields, brand, contact_number, km_scheduled, os_number, schedule_type, sgloc_reference, sgloc_sync_state, sgloc_last_error, archived_at";
 
 export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: () => void; currentUser: CurrentUser }) {
   const [logOpen, setLogOpen] = useState(false);
@@ -373,6 +374,14 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     setStatuses(statusResult.data ?? []);
     setFieldDefinitions(fieldResult.data ?? []);
   }
+  const [, setLimitsTick] = useState(0);
+  useEffect(() => {
+    void (async () => {
+      try { const { data, error } = await supabase.rpc("get_my_edit_limit"); myEditLimit = !error && typeof data === "number" ? data : 1; } catch { myEditLimit = 1; }
+      try { const { data } = await supabase.from("edit_limit_defaults").select("max_edits").eq("role", "atendimento").maybeSingle(); atendimentoDefaultLimit = data?.max_edits ?? 1; } catch { atendimentoDefaultLimit = 1; }
+      setLimitsTick((t) => t + 1);
+    })();
+  }, []);
   useEffect(() => { void loadConfig(); void loadAppointments(); }, []);
   useEffect(() => { if (statuses.length) void loadCompletionLogs(appointments); }, [completion]);
 
@@ -736,7 +745,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     kpiOpen === "Média por dia" ? [...new Set(filtered.map((item) => normalizeDate(item.date)).filter((date): date is string => Boolean(date)))].sort().map((date) => ({ key: date, label: formatDateBR(date), rows: filtered.filter((item) => normalizeDate(item.date) === date).map(indicatorRow), filter: () => { const before = { startDate, endDate, periodPreset }; toggleDetailFilter(`Dia: ${formatDateBR(date)}`, startDate === date && endDate === date, () => { setPeriodPreset("custom"); setStartDate(date); setEndDate(date); }, () => { setPeriodPreset(before.periodPreset); setStartDate(before.startDate); setEndDate(before.endDate); }, () => { setPeriodPreset("custom"); setStartDate(""); setEndDate(""); }); } })) :
     kpiOpen === "Agendamentos" || kpiOpen === "Retrabalhos no período" ? sorted.filter((item) => kpiOpen === "Agendamentos" || item.reworkOf).map((item) => ({ key: item.dbId, label: `${item.plate || "Não informado"} · ${formatDateBR(item.date)}${item.reworkOf ? ` · Original: ${appointments.find((row) => row.dbId === item.reworkOf)?.plate || "Não informado"}` : ""}`, rows: [indicatorRow(item)], filter: () => filterPlate(item.plate || EMPTY_OPTION) })) : [];
 
-  const renderCard = (item: Appointment) => (<article key={item.dbId} className="overflow-hidden rounded-md border bg-card shadow-sm transition hover:-translate-y-0.5 hover:border-accent"><div className="p-3"><div className="flex items-center justify-between"><span className="text-xs font-bold text-accent-foreground">{dash(normalizeTime(item.time))}</span><span className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold", serviceCategory(item.issue) === "Revisão" ? "bg-service-review text-service-review-foreground" : "bg-service-repair text-service-repair-foreground")}>{serviceCategory(item.issue)}</span></div><Button variant="link" className="mt-1 min-h-11 h-auto px-0 font-bold text-primary" onClick={() => openVehicle(item.plate)}>{item.plate || "Não informado"}<ChevronRight className="size-4" /></Button><p className="truncate text-xs text-muted-foreground">{dash(item.model)}</p><p className="mt-2 truncate text-xs font-medium">{dash(item.contact)}</p><p className="mt-1 line-clamp-2 whitespace-normal text-[11px] leading-4 text-muted-foreground">{dash(item.issue)}</p><div className="mt-2 flex flex-wrap gap-1">{item.priorityUrgent && item.status !== completion && <UrgentBadge />}{item.reworkOf && <ReworkBadge />}{isEmergency(item.scheduleType) && <EmergencyBadge />}<DeadlineBadge item={item} completedAt={completedAtById[item.dbId]} today={today} completion={completion} /></div><Button variant="ghost" size="sm" className="mt-2 w-full justify-between text-primary" onClick={() => setSelected(item)}>Abrir agendamento<ChevronRight className="size-4" /></Button></div><div className={cn("border-t px-3 py-2 text-xs font-semibold", statusClasses(item.status, statuses))}>{item.status || "Situação não atualizada"}</div></article>);
+  const renderCard = (item: Appointment) => (<article key={item.dbId} className="overflow-hidden rounded-md border bg-card shadow-sm transition hover:-translate-y-0.5 hover:border-accent"><div className="p-3"><div className="flex items-center justify-between"><span className="text-xs font-bold text-accent-foreground">{dash(normalizeTime(item.time))}</span><span className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold", serviceCategory(item.issue) === "Revisão" ? "bg-service-review text-service-review-foreground" : "bg-service-repair text-service-repair-foreground")}>{serviceCategory(item.issue)}</span></div><Button variant="link" className="mt-1 min-h-11 h-auto px-0 font-bold text-primary" onClick={() => openVehicle(item.plate)}>{item.plate || "Não informado"}<ChevronRight className="size-4" /></Button><p className="truncate text-xs text-muted-foreground">{dash(item.model)}</p><p className="mt-2 truncate text-xs font-medium">{dash(item.contact)}</p><p className="mt-1 line-clamp-2 whitespace-normal text-[11px] leading-4 text-muted-foreground">{dash(item.issue)}</p><div className="mt-2 flex flex-wrap gap-1">{item.priorityUrgent && item.status !== completion && <UrgentBadge />}{item.reworkOf && <ReworkBadge />}{isEmergency(item.scheduleType) && <EmergencyBadge />}<DeadlineBadge item={item} completedAt={completedAtById[item.dbId]} today={today} completion={completion} /></div><Button variant="ghost" size="sm" className="mt-2 w-full justify-between text-primary" onClick={() => setSelected(item)}>Abrir agendamento<ChevronRight className="size-4" /></Button></div><div className={cn("border-t px-3 py-2 text-xs font-semibold", statusProps(item.status, statuses).className)} style={statusProps(item.status, statuses).style}>{item.status || "Situação não atualizada"}</div></article>);
 
   return (
     <div className={cn("min-h-screen overflow-x-hidden bg-background text-foreground", dark && "dark")}>
@@ -819,7 +828,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
 
         <SectionBoundary name="a tabela"><section ref={agendaRef} className="scroll-mt-4 rounded-lg border bg-card shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4"><div><h2 className="font-semibold">Agenda detalhada</h2><p className="text-xs text-muted-foreground">{sorted.length} registros encontrados</p></div><div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" aria-pressed={extraColumns} onClick={() => setExtraColumns((value) => !value)}>{extraColumns ? "Ocultar colunas extras" : "Mostrar colunas extras"}</Button><Button variant="outline" size="sm" onClick={exportBatch}><Download /> Exportar para edição em lote</Button><Button variant="outline" size="sm" disabled={batchBusy} onClick={() => batchInputRef.current?.click()}><Upload /> {batchBusy ? "Atualizando…" : "Atualizar agenda em lote"}</Button><input ref={batchInputRef} type="file" accept=".xlsx" className="hidden" aria-label="Arquivo de atualização em lote" onChange={(event) => void importBatch(event.target.files?.[0])} /><Button variant="outline" size="sm" onClick={() => exportFile("csv")}><Download /> CSV</Button><Button variant="outline" size="sm" onClick={() => exportFile("xlsx")}><Download /> Excel</Button></div></div>
-           <div className="max-w-full overflow-x-auto"><table className="w-full min-w-[1400px] text-sm"><thead className="bg-muted/60 text-left text-xs text-muted-foreground"><tr>{[["priority","Prioridade"],["id","ID"],["date","Atendimento"],["time","Hora"],["plate","Placa"],["status","Situação"],["currentDeadline","Prazo"],["model","Modelo"],["contact","Contato"],["workshop","Local/Oficina"],["issue","Problema relatado"],["note","Observação"],["operator","Operador"], ...(extraColumns ? [["brand","Marca"],["kmScheduled","KM"],["contactNumber","Telefone"],["osNumber","O.S Fornecedor"]] : [])].map(([key,label]) => <th key={key} className="px-4 py-3 font-medium"><Button variant="ghost" size="sm" className="h-auto p-0" onClick={() => changeSort(key as keyof Appointment | "priority")}>{label}<ArrowDownAZ className="size-3" /></Button></th>)}</tr></thead><tbody>{pageRows.map((item) => <tr key={item.dbId} onClick={() => setSelected(item)} className="cursor-pointer border-t hover:bg-muted/40"><td className="px-4 py-3">{item.priorityUrgent && item.status !== completion ? <UrgentBadge /> : <span className="text-xs text-muted-foreground">{["Urgente","Atrasado","Hoje","Futuro","Sem prazo"][priorityLevel(item, today, completion)]}</span>}</td><td className="px-4 py-3 font-mono text-xs">#{item.id}</td><td className="whitespace-nowrap px-4 py-3">{formatDateBR(item.date)}</td><td className="px-4 py-3 font-semibold">{dash(normalizeTime(item.time))}</td><td className="px-4 py-3 font-bold"><Button variant="link" className="min-h-11 h-auto px-0 font-bold text-primary" onClick={(event) => { event.stopPropagation(); openVehicle(item.plate); }}>{item.plate || "Não informado"}<ChevronRight className="size-4" /></Button>{item.reworkOf && <span className="mt-1 block"><ReworkBadge /></span>}{isEmergency(item.scheduleType) && <span className="mt-1 block"><EmergencyBadge /></span>}</td><td className="px-4 py-3"><span className={cn("whitespace-nowrap rounded border px-2 py-1 text-xs font-semibold", statusClasses(item.status, statuses))}>{item.status || "Não atualizada"}</span></td><td className="whitespace-nowrap px-4 py-3"><DeadlineBadge item={item} completedAt={completedAtById[item.dbId]} today={today} completion={completion} /></td><td title={item.model} className="max-w-48 truncate px-4 py-3">{dash(item.model)}</td><td title={item.contact} className="max-w-48 truncate px-4 py-3">{dash(item.contact)}</td><td title={item.workshop} className="max-w-52 truncate px-4 py-3">{dash(item.workshop)}</td><td title={item.issue} className="max-w-72 truncate px-4 py-3 text-muted-foreground">{dash(item.issue.replace(/\s+/g, " "))}</td><td title={item.note} className="max-w-36 truncate px-4 py-3">{dash(item.note.replace(/\s+/g, " "))}</td><td title={item.operator} className="max-w-40 truncate whitespace-nowrap px-4 py-3">{dash(item.operator)}</td>{extraColumns && <><td title={item.brand} className="max-w-36 truncate px-4 py-3">{dash(item.brand)}</td><td className="whitespace-nowrap px-4 py-3">{dash(item.kmScheduled)}</td><td className="whitespace-nowrap px-4 py-3">{dash(item.contactNumber)}</td><td className="whitespace-nowrap px-4 py-3">{dash(item.osNumber)}</td></>}</tr>)}</tbody></table></div>
+           <div className="max-w-full overflow-x-auto"><table className="w-full min-w-[1400px] text-sm"><thead className="bg-muted/60 text-left text-xs text-muted-foreground"><tr>{[["priority","Prioridade"],["id","ID"],["date","Atendimento"],["time","Hora"],["plate","Placa"],["status","Situação"],["currentDeadline","Prazo"],["model","Modelo"],["contact","Contato"],["workshop","Local/Oficina"],["issue","Problema relatado"],["note","Observação"],["operator","Operador"], ...(extraColumns ? [["brand","Marca"],["kmScheduled","KM"],["contactNumber","Telefone"],["osNumber","O.S Fornecedor"]] : [])].map(([key,label]) => <th key={key} className="px-4 py-3 font-medium"><Button variant="ghost" size="sm" className="h-auto p-0" onClick={() => changeSort(key as keyof Appointment | "priority")}>{label}<ArrowDownAZ className="size-3" /></Button></th>)}</tr></thead><tbody>{pageRows.map((item) => <tr key={item.dbId} onClick={() => setSelected(item)} className="cursor-pointer border-t hover:bg-muted/40"><td className="px-4 py-3">{item.priorityUrgent && item.status !== completion ? <UrgentBadge /> : <span className="text-xs text-muted-foreground">{["Urgente","Atrasado","Hoje","Futuro","Sem prazo"][priorityLevel(item, today, completion)]}</span>}</td><td className="px-4 py-3 font-mono text-xs">#{item.id}</td><td className="whitespace-nowrap px-4 py-3">{formatDateBR(item.date)}</td><td className="px-4 py-3 font-semibold">{dash(normalizeTime(item.time))}</td><td className="px-4 py-3 font-bold"><Button variant="link" className="min-h-11 h-auto px-0 font-bold text-primary" onClick={(event) => { event.stopPropagation(); openVehicle(item.plate); }}>{item.plate || "Não informado"}<ChevronRight className="size-4" /></Button>{item.reworkOf && <span className="mt-1 block"><ReworkBadge /></span>}{isEmergency(item.scheduleType) && <span className="mt-1 block"><EmergencyBadge /></span>}</td><td className="px-4 py-3"><span className={cn("whitespace-nowrap rounded border px-2 py-1 text-xs font-semibold", statusProps(item.status, statuses).className)} style={statusProps(item.status, statuses).style}>{item.status || "Não atualizada"}</span></td><td className="whitespace-nowrap px-4 py-3"><DeadlineBadge item={item} completedAt={completedAtById[item.dbId]} today={today} completion={completion} /></td><td title={item.model} className="max-w-48 truncate px-4 py-3">{dash(item.model)}</td><td title={item.contact} className="max-w-48 truncate px-4 py-3">{dash(item.contact)}</td><td title={item.workshop} className="max-w-52 truncate px-4 py-3">{dash(item.workshop)}</td><td title={item.issue} className="max-w-72 truncate px-4 py-3 text-muted-foreground">{dash(item.issue.replace(/\s+/g, " "))}</td><td title={item.note} className="max-w-36 truncate px-4 py-3">{dash(item.note.replace(/\s+/g, " "))}</td><td title={item.operator} className="max-w-40 truncate whitespace-nowrap px-4 py-3">{dash(item.operator)}</td>{extraColumns && <><td title={item.brand} className="max-w-36 truncate px-4 py-3">{dash(item.brand)}</td><td className="whitespace-nowrap px-4 py-3">{dash(item.kmScheduled)}</td><td className="whitespace-nowrap px-4 py-3">{dash(item.contactNumber)}</td><td className="whitespace-nowrap px-4 py-3">{dash(item.osNumber)}</td></>}</tr>)}</tbody></table></div>
           <div className="flex items-center justify-between border-t p-4"><p className="text-xs text-muted-foreground">Página {currentPage} de {pages}</p><div className="flex gap-2"><Button variant="outline" size="icon" disabled={currentPage <= 1} onClick={() => setPage((value) => Math.max(1,value-1))} aria-label="Página anterior"><ArrowLeft /></Button><Button variant="outline" size="icon" disabled={currentPage >= pages} onClick={() => setPage((value) => Math.min(pages,value+1))} aria-label="Próxima página"><ArrowRight /></Button></div></div>
         </section></SectionBoundary>
       </main>
@@ -876,7 +885,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
               <Button size="sm" variant="outline" onClick={() => void sendToSgloc(selected.dbId, "retry")}>Reenviar</Button>
             </div>}
             {editBlockReason(selected, currentUser.role) && <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{editBlockReason(selected, currentUser.role)}</p>}
-            {currentUser.role !== "atendimento" && <div className="flex flex-wrap items-center gap-3"><Button variant="outline" disabled={selected.editsAllowed > 1} onClick={() => grantExtraEdit(selected)}><Unlock /> Liberar edição extra</Button><span className="text-xs text-muted-foreground">Atendimento: {selected.editsUsed} de {selected.editsAllowed} edição(ões) usada(s){selected.editsAllowed > 1 ? " • edição extra já liberada" : ""}</span></div>}
+            {currentUser.role !== "atendimento" && <div className="flex flex-wrap items-center gap-3"><Button variant="outline" disabled={selected.editsAllowed > 1} onClick={() => grantExtraEdit(selected)}><Unlock /> Liberar edição extra</Button><span className="text-xs text-muted-foreground">Atendimento: {selected.editsUsed} de {atendimentoAllowance(atendimentoDefaultLimit, selected.editsAllowed)} edição(ões) usada(s){selected.editsAllowed > 1 ? " • edição extra já liberada" : ""}</span></div>}
             <AppointmentForm key={`${selected.dbId}-${historyKey}`} initial={fieldsFromAppointment(selected)} definitions={fieldDefinitions} editing blocked={editBlockReason(selected, currentUser.role)} onSave={saveAppointment} statusOptions={serviceStatuses} canUrgent={currentUser.role !== "atendimento"} onDirtyChange={(dirty) => { dirtyRef.current = dirty; }} />
             <div className="flex flex-wrap gap-2 border-t pt-4"><Button variant="outline" onClick={() => openRework(selected)}><RotateCcw /> Registrar retrabalho</Button>{currentUser.role === "master" && <Button variant="destructive" onClick={() => void archiveAppointment(selected)}><Trash2 /> Excluir</Button>}</div>
             {(selected.osNumber !== null && fieldDefinitions.find((field) => field.field_key === "os_number")?.visible !== false) || selected.sglocReference ? <div className="grid gap-3 sm:grid-cols-2">
