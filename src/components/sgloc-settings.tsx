@@ -20,6 +20,7 @@ export function SglocSettingsPanel() {
   const probe = useServerFn(runSglocProbe);
   const [baseUrl, setBaseUrl] = useState("");
   const [enabled, setEnabled] = useState(false);
+  const [writeEnabled, setWriteEnabled] = useState(false);
   const [timeout, setTimeoutSec] = useState(15);
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -27,15 +28,15 @@ export function SglocSettingsPanel() {
   const [result, setResult] = useState<Result | null>(null);
 
   useEffect(() => {
-    void supabase.from("sgloc_settings").select("enabled, base_url, request_timeout_seconds").eq("id", true).maybeSingle().then(({ data }) => {
-      setBaseUrl(data?.base_url ?? ""); setEnabled(data?.enabled ?? false); setTimeoutSec(data?.request_timeout_seconds ?? 15); setLoaded(true);
+    void supabase.from("sgloc_settings").select("enabled, base_url, request_timeout_seconds, write_enabled").eq("id", true).maybeSingle().then(({ data }) => {
+      setBaseUrl(data?.base_url ?? ""); setEnabled(data?.enabled ?? false); setWriteEnabled(data?.write_enabled ?? false); setTimeoutSec(data?.request_timeout_seconds ?? 15); setLoaded(true);
     });
   }, []);
 
   async function onSave(e: React.FormEvent) {
     e.preventDefault(); setBusy(true); setMsg({});
     try {
-      const r = await save({ data: { baseUrl, enabled, timeoutSeconds: Number(timeout) || 15 } });
+      const r = await save({ data: { baseUrl, enabled, writeEnabled, timeoutSeconds: Number(timeout) || 15 } });
       setBaseUrl(r.baseUrl ?? ""); setMsg({ ok: "Configurações do SGLOC salvas." });
     } catch (err) { setMsg({ error: err instanceof Error ? err.message : "Não foi possível salvar." }); }
     setBusy(false);
@@ -54,10 +55,11 @@ export function SglocSettingsPanel() {
 
   if (!loaded) return <p className="text-sm text-muted-foreground">Carregando…</p>;
   return <section className="space-y-4">
-    <p className="rounded-md border bg-muted px-3 py-2 text-sm">Este lote só <strong>LÊ</strong> do SGLOC: nada é criado ou alterado lá, e não há sincronização automática.</p>
+    <p className="rounded-md border bg-muted px-3 py-2 text-sm">Com "Escrita no SGLOC ativa" desligada, nada é enviado ao SGLOC. Ligada, agendamentos criados no painel e edições de agendamentos que vieram do SGLOC são enviados com a conta SGLOC de quem salvou. Não há sincronização automática.</p>
     <form onSubmit={onSave} className="space-y-3">
       <label className="block text-sm">URL base do SGLOC<Input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://servidor.exemplo.com.br" maxLength={300} inputMode="url" /></label>
       <label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} className="h-4 w-4" />Integração ativa</label>
+      <label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" checked={writeEnabled} onChange={(e) => setWriteEnabled(e.target.checked)} className="h-4 w-4" />Escrita no SGLOC ativa</label>
       <label className="block text-sm">Tempo limite (segundos, 3 a 60)<Input type="number" min={3} max={60} value={timeout} onChange={(e) => setTimeoutSec(Number(e.target.value))} className="w-28" /></label>
       <div className="flex flex-wrap gap-2"><Button type="submit" disabled={busy}>Salvar</Button>
         <Button type="button" variant="outline" disabled={busy} onClick={onTest}>{busy ? "Aguarde…" : "Testar integração"}</Button></div>

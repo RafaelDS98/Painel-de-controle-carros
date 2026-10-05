@@ -10,6 +10,8 @@ export type AppointmentFields = {
   operator: string; externalOrder: string; currentDeadline: string;
   brand: string; contactNumber: string; kmScheduled: string;
   customFields: CustomValues;
+  /** Só na edição: gravados no mesmo Salvar dos demais campos. */
+  status?: string; priorityUrgent?: boolean;
 };
 
 export const emptyFields: AppointmentFields = {
@@ -32,7 +34,10 @@ const baseFields = [
   { key: "plate", label: "Placa", type: "text" },
 ] as const;
 
-export function AppointmentForm({ initial, definitions, editing = false, blocked, onSave }: {
+export function AppointmentForm({ initial, definitions, editing = false, blocked, onSave, statusOptions, canUrgent = false, onDirtyChange }: {
+  statusOptions?: string[];
+  canUrgent?: boolean;
+  onDirtyChange?: (dirty: boolean) => void;
   initial: AppointmentFields;
   definitions: FieldDefinition[];
   editing?: boolean;
@@ -49,6 +54,10 @@ export function AppointmentForm({ initial, definitions, editing = false, blocked
   }
   const customChanges = Object.fromEntries(Object.entries(draft.customFields).filter(([key, value]) => value !== (initial.customFields[key] ?? "")));
   if (Object.keys(customChanges).length) changes.customFields = customChanges;
+  if (editing && statusOptions && (draft.status ?? "") !== (initial.status ?? "")) changes.status = draft.status ?? "";
+  if (editing && canUrgent && Boolean(draft.priorityUrgent) !== Boolean(initial.priorityUrgent)) changes.priorityUrgent = Boolean(draft.priorityUrgent);
+  const dirty = Object.keys(changes).length > 0;
+  useEffect(() => { onDirtyChange?.(editing && dirty); }, [dirty, editing]);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -64,6 +73,12 @@ export function AppointmentForm({ initial, definitions, editing = false, blocked
   return (
     <form onSubmit={submit} className="space-y-4">
       <fieldset disabled={Boolean(blocked) || saving} className="grid gap-4 disabled:opacity-70 sm:grid-cols-2">
+        {editing && statusOptions && <label className="sm:col-span-2"><span className="mb-1.5 block text-xs font-medium uppercase text-muted-foreground">Situação do veículo</span>
+          <select value={draft.status ?? ""} onChange={(event) => setDraft((prev) => ({ ...prev, status: event.target.value }))} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-semibold text-foreground">
+            <option value="">Não atualizada</option>{statusOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+            {draft.status && !statusOptions.includes(draft.status) && <option value={draft.status}>{draft.status}</option>}
+          </select></label>}
+        {editing && statusOptions && <label className="flex min-h-11 items-center gap-2 text-sm font-medium sm:col-span-2"><input type="checkbox" className="size-4 accent-destructive" checked={Boolean(draft.priorityUrgent)} disabled={!canUrgent} onChange={(event) => setDraft((prev) => ({ ...prev, priorityUrgent: event.target.checked }))} />Marcar como urgente{!canUrgent && <span className="text-xs font-normal text-muted-foreground">(somente gerente ou master)</span>}</label>}
         {baseFields.map(({ key, label, type }) => <label key={key}><span className="mb-1.5 block text-xs font-medium uppercase text-muted-foreground">{label}{!editing ? " *" : ""}</span><Input type={type} value={draft[key]} required={!editing} onChange={(event) => setDraft((prev) => ({ ...prev, [key]: event.target.value }))} /></label>)}
         {definitions.filter((field) => field.visible && !readOnlyColumns.has(field.field_key)).map((field) => {
           const key = fieldForColumn[field.field_key];
