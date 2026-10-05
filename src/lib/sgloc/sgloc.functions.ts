@@ -244,7 +244,7 @@ export const pushAppointmentToSgloc = createServerFn({ method: "POST" })
     if (!settings.enabled || !settings.write_enabled) return { status: "skipped" };
     const isUpdate = Boolean(row.sgloc_reference);
     if (data.origin === "update" && !isUpdate) return { status: "skipped" };
-    const changed = data.origin === "retry" ? [...core.SENDABLE_COLUMNS] : data.changed;
+    const changed = data.origin === "update" ? data.changed : [...core.SENDABLE_COLUMNS];
     if (isUpdate && !changed.some((c) => (core.SENDABLE_COLUMNS as readonly string[]).includes(c))) return { status: "no_change" };
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
