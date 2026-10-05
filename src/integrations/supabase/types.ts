@@ -29,6 +29,8 @@ export type Database = {
           current_deadline: string | null
           custom_fields: Json
           date: string | null
+          deadline_changes_allowed: number
+          deadline_changes_used: number
           external_order: string
           forwarded_at: string | null
           forwarded_by: string | null
@@ -79,6 +81,8 @@ export type Database = {
           current_deadline?: string | null
           custom_fields?: Json
           date?: string | null
+          deadline_changes_allowed?: number
+          deadline_changes_used?: number
           external_order?: string
           forwarded_at?: string | null
           forwarded_by?: string | null
@@ -129,6 +133,8 @@ export type Database = {
           current_deadline?: string | null
           custom_fields?: Json
           date?: string | null
+          deadline_changes_allowed?: number
+          deadline_changes_used?: number
           external_order?: string
           forwarded_at?: string | null
           forwarded_by?: string | null
