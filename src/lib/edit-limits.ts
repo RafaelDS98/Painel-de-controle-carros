@@ -12,7 +12,7 @@ export function deadlineBlockReason(item: DeadlineCounters, role: LimitRole): st
   if (canManageDeadline(role)) return null;
   const used = Math.max(0, safeInt(item.deadlineChangesUsed, 0));
   const allowed = Math.max(0, safeInt(item.deadlineChangesAllowed, 1));
-  return used >= allowed ? `Já houve ${used} alteração${used === 1 ? "" : "(ões)"} da previsão. Peça autorização ao gerente ou master.` : null;
+  return used >= allowed ? `Já houve ${used === 1 ? "1 alteração" : `${used} alterações`} da previsão. Peça autorização ao gerente ou master.` : null;
 }
 
 /** Os demais campos não têm limite de edições para nenhum perfil. */

@@ -33,5 +33,7 @@
 - Erros de criação/edição/senha de usuários passam por src/lib/auth-errors.ts (tradução, campo e código curto) e o erro técnico vai ao log do servidor sem senha — o master vê o motivo sem expor segredos.
 - Excluir agendamento = arquivar (archived_at/archived_by), só master, garantido no trigger de edição e na RLS de leitura; o painel carrega só ativos por activeOnly (src/lib/agenda-safety.ts) e a deduplicação de importação usa existing_sgloc_references (inclui arquivados) — nada é apagado e nada some de uma tela só.
 - A ficha grava Situação, Urgente e demais campos num único UPDATE montado por buildAppointmentUpdate (src/lib/appointment-update.ts) — cada Salvar conta uma só edição no limite.
-- Limites de edição: edit_limit_for (override, senão padrão do perfil) calculado no trigger; alterados só por set_edit_limit_* (master, log); tela espelha em src/lib/edit-limits.ts — não toca agendamentos.
 - color_token aceita token antigo ou #RRGGBB, exibido só por statusColorProps (src/lib/agenda-config.ts) — contraste e neutro num só lugar.
+
+- Previsão de Entrega: atendimento/oficina alteram enquanto deadline_changes_used < deadline_changes_allowed (contadores em appointments, protegidos no trigger); gerente/master alteram livremente e só aumentam o allowed (logado); os demais campos não têm limite por perfil — edit_limit_* ficou sem efeito. Tela espelha em src/lib/edit-limits.ts.
+- Perfil Oficina edita (mesmas regras do atendimento) só agendamentos com forwarded_workshop_id de uma oficina sua (RLS), nunca cria (trigger BEFORE INSERT) nem troca o encaminhamento; só master cadastra oficinas — o banco decide, a tela só esconde botões.
