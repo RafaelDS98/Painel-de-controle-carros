@@ -99,6 +99,13 @@
       "when": 1791211727994,
       "tag": "0013_status_color_free_hex",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1791211972026,
+      "tag": "0014_status_rename_archived",
+      "breakpoints": true
     }
   ]
 }
