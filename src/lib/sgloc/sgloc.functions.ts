@@ -102,6 +102,7 @@ export const getSglocSyncStatus = createServerFn({ method: "POST" })
     const cols = "id, started_at, finished_at, status, trigger_source, dry_run, fetched, inserted, updated, linked, protected, ambiguous, not_returned, skipped, errors, error_detail, sample";
     const { data: last } = await supabaseAdmin.from("sgloc_sync_runs").select(cols).order("started_at", { ascending: false }).limit(1).maybeSingle();
     const { data: lastSim } = await supabaseAdmin.from("sgloc_sync_runs").select(cols).eq("dry_run", true).neq("status", "running").order("started_at", { ascending: false }).limit(1).maybeSingle();
+    const { data: lastReal } = await supabaseAdmin.from("sgloc_sync_runs").select("started_at").eq("dry_run", false).in("status", ["success", "partial"]).order("started_at", { ascending: false }).limit(1).maybeSingle();
     let accountWarning: string | null = null;
     if (!s?.sync_user_id) accountWarning = "Nenhuma conta SGLOC designada para a sincronização.";
     else {
@@ -113,7 +114,7 @@ export const getSglocSyncStatus = createServerFn({ method: "POST" })
     return {
       settings: { intervalMinutes: s?.interval_minutes ?? 480, windowDaysBack: s?.window_days_back ?? 7, windowDaysAhead: s?.window_days_ahead ?? 45,
         syncUserId: s?.sync_user_id ?? null, syncLive: Boolean(s?.sync_live) },
-      last: last ?? null, lastSimulation: lastSim ?? null,
+      last: last ?? null, lastSimulation: lastSim ?? null, lastRealSuccessAt: lastReal?.started_at ?? null,
       nextRunAt: nextRunAt(tick, await lastCompletedStart("schedule")), accountWarning,
     };
   });
