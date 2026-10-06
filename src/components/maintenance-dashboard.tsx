@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Area,
   AreaChart,
@@ -270,7 +270,7 @@ function UrgentBadge() {
 
 const rowColumns = "id, sheet_id, registered_at, date, time, plate, store, model, contact, workshop, issue, note, operator, external_order, status, original_deadline, current_deadline, creator_edits_used, creator_edits_allowed, manager_edit_used, manager_edits_used, deadline_changes_used, deadline_changes_allowed, priority_urgent, rework_of, rework_reason, custom_fields, brand, contact_number, km_scheduled, os_number, schedule_type, sgloc_reference, sgloc_sync_state, sgloc_last_error, archived_at";
 
-export function MaintenanceDashboard({ onSignOut, currentUser, mode = "agenda", tabs }: { onSignOut?: () => void; currentUser: CurrentUser; mode?: "agenda" | "oficina"; tabs?: React.ReactNode }) {
+export function MaintenanceDashboard({ onSignOut, currentUser, mode = "agenda", tabs }: { onSignOut?: () => void; currentUser: CurrentUser; mode?: "agenda" | "oficina"; tabs?: ReactNode }) {
   // Módulo Oficina: mesma tela da Agenda, sem criar/importar/lote/excluir/configurar.
   const workshopMode = mode === "oficina" || currentUser.role === "oficina";
   const canCreate = !workshopMode;
