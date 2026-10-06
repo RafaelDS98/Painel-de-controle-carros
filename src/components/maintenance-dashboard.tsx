@@ -638,7 +638,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
         if (error) throw new Error("Não foi possível conferir os IDs do SGLOC já cadastrados.");
         for (const ref of data ?? []) if (ref) existing.add(ref);
       }
-      const tagged = candidates.map((record, index) => ({ record, line: lines[index] ?? 0, sgloc_reference: record.sgloc_reference }));
+      const tagged = candidates.map((record, index) => ({ record, line: lines[index] ?? 0, sgloc_reference: record.sgloc_reference ?? null }));
       const { kept, skippedExisting } = dropExistingReferences(tagged, existing);
       const created: { line: number; plate: string; date: string | null; time: string; ref: string | null }[] = [];
       const errors: { line: number; plate: string; reason: string }[] = [];
