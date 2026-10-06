@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { announceAgendaChange } from "@/lib/agenda-freshness";
 import { getSglocSyncStatus, listSglocConnectedUsers, runSglocSyncNow, saveSglocSettings } from "@/lib/sgloc/sgloc.functions";
 
 type Status = Awaited<ReturnType<typeof getSglocSyncStatus>>;
@@ -56,7 +57,10 @@ export function SglocSyncPanel({ base }: { base: { baseUrl: string; enabled: boo
   }
   async function onRun(simulate: boolean) {
     setBusy(true); setMsg({});
-    try { const r = await run({ data: { simulate } }); setMsg(r.status === "failed" ? { error: r.message } : { ok: r.message }); await reload(); }
+    try {
+      const r = await run({ data: { simulate } }); setMsg(r.status === "failed" ? { error: r.message } : { ok: r.message }); await reload();
+      announceAgendaChange({ source: r.dryRun ? "simulation" : "sync", inserted: r.counts?.["inserted"] ?? 0, updated: (r.counts?.["updated"] ?? 0) + (r.counts?.["linked"] ?? 0) });
+    }
     catch (e) { setMsg({ error: e instanceof Error ? e.message : "Não foi possível executar." }); }
     setBusy(false);
   }

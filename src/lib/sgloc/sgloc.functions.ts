@@ -315,7 +315,7 @@ export const pushAppointmentToSgloc = createServerFn({ method: "POST" })
     await assertApproved(context);
     // Leitura com RLS do usuário: confirma que ele enxerga o agendamento.
     const { data: row, error } = await context.supabase.from("appointments")
-      .select("id, date, time, plate, km_scheduled, contact, contact_number, issue, note, workshop, external_order, sgloc_reference, archived_at")
+      .select("id, date, time, plate, km_scheduled, contact, contact_number, issue, note, workshop, external_order, sgloc_reference, archived_at, store")
       .eq("id", data.appointmentId).maybeSingle();
     if (error || !row) throw new Error("Agendamento não encontrado.");
     if (row.archived_at) return { status: "skipped", message: "Agendamento na Lixeira não é enviado ao SGLOC." };
@@ -333,6 +333,13 @@ export const pushAppointmentToSgloc = createServerFn({ method: "POST" })
     let warning: string | undefined;
     try {
       const baseUrl = client.assertUsable(settings);
+      // Loja sem ID SGLOC: falha só este agendamento, com mensagem clara (nunca silenciosa).
+      if ((row.store ?? "").trim()) {
+        const { storeLinkError } = await import("@/lib/catalog");
+        const { data: stores } = await supabaseAdmin.from("catalog_items").select("name, sgloc_id").eq("kind", "store");
+        const linkError = storeLinkError(row.store, stores ?? []);
+        if (linkError) throw new core.SglocError("validation", linkError);
+      }
       let supplierId: number | null = null;
       if (changed.includes("workshop") && (row.workshop ?? "").trim()) {
         const { data: sup } = await supabaseAdmin.from("sgloc_suppliers").select("supplier_id, name");
