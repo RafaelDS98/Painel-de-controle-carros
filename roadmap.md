@@ -25,3 +25,4 @@
 - [x] Sincronização SGLOC → painel (simulação, manual, tela, rota do tick, testes).
 - [x] Previsão de entrega 1x para atendimento/oficina com liberação por gerente/master; Oficina edita encaminhados e não cria.
 - [ ] Cadastrar a tarefa agendada de 15 min chamando a rota do tick (bloqueado: sem mecanismo de agendamento da plataforma disponível ao agente; pg_cron não aprovado).
+- [x] Importação manual: grava linha a linha com resumo (criados/ignorados/erros por linha), leva a grade à semana importada; agenda recarrega a cada 2 min e ao voltar à aba; aviso de carga/sincronização falha, atrasada ou em simulação.

@@ -186,10 +186,13 @@ export function buildImportRecords(rows: Record<string, unknown>[], createdBy: s
   const cell = (row: Record<string, unknown>, column: string) => stripHtml(row[column]);
   let skippedEmpty = 0;
   const records: TablesInsert<"appointments">[] = [];
-  for (const row of rows) {
-    if (importRowSkipReason(row)) { skippedEmpty++; continue; }
+  /** Linha da planilha (cabeçalho = 1) de cada registro, na mesma ordem. */
+  const lines: number[] = [];
+  rows.forEach((row, index) => {
+    if (importRowSkipReason(row)) { skippedEmpty++; return; }
     const deadline = hasDeadline ? normalizeDate(row["Previsão de Entrega"]) : null;
     const extras = sglocExtras(row);
+    lines.push(index + 2);
     records.push({
       sheet_id: cell(row, "ID"), registered_at: normalizeDate(row["Data Cadastro"]), date: normalizeDate(row["Data Atendimento"]),
       time: normalizeTime(row["Hora"]), plate: normalizePlate(cell(row, "Placa")), store: cell(row, "Loja"), model: cell(row, "Modelo"),
@@ -198,8 +201,17 @@ export function buildImportRecords(rows: Record<string, unknown>[], createdBy: s
       status: "", created_by: createdBy, original_deadline: deadline, current_deadline: deadline,
       os_number: extras.os_number, schedule_type: extras.schedule_type, sgloc_reference: extras.sgloc_reference,
     });
-  }
-  return { records, skippedEmpty };
+  });
+  return { records, skippedEmpty, lines };
+}
+
+/** Motivo legível para uma linha que o banco recusou ao importar. */
+export function importErrorReason(error: { code?: string; message?: string } | null | undefined): string {
+  if (!error) return "Erro desconhecido.";
+  if (error.code === "23505") return "ID do SGLOC já cadastrado (possivelmente por outro usuário agora).";
+  if (error.code === "42501") return "Sem permissão para criar agendamentos.";
+  if (error.code === "22007" || error.code === "22008") return "Data inválida.";
+  return safeText(error.message) || "O banco recusou a linha.";
 }
 
 /** Remove registros cujo ID do SGLOC já existe (no banco ou repetido no arquivo). */

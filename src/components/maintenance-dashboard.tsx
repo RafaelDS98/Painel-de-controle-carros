@@ -58,7 +58,7 @@ import { periodRange, weekRange, pendingDeliveries, type PeriodPreset } from "@/
 import { ContactRegister } from "@/components/contact-register";
 import { AgendaSettings } from "@/components/agenda-settings";
 import { isEmergency, normalizeDate, normalizePlate, normalizeTime, parseKm, safeText, sglocStateLabels, stripHtml } from "@/lib/normalize";
-import { DASH, EMPTY_OPTION, NO_DATE_GROUP, clampPage, compareDateTime, compareText, countBy, dash, exportHeaders, exportRows, foldedOptions, formatDateBR, groupWeek, inPeriod, matchesFilter, safeAverage, serviceCategory, textMatches, toCsv, buildImportRecords, dropExistingReferences, activeOnly, archiveConfirmText } from "@/lib/agenda-safety";
+import { DASH, EMPTY_OPTION, NO_DATE_GROUP, clampPage, compareDateTime, compareText, countBy, dash, exportHeaders, exportRows, foldedOptions, formatDateBR, groupWeek, inPeriod, matchesFilter, safeAverage, serviceCategory, textMatches, toCsv, buildImportRecords, dropExistingReferences, activeOnly, archiveConfirmText, importErrorReason } from "@/lib/agenda-safety";
 import { TrashDialog } from "@/components/trash-dialog";
 import { applySelection, hasSelection, isSelected, removeSelection, selectionChips, toggleSelection, type ChartDim, type ChartSelection } from "@/lib/chart-selection";
 import { fixSheetRange } from "@/lib/sheet-range";
@@ -69,7 +69,8 @@ import { customValues, statusColorProps, type FieldDefinition, type StatusOption
 import { IndicatorDetails, type IndicatorGroup, type IndicatorAppointment } from "@/components/indicator-details";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
-import { pushAppointmentToSgloc } from "@/lib/sgloc/sgloc.functions";
+import { getSglocSyncStatus, pushAppointmentToSgloc } from "@/lib/sgloc/sgloc.functions";
+import { AGENDA_REFRESH_MS, agendaWarnings, type SyncSnapshot } from "@/lib/agenda-freshness";
 import { canManageDeadline, deadlineBlockReason } from "@/lib/edit-limits";
 import { buildAppointmentUpdate } from "@/lib/appointment-update";
 import { Toaster } from "@/components/ui/sonner";
@@ -310,6 +311,13 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const [message, setMessage] = useState("");
   const [batchBusy, setBatchBusy] = useState(false);
   const [batchResult, setBatchResult] = useState<{ updated: number; unchanged: number; skipped: number; errors: { line: number; plate: string; reason: string }[] } | null>(null);
+  const [importResult, setImportResult] = useState<{ created: { line: number; plate: string; date: string | null; time: string; ref: string | null }[]; skippedEmpty: number; skippedExisting: number; errors: { line: number; plate: string; reason: string }[] } | null>(null);
+  const [loadedAt, setLoadedAt] = useState<number | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  const [syncSnap, setSyncSnap] = useState<SyncSnapshot | null>(null);
+  const syncStatus = useServerFn(getSglocSyncStatus);
+  const freshness = agendaWarnings({ loadedAt, now: nowTick, loadFailed, sync: syncSnap });
   const [dark, setDark] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const batchInputRef = useRef<HTMLInputElement>(null);
@@ -355,14 +363,22 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     const data: AppointmentRow[] = [];
     for (let offset = 0; ; offset += 500) {
       const result = await supabase.from("appointments").select(rowColumns).is("archived_at", null).order("date").order("time").range(offset, offset + 499);
-      if (result.error) { setLoadError("Não foi possível carregar a agenda. Verifique sua conexão e tente de novo."); return; }
+      if (result.error) { setLoadFailed(true); setLoadError("Não foi possível carregar a agenda. Verifique sua conexão e tente de novo."); return; }
       data.push(...(result.data ?? []));
       if (!result.data || result.data.length < 500) break;
     }
-    setLoadError("");
+    setLoadError(""); setLoadFailed(false); setLoadedAt(Date.now());
     const rows = activeOnly(data).map(fromRow);
     setAppointments(rows);
     void loadCompletionLogs(rows);
+  }
+
+  async function loadSyncSnapshot() {
+    if (currentUser.role !== "master") return;
+    try {
+      const s = await syncStatus();
+      setSyncSnap({ syncLive: s.settings.syncLive, intervalMinutes: s.settings.intervalMinutes, last: s.last, lastRealSuccessAt: s.lastRealSuccessAt, accountWarning: s.accountWarning });
+    } catch { /* aviso de sincronização é opcional; a agenda continua */ }
   }
 
   async function loadConfig() {
@@ -380,7 +396,14 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
       setLimitsTick((t) => t + 1);
     })();
   }, []);
-  useEffect(() => { void loadConfig(); void loadAppointments(); }, []);
+  useEffect(() => { void loadConfig(); void loadAppointments(); void loadSyncSnapshot(); }, []);
+  // Recarrega sozinha a cada 2 min e ao voltar para a aba, para novos agendamentos aparecerem sem recarregar a página.
+  useEffect(() => {
+    const refresh = () => { if (document.visibilityState === "visible") { void loadAppointments(); void loadSyncSnapshot(); } setNowTick(Date.now()); };
+    const interval = window.setInterval(refresh, AGENDA_REFRESH_MS);
+    document.addEventListener("visibilitychange", refresh);
+    return () => { window.clearInterval(interval); document.removeEventListener("visibilitychange", refresh); };
+  }, []);
   useEffect(() => { if (statuses.length) void loadCompletionLogs(appointments); }, [completion]);
 
   const option = (key: keyof Appointment) => foldedOptions(appointments.map((item) => item[key]));
@@ -607,7 +630,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
       const hasDeadline = columns.includes("Previsão de Entrega");
       const { data: userData } = await supabase.auth.getUser();
       const createdBy = userData.user?.id ?? null;
-      const { records: candidates, skippedEmpty } = buildImportRecords(rows, createdBy, hasDeadline);
+      const { records: candidates, skippedEmpty, lines } = buildImportRecords(rows, createdBy, hasDeadline);
       const refs = [...new Set(candidates.map((item) => item.sgloc_reference).filter((ref): ref is string => Boolean(ref)))];
       const existing = new Set<string>();
       for (let start = 0; start < refs.length; start += 200) {
@@ -615,14 +638,30 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
         if (error) throw new Error("Não foi possível conferir os IDs do SGLOC já cadastrados.");
         for (const ref of data ?? []) if (ref) existing.add(ref);
       }
-      const { kept: records, skippedExisting } = dropExistingReferences(candidates, existing);
-      if (records.length) {
-        const { error } = await supabase.from("appointments").insert(records);
-        if (error) throw new Error(error.code === "23505" ? "Outro usuário cadastrou um ID do SGLOC desta planilha ao mesmo tempo. Importe novamente." : "Não foi possível gravar a agenda importada no banco.");
+      const tagged = candidates.map((record, index) => ({ record, line: lines[index] ?? 0, sgloc_reference: record.sgloc_reference ?? null }));
+      const { kept, skippedExisting } = dropExistingReferences(tagged, existing);
+      const created: { line: number; plate: string; date: string | null; time: string; ref: string | null }[] = [];
+      const errors: { line: number; plate: string; reason: string }[] = [];
+      const ok = (item: (typeof kept)[number]) => created.push({ line: item.line, plate: item.record.plate ?? "", date: item.record.date ?? null, time: item.record.time ?? "", ref: item.record.sgloc_reference ?? null });
+      // Grava em blocos; se um bloco falhar, tenta linha a linha para gravar as boas e explicar as recusadas.
+      for (let start = 0; start < kept.length; start += 50) {
+        const chunk = kept.slice(start, start + 50);
+        const { error } = await supabase.from("appointments").insert(chunk.map((item) => item.record));
+        if (!error) { chunk.forEach(ok); continue; }
+        for (const item of chunk) {
+          const single = await supabase.from("appointments").insert(item.record);
+          if (single.error) errors.push({ line: item.line, plate: item.record.plate ?? "", reason: importErrorReason(single.error) });
+          else ok(item);
+        }
       }
       await loadAppointments(); resetFilters();
-      setMessage(`${records.length} agendamento(s) importado(s) • ${skippedEmpty} linha(s) ignorada(s) (sem placa ou vazias) • ${skippedExisting} ignorada(s) por ID do SGLOC já existente.`);
-    } catch (error) { setMessage(error instanceof Error ? error.message : "Não foi possível ler o arquivo."); }
+      setMessage("");
+      setImportResult({ created, skippedEmpty, skippedExisting, errors });
+      const firstDate = created.map((item) => item.date).filter((d): d is string => Boolean(d)).sort()[0];
+      if (firstDate) window.setTimeout(() => setGridStart(weekRange(firstDate).start), 50);
+      if (created.length) toast.success(`${created.length} agendamento(s) criado(s) pela importação.`);
+      else if (errors.length) toast.error("Nenhum agendamento foi gravado. Veja os erros por linha.");
+    } catch (error) { setImportResult(null); setMessage(error instanceof Error ? error.message : "Não foi possível ler o arquivo."); }
   }
 
   function exportFile(kind: "csv" | "xlsx") {
@@ -772,7 +811,14 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
         </div>
 
         {loadError && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"><span>{loadError}</span><Button variant="outline" size="sm" onClick={() => { void loadConfig(); void loadAppointments(); }}>Tentar de novo</Button></div>}
+        {freshness.length > 0 && <div role="status" aria-label="Aviso de agenda desatualizada" className="flex items-start gap-3 rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"><AlertTriangle className="mt-0.5 size-4 shrink-0" /><ul className="flex-1 space-y-1">{freshness.map((text) => <li key={text}>{text}</li>)}</ul><Button variant="outline" size="sm" onClick={() => { void loadAppointments(); void loadSyncSnapshot(); }}>Atualizar agora</Button></div>}
         {message && <div className="flex items-center justify-between rounded-md border border-accent bg-accent/30 px-4 py-3 text-sm"><span>{message}</span><Button variant="ghost" size="icon" onClick={() => setMessage("")}><X /></Button></div>}
+        {importResult && <section aria-label="Resultado da importação" className="space-y-2 border-y py-4 text-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-semibold">Importação concluída</h2><Button variant="ghost" size="icon" aria-label="Fechar resultado da importação" onClick={() => setImportResult(null)}><X /></Button></div>
+          <p>{importResult.created.length} criado(s) · 0 atualizado(s) (a importação só cria; para alterar use "Atualizar agenda em lote") · {importResult.skippedEmpty} ignorada(s) sem placa ou vazias · {importResult.skippedExisting} ignorada(s) por ID do SGLOC já existente · {importResult.errors.length} erro(s)</p>
+          {importResult.created.length > 0 && <ul className="max-h-40 list-disc space-y-1 overflow-y-auto pl-5">{importResult.created.map((item) => <li key={`c-${item.line}`}>Linha {item.line} · {dash(item.plate)} · {formatDateBR(item.date)} {dash(item.time)}{item.ref ? ` · ID SGLOC ${item.ref}` : ""}</li>)}</ul>}
+          {importResult.errors.length > 0 && <ul className="max-h-64 list-disc space-y-1 overflow-y-auto pl-5 text-destructive">{importResult.errors.map((error) => <li key={`e-${error.line}`}>Linha {error.line} · {dash(error.plate)}: {error.reason}</li>)}</ul>}
+        </section>}
         {batchResult && <section aria-label="Resultado da atualização em lote" className="space-y-2 border-y py-4 text-sm">
           <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-semibold">Atualização em lote concluída</h2><Button variant="ghost" size="icon" aria-label="Fechar resultado" onClick={() => setBatchResult(null)}><X /></Button></div>
           <p>{batchResult.updated} atualizado(s) · {batchResult.unchanged} sem mudança · {batchResult.skipped} ignorada(s) (sem placa ou linha de total) · {batchResult.errors.length} erro(s)</p>

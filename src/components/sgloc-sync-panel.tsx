@@ -15,6 +15,7 @@ function RunCard({ run, title }: { run: Run; title: string }) {
   const detail = Array.isArray(run.error_detail) ? (run.error_detail as { message?: string; kind?: string }[]) : [];
   return <div className="rounded-md border p-3 text-sm">
     <p className="font-medium">{title}: {when(run.started_at)} · {run.trigger_source === "manual" ? "manual" : "agendada"}{run.dry_run ? " · simulação" : ""} · {statusLabel[run.status] ?? run.status}</p>
+    {run.dry_run && <p className="mt-1 font-medium">Simulação: nada foi gravado na agenda.</p>}
     <p className="mt-1 text-muted-foreground">Lidos {run.fetched} · {run.dry_run ? "criaria" : "criados"} {run.inserted} · {run.dry_run ? "atualizaria" : "atualizados"} {run.updated} · vinculados {run.linked} · não retornados {run.not_returned} · protegidos {run.protected} · ambíguos {run.ambiguous} · ignorados {run.skipped} · erros {run.errors}</p>
     {detail[0]?.message && <p className="mt-1 text-destructive">{detail[0].message}</p>}
   </div>;
