@@ -119,8 +119,8 @@ export type AppRole = "atendimento" | "oficina" | "gerente" | "master";
 export type CurrentUser = { id: string; name: string; role: AppRole; email?: string };
 const roleLabels: Record<AppRole, string> = { atendimento: "Atendimento", oficina: "Oficina", gerente: "Gerente", master: "Master" };
 
-function deadlineBlock(item: Appointment, role: AppRole): string | null {
-  return deadlineBlockReason({ deadlineChangesUsed: item.deadlineChangesUsed, deadlineChangesAllowed: item.deadlineChangesAllowed }, role);
+function deadlineBlock(item: Appointment, role: AppRole, limit = 1): string | null {
+  return deadlineBlockReason({ deadlineChangesUsed: item.deadlineChangesUsed, deadlineChangesAllowed: item.deadlineChangesAllowed }, role, limit);
 }
 
 type ServiceStatus = string;
@@ -270,7 +270,12 @@ function UrgentBadge() {
 
 const rowColumns = "id, sheet_id, registered_at, date, time, plate, store, model, contact, workshop, issue, note, operator, external_order, status, original_deadline, current_deadline, creator_edits_used, creator_edits_allowed, manager_edit_used, manager_edits_used, deadline_changes_used, deadline_changes_allowed, priority_urgent, rework_of, rework_reason, custom_fields, brand, contact_number, km_scheduled, os_number, schedule_type, sgloc_reference, sgloc_sync_state, sgloc_last_error, archived_at";
 
-export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: () => void; currentUser: CurrentUser }) {
+export function MaintenanceDashboard({ onSignOut, currentUser, mode = "agenda", tabs }: { onSignOut?: () => void; currentUser: CurrentUser; mode?: "agenda" | "oficina"; tabs?: React.ReactNode }) {
+  // Módulo Oficina: mesma tela da Agenda, sem criar/importar/lote/excluir/configurar.
+  const workshopMode = mode === "oficina" || currentUser.role === "oficina";
+  const canCreate = !workshopMode;
+  const [myLimit, setMyLimit] = useState(1);
+  useEffect(() => { void supabase.rpc("get_my_edit_limit").then(({ data }) => { if (typeof data === "number") setMyLimit(data); }); }, []);
   const [logOpen, setLogOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
@@ -552,7 +557,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
 
   async function saveAppointment(changes: Partial<AppointmentFields>): Promise<boolean> {
     if (!selected) return false;
-    const blocked = "currentDeadline" in changes ? deadlineBlock(selected, currentUser.role) : null;
+    const blocked = "currentDeadline" in changes ? deadlineBlock(selected, currentUser.role, myLimit) : null;
     if (blocked) { setMessage(blocked); return false; }
     if (changes.status && !serviceStatuses.includes(changes.status)) { setMessage("Situação inválida."); return false; }
     const update = buildAppointmentUpdate(changes, selected.customFields, { canUrgent: canManageDeadline(currentUser.role) }) as TablesUpdate<"appointments">;
@@ -633,7 +638,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   }
 
   async function grantDeadlineChange(item: Appointment) {
-    const { data, error } = await supabase.from("appointments").update({ deadline_changes_allowed: Math.max(item.deadlineChangesAllowed, item.deadlineChangesUsed) + 1 }).eq("id", item.dbId).select(rowColumns).single();
+    const { data, error } = await supabase.from("appointments").update({ deadline_changes_allowed: item.deadlineChangesAllowed + 1 }).eq("id", item.dbId).select(rowColumns).single();
     if (error || !data) { setMessage(error?.message || "Não foi possível liberar a alteração da previsão."); return; }
     replaceRow(data); setMessage(`Nova alteração da previsão liberada para ${item.plate}.`);
   }
@@ -831,10 +836,10 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
             <button type="button" onClick={() => setAccountOpen(true)} title="Minha conta" className="mr-2 min-h-11 rounded-md px-2 text-right text-sm hover:bg-primary-foreground/10"><p className="font-semibold"><UserCircle className="mr-1 inline size-4" />{currentUser.name}</p><p className="text-xs text-primary-foreground/70">{roleLabels[currentUser.role]} · Minha conta</p></button>
             <MyAccountDialog open={accountOpen} onOpenChange={setAccountOpen} userId={currentUser.id} email={currentUser.email ?? ""} name={currentUser.name} onSaved={() => void queryClientForAccount.invalidateQueries({ queryKey: ["profile", currentUser.id] })} />
             <Button variant="secondary" onClick={() => setLogOpen(true)}><History /> Log de alterações</Button>
-            {currentUser.role !== "oficina" && <Button variant="secondary" onClick={() => setNewOpen(true)}><Plus /> Novo agendamento</Button>}
-             {currentUser.role === "master" && <Button variant="secondary" onClick={() => setSettingsOpen(true)}><Settings /> Configurações</Button>}
-            {currentUser.role === "master" && <Button variant="secondary" onClick={() => setTrashOpen(true)}><Trash2 /> Lixeira</Button>}
-            {currentUser.role !== "oficina" && <Button variant="secondary" onClick={() => inputRef.current?.click()}><Upload /> Importar agenda</Button>}
+            {canCreate && <Button variant="secondary" onClick={() => setNewOpen(true)}><Plus /> Novo agendamento</Button>}
+             {currentUser.role === "master" && !workshopMode && <Button variant="secondary" onClick={() => setSettingsOpen(true)}><Settings /> Configurações</Button>}
+            {currentUser.role === "master" && !workshopMode && <Button variant="secondary" onClick={() => setTrashOpen(true)}><Trash2 /> Lixeira</Button>}
+            {canCreate && <Button variant="secondary" onClick={() => inputRef.current?.click()}><Upload /> Importar agenda</Button>}
             <input ref={inputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(event) => importFile(event.target.files?.[0])} />
             <Button variant="ghost" size="icon" onClick={() => setDark((value) => !value)} className="text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground" aria-label="Alternar tema">{dark ? <Sun /> : <Moon />}</Button>
             {onSignOut && <Button variant="ghost" size="icon" onClick={onSignOut} className="text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground" aria-label="Sair"><LogOut /></Button>}
@@ -843,8 +848,9 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
       </header>
 
       <main className="mx-auto max-w-[1600px] space-y-6 px-5 py-6 lg:px-8">
+        {tabs}
         <div className="flex flex-wrap items-end justify-between gap-4">
-          <div><p className="mb-1 text-xs font-semibold uppercase text-accent-foreground">Operação semanal</p><h1 className="text-2xl font-bold lg:text-3xl">Agenda de manutenção</h1><p className="mt-1 text-sm text-muted-foreground">Acompanhamento da frota, oficinas e serviços programados.</p></div>
+          <div><p className="mb-1 text-xs font-semibold uppercase text-accent-foreground">Operação semanal</p><h1 className="text-2xl font-bold lg:text-3xl">{workshopMode ? "Oficina" : "Agenda de manutenção"}</h1><p className="mt-1 text-sm text-muted-foreground">{workshopMode ? "Atualize situação, mecânico, observação e previsão dos veículos." : "Acompanhamento da frota, oficinas e serviços programados."}</p></div>
           <div className="rounded-md border bg-card px-4 py-2 text-right"><p className="text-xs text-muted-foreground">Período carregado</p><p className="text-sm font-semibold">{loadedPeriod}</p></div>
         </div>
 
@@ -909,7 +915,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
         </div></section></SectionBoundary>
 
         <SectionBoundary name="a tabela"><section ref={agendaRef} className="scroll-mt-4 rounded-lg border bg-card shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4"><div><h2 className="font-semibold">Agenda detalhada</h2><p className="text-xs text-muted-foreground">{sorted.length} registros encontrados</p></div><div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" aria-pressed={extraColumns} onClick={() => setExtraColumns((value) => !value)}>{extraColumns ? "Ocultar colunas extras" : "Mostrar colunas extras"}</Button><Button variant="outline" size="sm" onClick={exportBatch}><Download /> Exportar para edição em lote</Button><Button variant="outline" size="sm" disabled={batchBusy} onClick={() => batchInputRef.current?.click()}><Upload /> {batchBusy ? "Atualizando…" : "Atualizar agenda em lote"}</Button><input ref={batchInputRef} type="file" accept=".xlsx" className="hidden" aria-label="Arquivo de atualização em lote" onChange={(event) => void importBatch(event.target.files?.[0])} /><Button variant="outline" size="sm" onClick={() => exportFile("csv")}><Download /> CSV</Button><Button variant="outline" size="sm" onClick={() => exportFile("xlsx")}><Download /> Excel</Button></div></div>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4"><div><h2 className="font-semibold">Agenda detalhada</h2><p className="text-xs text-muted-foreground">{sorted.length} registros encontrados</p></div><div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" aria-pressed={extraColumns} onClick={() => setExtraColumns((value) => !value)}>{extraColumns ? "Ocultar colunas extras" : "Mostrar colunas extras"}</Button>{!workshopMode && <><Button variant="outline" size="sm" onClick={exportBatch}><Download /> Exportar para edição em lote</Button><Button variant="outline" size="sm" disabled={batchBusy} onClick={() => batchInputRef.current?.click()}><Upload /> {batchBusy ? "Atualizando…" : "Atualizar agenda em lote"}</Button></>}<input ref={batchInputRef} type="file" accept=".xlsx" className="hidden" aria-label="Arquivo de atualização em lote" onChange={(event) => void importBatch(event.target.files?.[0])} /><Button variant="outline" size="sm" onClick={() => exportFile("csv")}><Download /> CSV</Button><Button variant="outline" size="sm" onClick={() => exportFile("xlsx")}><Download /> Excel</Button></div></div>
            <div className="max-w-full overflow-x-auto"><table className="w-full min-w-[1400px] text-sm"><thead className="bg-muted/60 text-left text-xs text-muted-foreground"><tr>{[["priority","Prioridade"],["id","ID"],["date","Atendimento"],["time","Hora"],["plate","Placa"],["status","Situação"],["currentDeadline","Prazo"],["model","Modelo"],["contact","Contato"],["workshop","Local/Oficina"],["issue","Problema relatado"],["note","Observação"],["operator","Operador"], ...(extraColumns ? [["brand","Marca"],["kmScheduled","KM"],["contactNumber","Telefone"],["osNumber","O.S Fornecedor"]] : [])].map(([key,label]) => <th key={key} className="px-4 py-3 font-medium"><Button variant="ghost" size="sm" className="h-auto p-0" onClick={() => changeSort(key as keyof Appointment | "priority")}>{label}<ArrowDownAZ className="size-3" /></Button></th>)}</tr></thead><tbody>{pageRows.map((item) => <tr key={item.dbId} onClick={() => setSelected(item)} className="cursor-pointer border-t hover:bg-muted/40"><td className="px-4 py-3">{item.priorityUrgent && item.status !== completion ? <UrgentBadge /> : <span className="text-xs text-muted-foreground">{["Urgente","Atrasado","Hoje","Futuro","Sem prazo"][priorityLevel(item, today, completion)]}</span>}</td><td className="px-4 py-3 font-mono text-xs">#{item.id}</td><td className="whitespace-nowrap px-4 py-3">{formatDateBR(item.date)}</td><td className="px-4 py-3 font-semibold">{dash(normalizeTime(item.time))}</td><td className="px-4 py-3 font-bold"><Button variant="link" className="min-h-11 h-auto px-0 font-bold text-primary" onClick={(event) => { event.stopPropagation(); openVehicle(item.plate); }}>{item.plate || "Não informado"}<ChevronRight className="size-4" /></Button>{item.reworkOf && <span className="mt-1 block"><ReworkBadge /></span>}{isEmergency(item.scheduleType) && <span className="mt-1 block"><EmergencyBadge /></span>}</td><td className="px-4 py-3"><span className={cn("whitespace-nowrap rounded border px-2 py-1 text-xs font-semibold", statusProps(item.status, statuses).className)} style={statusProps(item.status, statuses).style}>{item.status || "Não atualizada"}</span></td><td className="whitespace-nowrap px-4 py-3"><DeadlineBadge item={item} completedAt={completedAtById[item.dbId]} today={today} completion={completion} /></td><td title={item.model} className="max-w-48 truncate px-4 py-3">{dash(item.model)}</td><td title={item.contact} className="max-w-48 truncate px-4 py-3">{dash(item.contact)}</td><td title={item.workshop} className="max-w-52 truncate px-4 py-3">{dash(item.workshop)}</td><td title={item.issue} className="max-w-72 truncate px-4 py-3 text-muted-foreground">{dash(item.issue.replace(/\s+/g, " "))}</td><td title={item.note} className="max-w-36 truncate px-4 py-3">{dash(item.note.replace(/\s+/g, " "))}</td><td title={item.operator} className="max-w-40 truncate whitespace-nowrap px-4 py-3">{dash(item.operator)}</td>{extraColumns && <><td title={item.brand} className="max-w-36 truncate px-4 py-3">{dash(item.brand)}</td><td className="whitespace-nowrap px-4 py-3">{dash(item.kmScheduled)}</td><td className="whitespace-nowrap px-4 py-3">{dash(item.contactNumber)}</td><td className="whitespace-nowrap px-4 py-3">{dash(item.osNumber)}</td></>}</tr>)}</tbody></table></div>
           <div className="flex items-center justify-between border-t p-4"><p className="text-xs text-muted-foreground">Página {currentPage} de {pages}</p><div className="flex gap-2"><Button variant="outline" size="icon" disabled={currentPage <= 1} onClick={() => setPage((value) => Math.max(1,value-1))} aria-label="Página anterior"><ArrowLeft /></Button><Button variant="outline" size="icon" disabled={currentPage >= pages} onClick={() => setPage((value) => Math.min(pages,value+1))} aria-label="Próxima página"><ArrowRight /></Button></div></div>
         </section></SectionBoundary>
@@ -933,7 +939,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader><DialogTitle>Novo agendamento</DialogTitle><DialogDescription>Dados do atendimento</DialogDescription></DialogHeader>
           {newOpen && <label className="mb-3 flex items-center gap-2 text-sm font-medium"><input type="checkbox" className="size-4 accent-destructive" checked={newUrgent && currentUser.role !== "atendimento"} disabled={currentUser.role === "atendimento"} onChange={(event) => setNewUrgent(event.target.checked)} />Marcar como urgente{currentUser.role === "atendimento" && <span className="text-xs font-normal text-muted-foreground">(somente gerente ou master)</span>}</label>}
-          {newOpen && <AppointmentForm initial={emptyFields} definitions={fieldDefinitions} onSave={createAppointment} catalog={catalog} canAddCatalog={currentUser.role !== "oficina"} onCatalogAdded={async () => { await loadCatalog(); }} />}
+          {newOpen && <AppointmentForm initial={emptyFields} definitions={fieldDefinitions} onSave={createAppointment} catalog={catalog} canAddCatalog={canCreate && currentUser.role !== "oficina"} onCatalogAdded={async () => { await loadCatalog(); }} />}
         </DialogContent>
       </Dialog>
       <Dialog open={Boolean(reworkSource)} onOpenChange={(open) => { if (!open) setReworkSource(null); }}>
@@ -966,10 +972,10 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
               {selected.sglocLastError && <p>{selected.sglocLastError}</p>}
               <Button size="sm" variant="outline" onClick={() => void sendToSgloc(selected.dbId, "retry")}>Reenviar</Button>
             </div>}
-            {deadlineBlock(selected, currentUser.role) && <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{deadlineBlock(selected, currentUser.role)}</p>}
-            {canManageDeadline(currentUser.role) && <div className="flex flex-wrap items-center gap-3"><Button variant="outline" disabled={selected.deadlineChangesAllowed > selected.deadlineChangesUsed} onClick={() => grantDeadlineChange(selected)}><Unlock /> Liberar nova alteração da previsão</Button><span className="text-xs text-muted-foreground">Previsão (atendimento/oficina): {selected.deadlineChangesUsed} de {selected.deadlineChangesAllowed} alteração(ões) usada(s)</span></div>}
-            <AppointmentForm key={`${selected.dbId}-${historyKey}`} initial={fieldsFromAppointment(selected)} definitions={fieldDefinitions} catalog={catalog} canAddCatalog={currentUser.role !== "oficina"} onCatalogAdded={async () => { await loadCatalog(); }} editing blocked={null} deadlineLocked={Boolean(deadlineBlock(selected, currentUser.role))} onSave={saveAppointment} statusOptions={serviceStatuses} canUrgent={canManageDeadline(currentUser.role)} onDirtyChange={(dirty) => { dirtyRef.current = dirty; }} />
-            <div className="flex flex-wrap gap-2 border-t pt-4">{currentUser.role !== "oficina" && <Button variant="outline" onClick={() => openRework(selected)}><RotateCcw /> Registrar retrabalho</Button>}{currentUser.role === "master" && <Button variant="destructive" onClick={() => void archiveAppointment(selected)}><Trash2 /> Excluir</Button>}</div>
+            {deadlineBlock(selected, currentUser.role, myLimit) && <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{deadlineBlock(selected, currentUser.role, myLimit)}</p>}
+            {canManageDeadline(currentUser.role) && <div className="flex flex-wrap items-center gap-3"><Button variant="outline" onClick={() => grantDeadlineChange(selected)}><Unlock /> Liberar nova alteração da previsão</Button><span className="text-xs text-muted-foreground">Previsão: {selected.deadlineChangesUsed} alteração(ões) feita(s) · {selected.deadlineChangesAllowed - 1} extra(s) liberada(s) além do limite de cada pessoa</span></div>}
+            <AppointmentForm key={`${selected.dbId}-${historyKey}`} initial={fieldsFromAppointment(selected)} definitions={fieldDefinitions} catalog={catalog} canAddCatalog={canCreate && currentUser.role !== "oficina"} onCatalogAdded={async () => { await loadCatalog(); }} editing blocked={null} deadlineLocked={Boolean(deadlineBlock(selected, currentUser.role, myLimit))} onSave={saveAppointment} statusOptions={serviceStatuses} canUrgent={canManageDeadline(currentUser.role)} onDirtyChange={(dirty) => { dirtyRef.current = dirty; }} />
+            <div className="flex flex-wrap gap-2 border-t pt-4">{canCreate && <Button variant="outline" onClick={() => openRework(selected)}><RotateCcw /> Registrar retrabalho</Button>}{currentUser.role === "master" && !workshopMode && <Button variant="destructive" onClick={() => void archiveAppointment(selected)}><Trash2 /> Excluir</Button>}</div>
             {(selected.osNumber !== null && fieldDefinitions.find((field) => field.field_key === "os_number")?.visible !== false) || selected.sglocReference ? <div className="grid gap-3 sm:grid-cols-2">
               {selected.osNumber !== null && fieldDefinitions.find((field) => field.field_key === "os_number")?.visible !== false && <Detail label="O.S Fornecedor" value={String(selected.osNumber)} />}
               {selected.sglocReference && <Detail label="ID SGLOC" value={selected.sglocReference} />}
@@ -982,8 +988,8 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
       </Dialog>
       <ChangeLogDialog open={logOpen} onOpenChange={setLogOpen} onPlateClick={openVehicle} />
       <Toaster richColors position="bottom-right" />
-      {currentUser.role === "master" && <TrashDialog open={trashOpen} onOpenChange={setTrashOpen} onRestored={() => void loadAppointments()} />}
-      {currentUser.role === "master" && <AgendaSettings open={settingsOpen} onOpenChange={setSettingsOpen} statuses={statuses} fields={fieldDefinitions} currentUserId={currentUser.id} onRefresh={async () => { await loadConfig(); await loadAppointments(); }} />}
+      {currentUser.role === "master" && !workshopMode && <TrashDialog open={trashOpen} onOpenChange={setTrashOpen} onRestored={() => void loadAppointments()} />}
+      {currentUser.role === "master" && !workshopMode && <AgendaSettings open={settingsOpen} onOpenChange={setSettingsOpen} statuses={statuses} fields={fieldDefinitions} currentUserId={currentUser.id} onRefresh={async () => { await loadConfig(); await loadAppointments(); }} />}
     </div>
   );
 }
