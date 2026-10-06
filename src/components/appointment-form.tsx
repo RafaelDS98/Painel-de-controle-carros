@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { FieldDefinition, CustomValues } from "@/lib/agenda-config";
 import { normalizePlate, parseKm, phonePattern } from "@/lib/normalize";
+import { kindForField, emptyCatalog, type Catalog } from "@/lib/catalog";
+import { CatalogSelect } from "@/components/catalog-select";
 
 export type AppointmentFields = {
   date: string; time: string; plate: string; store: string; model: string;
@@ -34,7 +36,10 @@ const baseFields = [
   { key: "plate", label: "Placa", type: "text" },
 ] as const;
 
-export function AppointmentForm({ initial, definitions, editing = false, blocked, onSave, statusOptions, canUrgent = false, onDirtyChange, deadlineLocked = false }: {
+export function AppointmentForm({ initial, definitions, editing = false, blocked, onSave, statusOptions, canUrgent = false, onDirtyChange, deadlineLocked = false, catalog = emptyCatalog(), canAddCatalog = false, onCatalogAdded }: {
+  catalog?: Catalog;
+  canAddCatalog?: boolean;
+  onCatalogAdded?: () => Promise<void> | void;
   deadlineLocked?: boolean;
   statusOptions?: string[];
   canUrgent?: boolean;
@@ -89,7 +94,8 @@ export function AppointmentForm({ initial, definitions, editing = false, blocked
             : key ? { ...prev, [key]: next } : prev);
           const options = Array.isArray(field.select_options) ? field.select_options.filter((option): option is string => typeof option === "string") : [];
           return <label key={field.id} className={field.field_type === "textarea" ? "sm:col-span-2" : ""}><span className="mb-1.5 block text-xs font-medium uppercase text-muted-foreground">{field.label}{field.required ? " *" : ""}</span>
-            {field.field_type === "textarea" ? <textarea value={value} required={field.required} onChange={(event) => setValue(event.target.value)} rows={2} className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" />
+            {kindForField[field.field_key] ? <CatalogSelect kind={kindForField[field.field_key]!} items={catalog[kindForField[field.field_key]!]} value={value} required={field.required} canAdd={canAddCatalog} onChange={setValue} onAdded={() => onCatalogAdded?.()} />
+              : field.field_type === "textarea" ? <textarea value={value} required={field.required} onChange={(event) => setValue(event.target.value)} rows={2} className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" />
               : field.field_type === "select" ? <select value={value} required={field.required} onChange={(event) => setValue(event.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground"><option value="">Selecione</option>{options.map((option) => <option key={option} value={option}>{option}</option>)}</select>
               : <Input type={field.field_type === "date" ? "date" : "text"} inputMode={field.field_key === "km_scheduled" ? "numeric" : field.field_key === "contact_number" ? "tel" : undefined} value={value} required={field.required} disabled={editing && deadlineLocked && field.field_key === "current_deadline"} onChange={(event) => setValue(event.target.value)} />}
             {hints[field.field_key] && <span className="mt-1 block text-xs text-muted-foreground">{hints[field.field_key]}</span>}
