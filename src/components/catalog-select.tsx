@@ -48,7 +48,7 @@ export function CatalogSelect({ kind, items, value, required, disabled, canAdd, 
     </select>
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader><DialogTitle>{labels.add.replace("...", "")}</DialogTitle><DialogDescription>O novo item fica disponível para todos e já é selecionado neste agendamento.</DialogDescription></DialogHeader>
+        <DialogHeader><DialogTitle>{labels.add.replace("...", "")}</DialogTitle><DialogDescription>O novo item fica disponível para todos e já é selecionado.</DialogDescription></DialogHeader>
         <form onSubmit={save} className="space-y-3">
           <label className="block text-sm">Nome *<Input autoFocus value={name} maxLength={200} onChange={(e) => setName(e.target.value)} /></label>
           {hasSglocId(kind) && <label className="block text-sm">ID {kind === "store" ? "da loja" : "do operador"} no SGLOC
