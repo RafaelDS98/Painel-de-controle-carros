@@ -127,3 +127,19 @@ describe("exportação", () => {
     expect(rows[0]?.["Problemas Relatado"]).toContain("\n");
   });
 });
+
+import { buildImportRecords as buildRecs, importErrorReason as reason } from "./agenda-safety";
+describe("importação manual: linhas e motivos", () => {
+  it("guarda a linha da planilha de cada registro criado", () => {
+    const rows = [{ ID: "1123", Placa: "QEA1B23", "Data Atendimento": "05/10/2026", Hora: "08:00" }, { ID: "", Placa: "" }, { ID: "9", Placa: "abc-1234", "Data Atendimento": "2026-10-06", Hora: "9:30" }];
+    const { records, lines, skippedEmpty } = buildRecs(rows, null, false);
+    expect(lines).toEqual([2, 4]);
+    expect(skippedEmpty).toBe(1);
+    expect(records[0]).toMatchObject({ plate: "QEA1B23", date: "2026-10-05", time: "08:00", status: "", sgloc_reference: "1123" });
+  });
+  it("traduz erros do banco", () => {
+    expect(reason({ code: "23505" })).toMatch(/já cadastrado/);
+    expect(reason({ code: "42501" })).toMatch(/permissão/);
+    expect(reason(null)).toMatch(/desconhecido/);
+  });
+});
