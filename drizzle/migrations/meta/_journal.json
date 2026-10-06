@@ -134,6 +134,13 @@
       "when": 1791297143043,
       "tag": "0018_catalog_lists",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1791298496143,
+      "tag": "0019_oficina_module_sector_deadline_limit",
+      "breakpoints": true
     }
   ]
 }

@@ -1,12 +1,12 @@
 // Listas de seleção (Loja, Marca, Operador, Mecânico, Local/Oficina): regras puras.
 import { EMPTY_OPTION, foldKey } from "./agenda-safety";
 
-export type CatalogKind = "store" | "brand" | "operator" | "mechanic" | "workshop";
+export type CatalogKind = "store" | "brand" | "operator" | "mechanic" | "workshop" | "sector";
 export type CatalogItem = { id: string; kind: CatalogKind; name: string; active: boolean; sgloc_id: number | null; source?: string };
 export type Catalog = Record<CatalogKind, CatalogItem[]>;
 
-export const CATALOG_KINDS: CatalogKind[] = ["workshop", "store", "brand", "mechanic", "operator"];
-export const emptyCatalog = (): Catalog => ({ store: [], brand: [], operator: [], mechanic: [], workshop: [] });
+export const CATALOG_KINDS: CatalogKind[] = ["workshop", "store", "brand", "mechanic", "operator", "sector"];
+export const emptyCatalog = (): Catalog => ({ store: [], brand: [], operator: [], mechanic: [], workshop: [], sector: [] });
 
 /** Campo do formulário (field_key) → lista. */
 export const kindForField: Record<string, CatalogKind> = {
@@ -18,6 +18,7 @@ export const catalogLabels: Record<CatalogKind, { title: string; add: string; no
   brand: { title: "Marcas", add: "Adicionar marca...", noun: "marca" },
   mechanic: { title: "Mecânicos", add: "Adicionar mecânico...", noun: "mecânico" },
   operator: { title: "Operadores", add: "Adicionar operador...", noun: "operador" },
+  sector: { title: "Setores", add: "Adicionar setor...", noun: "setor" },
 };
 /** Listas que têm ID no SGLOC. */
 export const hasSglocId = (kind: CatalogKind) => kind === "store" || kind === "operator";

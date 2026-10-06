@@ -38,7 +38,7 @@ export function CatalogPanel({ onChanged }: { onChanged: () => Promise<void> }) 
 
   return <section className="space-y-3">
     <div className="flex flex-wrap gap-2">{CATALOG_KINDS.map((k) => <Button key={k} size="sm" variant={k === kind ? "default" : "outline"} onClick={() => { setKind(k); setMsg({}); }}>{catalogLabels[k].title}</Button>)}</div>
-    <p className="text-xs text-muted-foreground">Renomear atualiza os agendamentos ligados (inclusive na Lixeira) e entra no histórico. Desativar tira da lista de escolha, mas o nome continua nos agendamentos que já o usam.{kind === "store" ? " Loja sem ID SGLOC não é enviada ao SGLOC." : ""}</p>
+    <p className="text-xs text-muted-foreground">{kind === "sector" ? "Setor é só um rótulo do usuário (sem permissões). Renomear atualiza os usuários ligados. " : ""}Renomear atualiza os agendamentos ligados (inclusive na Lixeira) e entra no histórico. Desativar tira da lista de escolha, mas o nome continua nos agendamentos que já o usam.{kind === "store" ? " Loja sem ID SGLOC não é enviada ao SGLOC." : ""}</p>
     {msg.error && <p role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{msg.error}</p>}
     {msg.ok && <p className="text-sm text-muted-foreground">{msg.ok}</p>}
     <ul className="divide-y rounded-md border">{rows.map((row) => {
