@@ -1,5 +1,5 @@
 // Listas de seleção (Loja, Marca, Operador, Mecânico, Local/Oficina): regras puras.
-import { foldKey } from "./agenda-safety";
+import { EMPTY_OPTION, foldKey } from "./agenda-safety";
 
 export type CatalogKind = "store" | "brand" | "operator" | "mechanic" | "workshop";
 export type CatalogItem = { id: string; kind: CatalogKind; name: string; active: boolean; sgloc_id: number | null; source?: string };
@@ -45,7 +45,7 @@ export function filterOptions(items: CatalogItem[], present: string[]): string[]
   const tail: string[] = [];
   for (const name of [...items.map((item) => item.name), ...present]) {
     const key = catalogKey(name);
-    if (!key) { if (name && !tail.includes(name)) tail.push(name); continue; }
+    if (!key || name === EMPTY_OPTION) { if (name && !tail.includes(name)) tail.push(name); continue; }
     if (!seen.has(key)) seen.set(key, name);
   }
   return [...[...seen.values()].sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" })), ...tail];
