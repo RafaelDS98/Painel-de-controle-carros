@@ -113,7 +113,7 @@ export async function runSglocSync(opts: { trigger: SyncTrigger; simulate: boole
       if (!name || seenCatalog.has(key)) continue;
       seenCatalog.add(key);
       const sid = idColumn && typeof f[idColumn] === "number" ? (f[idColumn] as number) : undefined;
-      const { data: added, error: catErr } = await supabaseAdmin.rpc("catalog_add", { _kind: kind, _name: name, _sgloc_id: sid, _source: "SGLOC" });
+      const { data: added, error: catErr } = await supabaseAdmin.rpc("catalog_add", { _kind: kind, _name: name, _source: "SGLOC", ...(sid !== undefined ? { _sgloc_id: sid } : {}) });
       if (!catErr && (added as { created?: boolean } | null)?.created) catalogAdded++;
     }
   }

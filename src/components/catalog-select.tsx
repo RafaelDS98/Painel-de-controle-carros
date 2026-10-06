@@ -28,7 +28,7 @@ export function CatalogSelect({ kind, items, value, required, disabled, canAdd, 
     const id = sglocId.trim() ? Number(sglocId) : null;
     if (id !== null && (!Number.isInteger(id) || id <= 0)) { setError("O ID SGLOC deve ser um número inteiro."); return; }
     setBusy(true); setError("");
-    const { data, error: rpcError } = await supabase.rpc("catalog_add", { _kind: kind, _name: clean, _sgloc_id: id ?? undefined, _source: "manual" });
+    const { data, error: rpcError } = await supabase.rpc("catalog_add", { _kind: kind, _name: clean, _source: "manual", ...(id !== null ? { _sgloc_id: id } : {}) });
     setBusy(false);
     if (rpcError) { setError(rpcError.message); return; }
     const saved = (data as { name?: string } | null)?.name ?? clean;
