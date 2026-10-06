@@ -28,3 +28,6 @@
 - [x] Importação manual: grava linha a linha com resumo (criados/ignorados/erros por linha), leva a grade à semana importada; agenda recarrega a cada 2 min e ao voltar à aba; aviso de carga/sincronização falha, atrasada ou em simulação.
 - [x] Agenda recarrega na hora após sincronizar/simular/importar, com aviso do que entrou.
 - [x] Loja, Marca, Operador, Mecânico e Local/Oficina como listas com "Adicionar ...", aba Configurações > Listas, importação/sincronização cadastram o que falta, loja sem ID SGLOC bloqueia só o envio dela.
+- [x] Perfil Oficina operacional + aba Oficina (vê/edita todos os ativos, sem criar/importar/lote/excluir/urgência).
+- [x] Campo Setor no usuário (lista "Setores", semeada com Oficina).
+- [x] Limite de alterações da Previsão de Entrega por perfil/usuário (Atendimento e Oficina, padrão 1).
