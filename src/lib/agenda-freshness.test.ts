@@ -23,3 +23,12 @@ describe("aviso de agenda desatualizada", () => {
     expect(agendaWarnings({ loadedAt: now, now, loadFailed: false, sync: sync({ lastRealSuccessAt: null }) })[0]).toMatch(/Nenhuma/);
   });
 });
+
+import { agendaChangeToast } from "./agenda-freshness";
+describe("aviso de recarga após sincronização", () => {
+  it("conta o que entrou e não avisa em simulação", () => {
+    expect(agendaChangeToast({ source: "sync", inserted: 4, updated: 1 })).toBe("Agenda atualizada pela sincronização: 4 novo(s), 1 alterado(s).");
+    expect(agendaChangeToast({ source: "simulation", inserted: 4 })).toBeNull();
+    expect(agendaChangeToast(null)).toBeNull();
+  });
+});

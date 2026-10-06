@@ -102,6 +102,21 @@ export async function runSglocSync(opts: { trigger: SyncTrigger; simulate: boole
   }
 
   const errors: { ref?: string; kind: string }[] = [];
+  // Listas de seleção: valores novos vindos do SGLOC entram com origem "SGLOC" (casados pelo nome normalizado).
+  let catalogAdded = 0;
+  const touched = [...plan.create.map((c) => c.fields as Record<string, unknown>), ...plan.update.map((u) => u.patch as Record<string, unknown>), ...plan.link.map((u) => u.patch as Record<string, unknown>)];
+  const seenCatalog = new Set<string>();
+  for (const f of touched) {
+    for (const [kind, column, idColumn] of [["store", "store", "store_id"], ["brand", "brand", null], ["operator", "operator", "operator_id"], ["workshop", "workshop", null]] as const) {
+      const name = typeof f[column] === "string" ? (f[column] as string).trim() : "";
+      const key = `${kind}:${name.toLowerCase()}`;
+      if (!name || seenCatalog.has(key)) continue;
+      seenCatalog.add(key);
+      const sid = idColumn && typeof f[idColumn] === "number" ? (f[idColumn] as number) : undefined;
+      const { data: added, error: catErr } = await supabaseAdmin.rpc("catalog_add", { _kind: kind, _name: name, _source: "SGLOC", ...(sid !== undefined ? { _sgloc_id: sid } : {}) });
+      if (!catErr && (added as { created?: boolean } | null)?.created) catalogAdded++;
+    }
+  }
   let inserted = 0; let updated = 0; let linked = 0; let missing = 0;
   const today = todayInSaoPaulo();
   const now = new Date().toISOString();
@@ -124,5 +139,5 @@ export async function runSglocSync(opts: { trigger: SyncTrigger; simulate: boole
   }
   const status = errors.length || !complete ? "partial" : "success";
   return finish(status, { ...base, inserted, updated, linked, not_returned: missing, errors: errors.length, error_detail: errors.slice(0, 50) },
-    `Sincronização: ${inserted} criado(s), ${updated} atualizado(s), ${linked} vinculado(s), ${missing} não retornado(s), ${errors.length} erro(s).${note}`);
+    `Sincronização: ${inserted} criado(s), ${updated} atualizado(s), ${linked} vinculado(s), ${missing} não retornado(s), ${errors.length} erro(s)${catalogAdded ? `, ${catalogAdded} novo(s) item(ns) nas listas` : ""}.${note}`);
 }

@@ -35,3 +35,18 @@ export function agendaWarnings(input: { loadedAt: number | null; now: number; lo
   if (sync.accountWarning) out.push(sync.accountWarning);
   return out;
 }
+
+/** Evento de janela disparado quando uma sincronização ou importação termina: a Agenda recarrega na hora. */
+export const AGENDA_CHANGED_EVENT = "anpexc:agenda-changed";
+export type AgendaChange = { source: "sync" | "simulation" | "import"; inserted?: number; updated?: number };
+export function announceAgendaChange(change: AgendaChange) {
+  if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent<AgendaChange>(AGENDA_CHANGED_EVENT, { detail: change }));
+}
+/** Texto do aviso após a recarga; simulação não grava nada, então não avisa. */
+export function agendaChangeToast(change: AgendaChange | null | undefined): string | null {
+  if (!change || change.source === "simulation") return null;
+  const inserted = Math.max(0, Number(change.inserted) || 0);
+  const updated = Math.max(0, Number(change.updated) || 0);
+  if (change.source === "sync") return `Agenda atualizada pela sincronização: ${inserted} novo(s), ${updated} alterado(s).`;
+  return inserted ? `Agenda atualizada: ${inserted} agendamento(s) entraram.` : null;
+}

@@ -195,6 +195,75 @@ export type Database = {
           },
         ]
       }
+      catalog_items: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          id: string
+          kind: string
+          name: string
+          name_key: string | null
+          sgloc_id: number | null
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind: string
+          name: string
+          name_key?: string | null
+          sgloc_id?: number | null
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: string
+          name?: string
+          name_key?: string | null
+          sgloc_id?: number | null
+          source?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      catalog_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          changed_at: string
+          detail: string
+          id: string
+          item_name: string
+          kind: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          changed_at?: string
+          detail?: string
+          id?: string
+          item_name: string
+          kind: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          changed_at?: string
+          detail?: string
+          id?: string
+          item_name?: string
+          kind?: string
+        }
+        Relationships: []
+      }
       contact_log: {
         Row: {
           appointment_id: string
@@ -779,6 +848,7 @@ export type Database = {
           created_by: string | null
           id: string
           name: string
+          source: string
         }
         Insert: {
           active?: boolean
@@ -786,6 +856,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           name: string
+          source?: string
         }
         Update: {
           active?: boolean
@@ -793,6 +864,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           name?: string
+          source?: string
         }
         Relationships: []
       }
@@ -801,6 +873,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      catalog_add: {
+        Args: {
+          _kind: string
+          _name: string
+          _sgloc_id?: number
+          _source?: string
+        }
+        Returns: Json
+      }
+      catalog_update: {
+        Args: {
+          _active: boolean
+          _id: string
+          _kind: string
+          _name: string
+          _sgloc_id: number
+        }
+        Returns: number
+      }
       edit_limit_for: { Args: { _uid: string }; Returns: number }
       existing_sgloc_references: {
         Args: { _refs: string[] }
@@ -844,6 +935,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      norm_name: { Args: { _v: string }; Returns: string }
       revoke_user_sessions: { Args: { _user_id: string }; Returns: undefined }
       set_edit_limit_default: {
         Args: { _max: number; _role: Database["public"]["Enums"]["app_role"] }

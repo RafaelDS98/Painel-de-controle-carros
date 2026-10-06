@@ -26,3 +26,5 @@
 - [x] Previsão de entrega 1x para atendimento/oficina com liberação por gerente/master; Oficina edita encaminhados e não cria.
 - [ ] Cadastrar a tarefa agendada de 15 min chamando a rota do tick (bloqueado: sem mecanismo de agendamento da plataforma disponível ao agente; pg_cron não aprovado).
 - [x] Importação manual: grava linha a linha com resumo (criados/ignorados/erros por linha), leva a grade à semana importada; agenda recarrega a cada 2 min e ao voltar à aba; aviso de carga/sincronização falha, atrasada ou em simulação.
+- [x] Agenda recarrega na hora após sincronizar/simular/importar, com aviso do que entrou.
+- [x] Loja, Marca, Operador, Mecânico e Local/Oficina como listas com "Adicionar ...", aba Configurações > Listas, importação/sincronização cadastram o que falta, loja sem ID SGLOC bloqueia só o envio dela.

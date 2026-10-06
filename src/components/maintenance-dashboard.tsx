@@ -74,6 +74,8 @@ import { AGENDA_REFRESH_MS, agendaWarnings, type SyncSnapshot } from "@/lib/agen
 import { canManageDeadline, deadlineBlockReason } from "@/lib/edit-limits";
 import { buildAppointmentUpdate } from "@/lib/appointment-update";
 import { Toaster } from "@/components/ui/sonner";
+import { canonicalName, emptyCatalog, filterOptions, missingNames, type Catalog, type CatalogItem, type CatalogKind } from "@/lib/catalog";
+import { AGENDA_CHANGED_EVENT, agendaChangeToast, type AgendaChange } from "@/lib/agenda-freshness";
 
 type Appointment = {
   dbId: string;
@@ -311,7 +313,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const [message, setMessage] = useState("");
   const [batchBusy, setBatchBusy] = useState(false);
   const [batchResult, setBatchResult] = useState<{ updated: number; unchanged: number; skipped: number; errors: { line: number; plate: string; reason: string }[] } | null>(null);
-  const [importResult, setImportResult] = useState<{ created: { line: number; plate: string; date: string | null; time: string; ref: string | null }[]; skippedEmpty: number; skippedExisting: number; errors: { line: number; plate: string; reason: string }[] } | null>(null);
+  const [importResult, setImportResult] = useState<{ created: { line: number; plate: string; date: string | null; time: string; ref: string | null }[]; skippedEmpty: number; skippedExisting: number; errors: { line: number; plate: string; reason: string }[]; catalogAdded: number } | null>(null);
   const [loadedAt, setLoadedAt] = useState<number | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [nowTick, setNowTick] = useState(() => Date.now());
@@ -319,6 +321,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
   const syncStatus = useServerFn(getSglocSyncStatus);
   const freshness = agendaWarnings({ loadedAt, now: nowTick, loadFailed, sync: syncSnap });
   const [dark, setDark] = useState(false);
+  const [catalog, setCatalog] = useState<Catalog>(emptyCatalog);
   const inputRef = useRef<HTMLInputElement>(null);
   const batchInputRef = useRef<HTMLInputElement>(null);
 
@@ -381,6 +384,18 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
     } catch { /* aviso de sincronização é opcional; a agenda continua */ }
   }
 
+  async function loadCatalog(): Promise<Catalog> {
+    const [items, shops] = await Promise.all([
+      supabase.from("catalog_items").select("id, kind, name, active, sgloc_id, source").order("name"),
+      supabase.from("workshops").select("id, name, active").order("name"),
+    ]);
+    const next = emptyCatalog();
+    for (const item of items.data ?? []) next[item.kind as CatalogKind]?.push(item as CatalogItem);
+    next.workshop = (shops.data ?? []).map((w) => ({ id: w.id, kind: "workshop", name: w.name, active: w.active, sgloc_id: null }));
+    setCatalog(next);
+    return next;
+  }
+
   async function loadConfig() {
     const [statusResult, fieldResult] = await Promise.all([
       supabase.from("status_options").select("*").order("sort_order").order("created_at"),
@@ -396,7 +411,18 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
       setLimitsTick((t) => t + 1);
     })();
   }, []);
-  useEffect(() => { void loadConfig(); void loadAppointments(); void loadSyncSnapshot(); }, []);
+  useEffect(() => { void loadConfig(); void loadAppointments(); void loadSyncSnapshot(); void loadCatalog(); }, []);
+  // Recarrega na hora quando uma sincronização (ou outra tela) avisa que a agenda mudou.
+  useEffect(() => {
+    const onChange = (event: Event) => {
+      const detail = (event as CustomEvent<AgendaChange>).detail;
+      void loadAppointments(); void loadSyncSnapshot(); void loadCatalog();
+      const text = agendaChangeToast(detail);
+      if (text) toast.success(text);
+    };
+    window.addEventListener(AGENDA_CHANGED_EVENT, onChange);
+    return () => window.removeEventListener(AGENDA_CHANGED_EVENT, onChange);
+  }, []);
   // Recarrega sozinha a cada 2 min e ao voltar para a aba, para novos agendamentos aparecerem sem recarregar a página.
   useEffect(() => {
     const refresh = () => { if (document.visibilityState === "visible") { void loadAppointments(); void loadSyncSnapshot(); } setNowTick(Date.now()); };
@@ -640,6 +666,18 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
       }
       const tagged = candidates.map((record, index) => ({ record, line: lines[index] ?? 0, sgloc_reference: record.sgloc_reference ?? null }));
       const { kept, skippedExisting } = dropExistingReferences(tagged, existing);
+      // Valores fora das listas: casa pelo nome normalizado; se não existir, cadastra com origem "importação".
+      let lists = await loadCatalog();
+      let catalogAdded = 0;
+      const importKinds = [["store", "store"], ["brand", "brand"], ["operator", "operator"], ["workshop", "workshop"]] as const;
+      for (const [kind, column] of importKinds) {
+        for (const name of missingNames(lists[kind], kept.map((item) => item.record[column]))) {
+          const { data: added } = await supabase.rpc("catalog_add", { _kind: kind, _name: name, _source: "importação" });
+          if ((added as { created?: boolean } | null)?.created) catalogAdded++;
+        }
+      }
+      if (catalogAdded) lists = await loadCatalog();
+      for (const item of kept) for (const [kind, column] of importKinds) if (item.record[column]) item.record[column] = canonicalName(lists[kind], item.record[column]);
       const created: { line: number; plate: string; date: string | null; time: string; ref: string | null }[] = [];
       const errors: { line: number; plate: string; reason: string }[] = [];
       const ok = (item: (typeof kept)[number]) => created.push({ line: item.line, plate: item.record.plate ?? "", date: item.record.date ?? null, time: item.record.time ?? "", ref: item.record.sgloc_reference ?? null });
@@ -656,7 +694,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
       }
       await loadAppointments(); resetFilters();
       setMessage("");
-      setImportResult({ created, skippedEmpty, skippedExisting, errors });
+      setImportResult({ created, skippedEmpty, skippedExisting, errors, catalogAdded });
       const firstDate = created.map((item) => item.date).filter((d): d is string => Boolean(d)).sort()[0];
       if (firstDate) window.setTimeout(() => setGridStart(weekRange(firstDate).start), 50);
       if (created.length) toast.success(`${created.length} agendamento(s) criado(s) pela importação.`);
@@ -815,7 +853,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
         {message && <div className="flex items-center justify-between rounded-md border border-accent bg-accent/30 px-4 py-3 text-sm"><span>{message}</span><Button variant="ghost" size="icon" onClick={() => setMessage("")}><X /></Button></div>}
         {importResult && <section aria-label="Resultado da importação" className="space-y-2 border-y py-4 text-sm">
           <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-semibold">Importação concluída</h2><Button variant="ghost" size="icon" aria-label="Fechar resultado da importação" onClick={() => setImportResult(null)}><X /></Button></div>
-          <p>{importResult.created.length} criado(s) · 0 atualizado(s) (a importação só cria; para alterar use "Atualizar agenda em lote") · {importResult.skippedEmpty} ignorada(s) sem placa ou vazias · {importResult.skippedExisting} ignorada(s) por ID do SGLOC já existente · {importResult.errors.length} erro(s)</p>
+          <p>{importResult.created.length} criado(s) · 0 atualizado(s) (a importação só cria; para alterar use "Atualizar agenda em lote") · {importResult.skippedEmpty} ignorada(s) sem placa ou vazias · {importResult.skippedExisting} ignorada(s) por ID do SGLOC já existente · {importResult.errors.length} erro(s){importResult.catalogAdded ? ` · ${importResult.catalogAdded} novo(s) item(ns) nas listas (origem importação)` : ""}</p>
           {importResult.created.length > 0 && <ul className="max-h-40 list-disc space-y-1 overflow-y-auto pl-5">{importResult.created.map((item) => <li key={`c-${item.line}`}>Linha {item.line} · {dash(item.plate)} · {formatDateBR(item.date)} {dash(item.time)}{item.ref ? ` · ID SGLOC ${item.ref}` : ""}</li>)}</ul>}
           {importResult.errors.length > 0 && <ul className="max-h-64 list-disc space-y-1 overflow-y-auto pl-5 text-destructive">{importResult.errors.map((error) => <li key={`e-${error.line}`}>Linha {error.line} · {dash(error.plate)}: {error.reason}</li>)}</ul>}
         </section>}
@@ -830,12 +868,12 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
             <label className="relative min-w-0 flex-[1.4] sm:min-w-64"><Search className="absolute left-3 top-3 size-4 text-muted-foreground" /><Input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Buscar placa, contato ou serviço" className="pl-9" /></label>
             <div className="flex min-w-0 flex-1 flex-wrap gap-2 sm:min-w-64"><Input type="date" aria-label="Data inicial" value={startDate} onChange={(e) => { setStartDate(e.target.value); setPeriodPreset("custom"); setPage(1); }} className="min-w-36 flex-1" /><Input type="date" aria-label="Data final" value={endDate} onChange={(e) => { setEndDate(e.target.value); setPeriodPreset("custom"); setPage(1); }} className="min-w-36 flex-1" /></div>
             <SearchableSelect label="Todos os contatos" value={contact} options={option("contact")} onChange={setContact} />
-            <SearchableSelect label="Todas as oficinas" value={workshop} options={option("workshop")} onChange={setWorkshop} />
+            <SearchableSelect label="Todas as oficinas" value={workshop} options={filterOptions(catalog.workshop, option("workshop"))} onChange={setWorkshop} />
           </div>
           <div className="mt-3 flex flex-col gap-3 md:flex-row">
             <SearchableSelect label="Todas as placas" value={plateFilter} options={option("plate")} onChange={(value) => { setPlateFilter(value); setPage(1); }} />
             <SearchableSelect label="Todos os modelos" value={model} options={option("model")} onChange={setModel} />
-            <SearchableSelect label="Todos os operadores" value={operator} options={option("operator")} onChange={setOperator} />
+            <SearchableSelect label="Todos os operadores" value={operator} options={filterOptions(catalog.operator, option("operator"))} onChange={setOperator} />
             <label className="flex min-h-10 items-center gap-2 text-sm text-foreground"><Checkbox checked={reworksOnly} onCheckedChange={(checked) => { setReworksOnly(checked === true); setPage(1); }} aria-label="Mostrar somente retrabalhos" />Mostrar somente retrabalhos</label>
             <Button variant="outline" onClick={resetFilters}><RotateCcw /> Limpar tudo</Button>
           </div>
@@ -895,7 +933,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader><DialogTitle>Novo agendamento</DialogTitle><DialogDescription>Dados do atendimento</DialogDescription></DialogHeader>
           {newOpen && <label className="mb-3 flex items-center gap-2 text-sm font-medium"><input type="checkbox" className="size-4 accent-destructive" checked={newUrgent && currentUser.role !== "atendimento"} disabled={currentUser.role === "atendimento"} onChange={(event) => setNewUrgent(event.target.checked)} />Marcar como urgente{currentUser.role === "atendimento" && <span className="text-xs font-normal text-muted-foreground">(somente gerente ou master)</span>}</label>}
-          {newOpen && <AppointmentForm initial={emptyFields} definitions={fieldDefinitions} onSave={createAppointment} />}
+          {newOpen && <AppointmentForm initial={emptyFields} definitions={fieldDefinitions} onSave={createAppointment} catalog={catalog} canAddCatalog={currentUser.role !== "oficina"} onCatalogAdded={async () => { await loadCatalog(); }} />}
         </DialogContent>
       </Dialog>
       <Dialog open={Boolean(reworkSource)} onOpenChange={(open) => { if (!open) setReworkSource(null); }}>
@@ -930,7 +968,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser }: { onSignOut?: (
             </div>}
             {deadlineBlock(selected, currentUser.role) && <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{deadlineBlock(selected, currentUser.role)}</p>}
             {canManageDeadline(currentUser.role) && <div className="flex flex-wrap items-center gap-3"><Button variant="outline" disabled={selected.deadlineChangesAllowed > selected.deadlineChangesUsed} onClick={() => grantDeadlineChange(selected)}><Unlock /> Liberar nova alteração da previsão</Button><span className="text-xs text-muted-foreground">Previsão (atendimento/oficina): {selected.deadlineChangesUsed} de {selected.deadlineChangesAllowed} alteração(ões) usada(s)</span></div>}
-            <AppointmentForm key={`${selected.dbId}-${historyKey}`} initial={fieldsFromAppointment(selected)} definitions={fieldDefinitions} editing blocked={null} deadlineLocked={Boolean(deadlineBlock(selected, currentUser.role))} onSave={saveAppointment} statusOptions={serviceStatuses} canUrgent={canManageDeadline(currentUser.role)} onDirtyChange={(dirty) => { dirtyRef.current = dirty; }} />
+            <AppointmentForm key={`${selected.dbId}-${historyKey}`} initial={fieldsFromAppointment(selected)} definitions={fieldDefinitions} catalog={catalog} canAddCatalog={currentUser.role !== "oficina"} onCatalogAdded={async () => { await loadCatalog(); }} editing blocked={null} deadlineLocked={Boolean(deadlineBlock(selected, currentUser.role))} onSave={saveAppointment} statusOptions={serviceStatuses} canUrgent={canManageDeadline(currentUser.role)} onDirtyChange={(dirty) => { dirtyRef.current = dirty; }} />
             <div className="flex flex-wrap gap-2 border-t pt-4">{currentUser.role !== "oficina" && <Button variant="outline" onClick={() => openRework(selected)}><RotateCcw /> Registrar retrabalho</Button>}{currentUser.role === "master" && <Button variant="destructive" onClick={() => void archiveAppointment(selected)}><Trash2 /> Excluir</Button>}</div>
             {(selected.osNumber !== null && fieldDefinitions.find((field) => field.field_key === "os_number")?.visible !== false) || selected.sglocReference ? <div className="grid gap-3 sm:grid-cols-2">
               {selected.osNumber !== null && fieldDefinitions.find((field) => field.field_key === "os_number")?.visible !== false && <Detail label="O.S Fornecedor" value={String(selected.osNumber)} />}
