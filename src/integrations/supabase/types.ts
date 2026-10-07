@@ -569,6 +569,7 @@ export type Database = {
       }
       sgloc_settings: {
         Row: {
+          auto_sync_enabled: boolean
           base_url: string | null
           enabled: boolean
           id: boolean
@@ -583,6 +584,7 @@ export type Database = {
           write_enabled: boolean
         }
         Insert: {
+          auto_sync_enabled?: boolean
           base_url?: string | null
           enabled?: boolean
           id?: boolean
@@ -597,6 +599,7 @@ export type Database = {
           write_enabled?: boolean
         }
         Update: {
+          auto_sync_enabled?: boolean
           base_url?: string | null
           enabled?: boolean
           id?: boolean
@@ -876,6 +879,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      appointment_creator_sectors: {
+        Args: never
+        Returns: {
+          sector: string
+          user_id: string
+        }[]
+      }
       catalog_add: {
         Args: {
           _kind: string
@@ -885,6 +895,7 @@ export type Database = {
         }
         Returns: Json
       }
+      catalog_delete: { Args: { _id: string; _kind: string }; Returns: number }
       catalog_update: {
         Args: {
           _active: boolean
@@ -895,6 +906,7 @@ export type Database = {
         }
         Returns: number
       }
+      catalog_usage: { Args: { _id: string; _kind: string }; Returns: number }
       edit_limit_for: { Args: { _uid: string }; Returns: number }
       existing_sgloc_references: {
         Args: { _refs: string[] }

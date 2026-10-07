@@ -141,6 +141,13 @@
       "when": 1791298496143,
       "tag": "0019_oficina_module_sector_deadline_limit",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1791376932543,
+      "tag": "0020_lote_a_auto_sync_catalog_sector",
+      "breakpoints": true
     }
   ]
 }
