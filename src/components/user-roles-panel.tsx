@@ -30,7 +30,7 @@ export function UserRolesPanel({ currentUserId }: { currentUserId: string }) {
   const fe = (f: AuthField) => fieldErr.field === f && fieldErr.message ? <span role="alert" className="mt-1 block text-xs text-destructive">{fieldErr.message}</span> : null;
   const local = (f: AuthField, m: string) => { setError(m); setFieldErr({ field: f, message: m }); };
   const [formOpen, setFormOpen] = useState(false);
-  const [draft, setDraft] = useState({ fullName: "", email: "", role: "atendimento" as Role, sector: "", password: "" });
+  const [draft, setDraft] = useState({ fullName: "", email: "", role: "atendimento" as Role, sector: "", password: "", requireChange: false });
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [edit, setEdit] = useState({ fullName: "", email: "", role: "" as Role | "", sector: "" });
@@ -122,8 +122,8 @@ export function UserRolesPanel({ currentUserId }: { currentUserId: string }) {
     setCreating(true);
     try {
       await createUser({ data: { ...draft, email } });
-      setNotice(`Usuário ${draft.fullName.trim()} criado como ${roleNames[draft.role]}. Ele deverá trocar a senha no primeiro acesso.`);
-      setDraft({ fullName: "", email: "", role: "atendimento", sector: "", password: "" });
+      setNotice(`Usuário ${draft.fullName.trim()} criado como ${roleNames[draft.role]}.${draft.requireChange ? " Ele deverá trocar a senha no primeiro acesso." : ""}`);
+      setDraft({ fullName: "", email: "", role: "atendimento", sector: "", password: "", requireChange: false });
       setFormOpen(false);
       await load();
     } catch (caught) { showErr(caught, "Não foi possível criar o usuário."); } finally { setCreating(false); }
@@ -178,7 +178,8 @@ export function UserRolesPanel({ currentUserId }: { currentUserId: string }) {
       <label className="text-sm">E-mail<Input type="email" value={draft.email} onChange={(e) => setDraft({ ...draft, email: e.target.value })} maxLength={255} />{fe("email")}</label>
       <label className="text-sm">Perfil<select className={selectClass} value={draft.role} onChange={(e) => setDraft({ ...draft, role: e.target.value as Role })}>{(Object.keys(roleNames) as Role[]).map((r) => <option key={r} value={r}>{roleNames[r]}</option>)}</select>{fe("role")}</label>
       <label className="text-sm">Setor<CatalogSelect kind="sector" items={sectors} value={draft.sector} canAdd onChange={(v) => setDraft({ ...draft, sector: v })} onAdded={loadSectors} /></label>
-      <label className="text-sm">Senha provisória<Input type="password" autoComplete="new-password" value={draft.password} onChange={(e) => setDraft({ ...draft, password: e.target.value })} />{fe("password")}<span className="text-xs text-muted-foreground">Mínimo 8 caracteres. Não fica salva no painel; o usuário troca no primeiro acesso.</span></label>
+      <label className="text-sm">Senha provisória<Input type="password" autoComplete="new-password" value={draft.password} onChange={(e) => setDraft({ ...draft, password: e.target.value })} />{fe("password")}<span className="text-xs text-muted-foreground">Mínimo 8 caracteres. Não fica salva no painel.</span></label>
+      <label className="flex items-center gap-2 text-sm sm:col-span-2"><Checkbox checked={draft.requireChange} onCheckedChange={(v) => setDraft({ ...draft, requireChange: v === true })} />Exigir que o usuário troque a senha no próximo acesso</label>
       <div className="flex gap-2 sm:col-span-2"><Button type="submit" disabled={creating}>{creating ? "Criando…" : "Criar usuário"}</Button><Button type="button" variant="outline" onClick={() => setFormOpen(false)}>Cancelar</Button></div>
     </form>}
     {error && <p role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>}

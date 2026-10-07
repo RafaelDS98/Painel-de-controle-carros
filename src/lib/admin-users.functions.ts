@@ -31,6 +31,7 @@ const input = z.object({
   role: roleEnum,
   sector: z.string().trim().max(200).optional().default(""),
   password: z.string().min(8, "Senha precisa de no mínimo 8 caracteres.").max(72, "Senha pode ter no máximo 72 caracteres."),
+  requireChange: z.boolean().optional().default(false),
 });
 
 async function assertMaster(context: { supabase: any; userId: string }) {
@@ -49,7 +50,7 @@ export const createPanelUser = createServerFn({ method: "POST" })
     try {
       created = await supabaseAdmin.auth.admin.createUser({
         email: data.email, password: data.password, email_confirm: true,
-        user_metadata: { full_name: data.fullName, must_change_password: true },
+        user_metadata: { full_name: data.fullName, must_change_password: data.requireChange },
       });
     } catch (caught) { throw fail("createUser", caught, "create"); }
     if (created.error || !created.data.user) throw fail("createUser", created.error, "create");
