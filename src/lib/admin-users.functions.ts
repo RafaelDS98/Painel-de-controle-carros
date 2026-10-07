@@ -153,3 +153,35 @@ export const resetPanelPassword = createServerFn({ method: "POST" })
     await supabaseAdmin.from("user_admin_log").insert({ actor_id: context.userId, target_id: data.userId, target_label: profile?.full_name || current.user.email || "", action: "Senha redefinida", detail: data.requireChange ? "Troca exigida no próximo acesso" : "" });
     return { ok: true };
   });
+
+/** Master exclui um usuário (libera o e-mail). Agendamentos e histórico ficam, sem o nome do autor. */
+export const deletePanelUser = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => parseWith(z.object({ userId: z.string().uuid("Usuário inválido.") }), data))
+  .handler(async ({ data, context }) => {
+    await assertMaster(context);
+    if (data.userId === context.userId) throw panelError("", "Você não pode excluir a si mesmo.");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: current, error: getError } = await supabaseAdmin.auth.admin.getUserById(data.userId);
+    if (getError || !current.user) throw fail("getUserById", getError ?? { message: "Usuário não encontrado." }, "update");
+    const { data: profile } = await supabaseAdmin.from("profiles").select("full_name").eq("id", data.userId).maybeSingle();
+    const { data: roleRow } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", data.userId).maybeSingle();
+    const role = roleRow?.role ?? null;
+    if (role === "master") {
+      const { count } = await supabaseAdmin.from("user_roles").select("user_id", { count: "exact", head: true }).eq("role", "master");
+      if ((count ?? 0) <= 1) throw panelError("", "Este é o último master. Defina outro master antes de excluir este usuário.");
+    }
+    const { data: settings } = await supabaseAdmin.from("sgloc_settings").select("sync_user_id").limit(1).maybeSingle();
+    if (settings?.sync_user_id === data.userId) throw panelError("", "Este usuário é a conta designada da sincronização SGLOC. Troque a conta designada em Configurações > SGLOC antes de excluir.");
+    const email = current.user.email ?? "";
+    const { error: roleDelError } = await supabaseAdmin.from("user_roles").delete().eq("user_id", data.userId);
+    if (roleDelError) throw fail("deleteRole", roleDelError, "update", "Falha ao remover o perfil: ");
+    const { error: delError } = await supabaseAdmin.auth.admin.deleteUser(data.userId);
+    if (delError) {
+      if (role) await supabaseAdmin.from("user_roles").insert({ user_id: data.userId, role });
+      throw fail("deleteUser", delError, "update", "Não foi possível excluir o usuário: ");
+    }
+    const label = profile?.full_name || email;
+    await supabaseAdmin.from("user_admin_log").insert({ actor_id: context.userId, target_id: data.userId, target_label: label, action: "Usuário excluído", detail: `E-mail: ${email || "—"}; Perfil: ${role ?? "sem acesso"}` });
+    return { name: label, email };
+  });

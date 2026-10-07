@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
-import { createPanelUser, resetPanelPassword, updatePanelUser } from "@/lib/admin-users.functions";
+import { createPanelUser, deletePanelUser, resetPanelPassword, updatePanelUser } from "@/lib/admin-users.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -45,6 +45,18 @@ export function UserRolesPanel({ currentUserId }: { currentUserId: string }) {
   const createUser = useServerFn(createPanelUser);
   const updateUser = useServerFn(updatePanelUser);
   const resetPassword = useServerFn(resetPanelPassword);
+  const removeUser = useServerFn(deletePanelUser);
+  async function deleteRow(row: UserRow) {
+    const name = row.full_name || row.email || "usuário";
+    if (!window.confirm(`Excluir ${name} (${row.email || "—"})? O acesso será removido e o e-mail poderá ser usado em um novo cadastro. Os agendamentos e o histórico feitos por ele continuam, sem o nome do autor. Esta ação não pode ser desfeita.`)) return;
+    setError(""); setNotice(""); setFieldErr({ field: "", message: "" });
+    setBusy(true);
+    try {
+      const r = await removeUser({ data: { userId: row.user_id } });
+      setNotice(`Usuário ${r.name || name} excluído. O e-mail ${r.email || row.email || "—"} já pode ser cadastrado de novo.`);
+      close(row.user_id); await load();
+    } catch (caught) { showErr(caught, "Não foi possível excluir o usuário."); } finally { setBusy(false); }
+  }
 
   async function load() {
     setLoading(true);
@@ -159,7 +171,7 @@ export function UserRolesPanel({ currentUserId }: { currentUserId: string }) {
     } catch (caught) { showErr(caught, "Não foi possível redefinir a senha."); } finally { setBusy(false); }
   }
 
-  const nameOf = (id: string | null) => users.find((u) => u.user_id === id)?.full_name || users.find((u) => u.user_id === id)?.email || "—";
+  const nameOf = (id: string | null) => users.find((u) => u.user_id === id)?.full_name || users.find((u) => u.user_id === id)?.email || (id ? "Usuário excluído" : "—");
 
   return <section className="space-y-3">
     <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold">Usuários e permissões</h3><Button size="sm" variant="outline" onClick={() => { setFormOpen((v) => !v); setError(""); }}><UserPlus /> Novo usuário</Button></div>
@@ -212,6 +224,11 @@ export function UserRolesPanel({ currentUserId }: { currentUserId: string }) {
             {isWeakPassword(pw.password) && <p className="text-xs text-muted-foreground sm:col-span-2">Senha fraca — permitida, mas recomende trocar depois.</p>}
             <label className="flex items-center gap-2 text-sm sm:col-span-2"><Checkbox checked={pw.requireChange} onCheckedChange={(v) => setPw({ ...pw, requireChange: v === true })} />Exigir que o usuário troque a senha no próximo acesso</label>
             <div className="sm:col-span-2"><Button type="button" variant="outline" disabled={busy} onClick={() => savePassword(row)}>Redefinir senha</Button></div>
+          </div>
+          <div className="space-y-2 border-t pt-3" role="group" aria-label="Excluir usuário">
+            <h4 className="font-semibold">Excluir usuário</h4>
+            <Button type="button" variant="destructive" disabled={busy || self} title={self ? "Você não pode excluir a si mesmo" : undefined} onClick={() => deleteRow(row)}>Excluir usuário</Button>
+            {self && <p className="text-xs text-muted-foreground">Você não pode excluir a si mesmo.</p>}
           </div>
         </div>}
       </div>;
