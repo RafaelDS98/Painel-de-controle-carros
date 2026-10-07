@@ -77,7 +77,7 @@ import { canManageDeadline, deadlineBlockReason } from "@/lib/edit-limits";
 import { buildAppointmentUpdate } from "@/lib/appointment-update";
 import { Toaster } from "@/components/ui/sonner";
 import { canManageCatalog, canonicalName, emptyCatalog, filterOptions, missingNames, type Catalog, type CatalogItem, type CatalogKind } from "@/lib/catalog";
-import { AGENDA_CHANGED_EVENT, agendaChangeToast, type AgendaChange } from "@/lib/agenda-freshness";
+import { AGENDA_CHANGED_EVENT, agendaChangeToast, announceAgendaChange, type AgendaChange } from "@/lib/agenda-freshness";
 
 type Appointment = {
   dbId: string;
