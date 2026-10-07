@@ -76,3 +76,13 @@ export function storeLinkError(store: unknown, stores: { name: string; sgloc_id:
   if (!item || item.sgloc_id === null) return `Loja "${name}" sem vínculo SGLOC. Informe o ID da loja no SGLOC em Configurações > Listas e clique em Reenviar.`;
   return null;
 }
+
+/** Quem adiciona/renomeia/desativa/exclui itens das listas (o banco confere de novo). */
+export const canManageCatalog = (role: unknown) => role === "master" || role === "gerente";
+
+/** Texto da confirmação de exclusão. */
+export function deleteConfirmText(kind: CatalogKind, name: string, usage: number): string {
+  const n = Math.max(0, Number(usage) || 0);
+  if (kind === "sector") return `Excluir o setor "${name}"? ${n} usuário(s) com este setor ficarão sem setor. Esta ação entra no histórico.`;
+  return `Excluir "${name}" da lista de ${catalogLabels[kind].title}? ${n} agendamento(s) usam este nome e mantêm o texto como está. Esta ação entra no histórico.`;
+}

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { agendaWarnings, type SyncSnapshot } from "./agenda-freshness";
 
 const now = Date.parse("2026-10-06T13:40:00Z");
-const sync = (over: Partial<SyncSnapshot>): SyncSnapshot => ({ syncLive: true, intervalMinutes: 480, last: null, lastRealSuccessAt: "2026-10-06T10:00:00Z", accountWarning: null, ...over });
+const sync = (over: Partial<SyncSnapshot>): SyncSnapshot => ({ syncLive: true, autoSyncEnabled: true, intervalMinutes: 480, last: null, lastRealSuccessAt: "2026-10-06T10:00:00Z", accountWarning: null, ...over });
 
 describe("aviso de agenda desatualizada", () => {
   it("sem problemas não avisa", () => {
@@ -24,7 +24,15 @@ describe("aviso de agenda desatualizada", () => {
   });
 });
 
-import { agendaChangeToast } from "./agenda-freshness";
+describe("sincronização automática desligada", () => {
+  it("não mostra atraso/nenhuma; só aviso neutro após 24 h", () => {
+    expect(agendaWarnings({ loadedAt: now, now, loadFailed: false, sync: sync({ autoSyncEnabled: false, lastRealSuccessAt: "2026-10-06T10:00:00Z" }) })).toEqual([]);
+    expect(agendaWarnings({ loadedAt: now, now, loadFailed: false, sync: sync({ autoSyncEnabled: false, syncLive: false, lastRealSuccessAt: "2026-10-04T10:00:00Z", last: { started_at: "2026-10-06T13:00:00Z", status: "failed", dry_run: false } }) })).toEqual([AUTO_OFF_NOTICE]);
+    expect(agendaWarnings({ loadedAt: now, now, loadFailed: false, sync: sync({ autoSyncEnabled: false, lastRealSuccessAt: null }) })).toEqual([AUTO_OFF_NOTICE]);
+  });
+});
+
+import { agendaChangeToast, AUTO_OFF_NOTICE } from "./agenda-freshness";
 describe("aviso de recarga após sincronização", () => {
   it("conta o que entrou e não avisa em simulação", () => {
     expect(agendaChangeToast({ source: "sync", inserted: 4, updated: 1 })).toBe("Agenda atualizada pela sincronização: 4 novo(s), 1 alterado(s).");

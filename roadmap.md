@@ -31,3 +31,4 @@
 - [x] Perfil Oficina operacional + aba Oficina (vê/edita todos os ativos, sem criar/importar/lote/excluir/urgência).
 - [x] Campo Setor no usuário (lista "Setores", semeada com Oficina).
 - [x] Limite de alterações da Previsão de Entrega por perfil/usuário (Atendimento e Oficina, padrão 1).
+- [x] Lote A: auto-sync desligável, Atualizar do SGLOC, filtro Setor, gestão de listas (gerente/master)
