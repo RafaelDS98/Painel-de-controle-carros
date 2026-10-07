@@ -28,3 +28,16 @@ describe("listas de seleção", () => {
     expect(storeLinkError("xyz", [])).toMatch(/sem vínculo SGLOC/);
   });
 });
+
+import { canManageCatalog, deleteConfirmText } from "./catalog";
+describe("gestão das listas", () => {
+  it("só master e gerente gerenciam", () => {
+    expect(canManageCatalog("master")).toBe(true); expect(canManageCatalog("gerente")).toBe(true);
+    expect(canManageCatalog("atendimento")).toBe(false); expect(canManageCatalog("oficina")).toBe(false);
+  });
+  it("confirmação mostra uso e avisa setor", () => {
+    expect(deleteConfirmText("store", "MAT", 3)).toMatch(/3 agendamento\(s\)/);
+    expect(deleteConfirmText("sector", "Oficina", 2)).toMatch(/2 usuário\(s\).*sem setor/);
+    expect(deleteConfirmText("brand", "X", NaN)).toMatch(/0 agendamento/);
+  });
+});

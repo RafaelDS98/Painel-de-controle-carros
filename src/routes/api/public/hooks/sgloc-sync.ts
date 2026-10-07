@@ -3,7 +3,7 @@ import { authenticateCronRequest } from "@/integrations/supabase/cron-auth";
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 
-/** Tick da sincronização SGLOC (a cada 15 min). Só roda se a integração estiver ativa e o intervalo configurado já tiver passado. */
+/** Tick da sincronização SGLOC (a cada 15 min). Só roda se a sincronização automática (auto_sync_enabled) e a integração estiverem ativas e o intervalo configurado já tiver passado. */
 export const Route = createFileRoute("/api/public/hooks/sgloc-sync")({
   server: {
     handlers: {
@@ -13,7 +13,7 @@ export const Route = createFileRoute("/api/public/hooks/sgloc-sync")({
         const { loadSyncSettings, lastCompletedStart, runSglocSync, SyncBusyError } = await import("@/lib/sgloc/sync.server");
         const { shouldRunTick } = await import("@/lib/sgloc/sync-core");
         const s = await loadSyncSettings();
-        const decision = shouldRunTick({ enabled: Boolean(s?.enabled), base_url: s?.base_url ?? null, interval_minutes: s?.interval_minutes ?? 480, sync_user_id: s?.sync_user_id ?? null },
+        const decision = shouldRunTick({ enabled: Boolean(s?.enabled), auto_sync_enabled: Boolean(s?.auto_sync_enabled), base_url: s?.base_url ?? null, interval_minutes: s?.interval_minutes ?? 480, sync_user_id: s?.sync_user_id ?? null },
           await lastCompletedStart("schedule"));
         if (!decision.run) return json({ ran: false, reason: decision.reason });
         try {

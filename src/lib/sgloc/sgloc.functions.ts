@@ -34,6 +34,7 @@ const settingsInput = z.object({
   windowDaysAhead: z.number().int().min(0, "Dias para frente: mínimo 0.").max(180, "Dias para frente: máximo 180.").optional(),
   syncUserId: z.string().uuid().nullable().optional(),
   syncLive: z.boolean().optional(),
+  autoSyncEnabled: z.boolean().optional(),
 });
 
 export const saveSglocSettings = createServerFn({ method: "POST" })
@@ -73,6 +74,7 @@ export const saveSglocSettings = createServerFn({ method: "POST" })
     if (data.windowDaysAhead !== undefined) row["window_days_ahead"] = data.windowDaysAhead;
     if (data.syncUserId !== undefined) row["sync_user_id"] = data.syncUserId;
     if (data.syncLive !== undefined) row["sync_live"] = data.syncLive;
+    if (data.autoSyncEnabled !== undefined) row["auto_sync_enabled"] = data.autoSyncEnabled;
     const { error } = await supabaseAdmin.from("sgloc_settings").upsert(row as never);
     if (error) throw await safeError("saveSettings", error);
     return { baseUrl, enabled: data.enabled, writeEnabled: data.writeEnabled, timeoutSeconds: data.timeoutSeconds };
@@ -110,10 +112,10 @@ export const getSglocSyncStatus = createServerFn({ method: "POST" })
       if (!acc) accountWarning = "A conta designada não está conectada ao SGLOC.";
       else if (tokenState(acc.token_expires_at) === "expired") accountWarning = "A conexão SGLOC da conta designada expirou; ela precisa reconectar em Minha conta.";
     }
-    const tick = { enabled: Boolean(s?.enabled), base_url: s?.base_url ?? null, interval_minutes: s?.interval_minutes ?? 480, sync_user_id: s?.sync_user_id ?? null };
+    const tick = { enabled: Boolean(s?.enabled), auto_sync_enabled: Boolean(s?.auto_sync_enabled), base_url: s?.base_url ?? null, interval_minutes: s?.interval_minutes ?? 480, sync_user_id: s?.sync_user_id ?? null };
     return {
       settings: { intervalMinutes: s?.interval_minutes ?? 480, windowDaysBack: s?.window_days_back ?? 7, windowDaysAhead: s?.window_days_ahead ?? 45,
-        syncUserId: s?.sync_user_id ?? null, syncLive: Boolean(s?.sync_live) },
+        syncUserId: s?.sync_user_id ?? null, syncLive: Boolean(s?.sync_live), autoSyncEnabled: Boolean(s?.auto_sync_enabled) },
       last: last ?? null, lastSimulation: lastSim ?? null, lastRealSuccessAt: lastReal?.started_at ?? null,
       nextRunAt: nextRunAt(tick, await lastCompletedStart("schedule")), accountWarning,
     };
@@ -134,6 +136,49 @@ export const runSglocSyncNow = createServerFn({ method: "POST" })
     const { runSglocSync, SyncBusyError } = await import("./sync.server");
     try { return await runSglocSync({ trigger: "manual", simulate: data.simulate, actorId: context.userId }); }
     catch (e) { if (e instanceof SyncBusyError) throw new Error(e.message); throw await safeError("syncNow", e); }
+  });
+
+/** Última atualização real com o SGLOC (para o botão "Atualizar do SGLOC"). Qualquer perfil aprovado. */
+export const getAgendaSyncInfo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: r } = await context.supabase.from("user_roles").select("role").eq("user_id", context.userId).maybeSingle();
+    if (!r?.role) throw new Error("Seu usuário ainda não tem acesso ao painel.");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: lastReal } = await supabaseAdmin.from("sgloc_sync_runs").select("started_at").eq("dry_run", false).in("status", ["success", "partial"]).order("started_at", { ascending: false }).limit(1).maybeSingle();
+    return { lastRealSuccessAt: lastReal?.started_at ?? null };
+  });
+
+const REFRESH_GAP_MS = 120_000;
+/** Botão "Atualizar do SGLOC": sincronização REAL com a conta designada. Oficina, gerente e master; 1 a cada 2 min no total. */
+export const refreshAgendaFromSgloc = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: r } = await context.supabase.from("user_roles").select("role").eq("user_id", context.userId).maybeSingle();
+    const { canRefreshFromSgloc, refreshWaitSeconds } = await import("./sync-core");
+    if (!canRefreshFromSgloc(r?.role)) throw new Error("Você não tem permissão para atualizar do SGLOC.");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { loadSyncSettings, runSglocSync, SyncBusyError } = await import("./sync.server");
+    const { tokenState } = await import("./core");
+    const s = await loadSyncSettings();
+    if (!s?.enabled || !s.base_url) return { ok: false as const, message: "A integração com o SGLOC está desligada. Peça ao master para ativá-la." };
+    if (!s.sync_live) return { ok: false as const, message: "A atualização com o SGLOC ainda está em modo simulação. Peça ao master para ativar o modo real." };
+    if (!s.sync_user_id) return { ok: false as const, message: "Nenhuma conta SGLOC foi designada para a atualização. Peça ao master para escolher uma." };
+    const { data: acc } = await supabaseAdmin.from("sgloc_accounts").select("token_expires_at").eq("user_id", s.sync_user_id).maybeSingle();
+    if (!acc) return { ok: false as const, message: "A conta SGLOC designada não está conectada. Peça ao master para verificar." };
+    if (tokenState(acc.token_expires_at) === "expired") return { ok: false as const, message: "A conexão SGLOC da conta designada expirou. Ela precisa reconectar em Minha conta." };
+    const { data: last } = await supabaseAdmin.from("sgloc_sync_runs").select("started_at").order("started_at", { ascending: false }).limit(1).maybeSingle();
+    const wait = refreshWaitSeconds(last?.started_at ?? null, Date.now(), REFRESH_GAP_MS);
+    if (wait > 0) return { ok: false as const, message: `Aguarde ${wait} s para atualizar de novo (limite: 1 atualização a cada 2 minutos).` };
+    try {
+      const res = await runSglocSync({ trigger: "manual", simulate: false, actorId: context.userId });
+      if (res.status === "failed") return { ok: false as const, message: "Não foi possível atualizar do SGLOC agora. Tente de novo em alguns minutos." };
+      return { ok: true as const, message: res.message, counts: res.counts, dryRun: res.dryRun };
+    } catch (e) {
+      if (e instanceof SyncBusyError) return { ok: false as const, message: "Já existe uma atualização em andamento. Aguarde terminar." };
+      const err = await safeError("refreshAgenda", e);
+      return { ok: false as const, message: err.message.startsWith("Erro inesperado") ? err.message : "Não foi possível atualizar do SGLOC agora." };
+    }
   });
 
 const connectInput = z.object({

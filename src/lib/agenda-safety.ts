@@ -163,10 +163,10 @@ export function toCsv(rows: Record<string, unknown>[], headers: string[], separa
 export type ExportSource = {
   id: unknown; date: unknown; time: unknown; plate: unknown; status: unknown; brand?: unknown; model: unknown;
   contact: unknown; contactNumber?: unknown; workshop: unknown; issue: unknown; note: unknown; operator: unknown;
-  externalOrder?: unknown; kmScheduled?: unknown; osNumber?: unknown; sglocReference?: unknown;
+  externalOrder?: unknown; kmScheduled?: unknown; osNumber?: unknown; sglocReference?: unknown; sector?: unknown;
 };
 
-export const exportHeaders = ["ID", "ID SGLOC", "Data Atendimento", "Hora", "Placa", "Situação", "Marca", "Modelo", "Contato", "Telefone do contato", "Local/Oficina", "Problemas Relatado", "Observação", "Operador", "O.S Externa", "O.S Fornecedor", "KM do agendamento"];
+export const exportHeaders = ["ID", "ID SGLOC", "Data Atendimento", "Hora", "Placa", "Situação", "Marca", "Modelo", "Contato", "Telefone do contato", "Local/Oficina", "Problemas Relatado", "Observação", "Operador", "O.S Externa", "O.S Fornecedor", "KM do agendamento", "Setor"];
 
 /** Linhas de exportação: só campos de negócio (nunca colunas técnicas sgloc_*), nulos viram vazio, texto protegido. */
 export function exportRows(items: ExportSource[]): Record<string, string>[] {
@@ -176,7 +176,7 @@ export function exportRows(items: ExportSource[]): Record<string, string>[] {
     Placa: text(item.plate), Situação: text(item.status) || "Não atualizada", Marca: text(item.brand), Modelo: text(item.model),
     Contato: text(item.contact), "Telefone do contato": text(item.contactNumber), "Local/Oficina": text(item.workshop),
     "Problemas Relatado": text(item.issue), Observação: text(item.note), Operador: text(item.operator),
-    "O.S Externa": text(item.externalOrder), "O.S Fornecedor": text(item.osNumber), "KM do agendamento": text(item.kmScheduled),
+    "O.S Externa": text(item.externalOrder), "O.S Fornecedor": text(item.osNumber), "KM do agendamento": text(item.kmScheduled), Setor: text(item.sector),
   }));
 }
 
