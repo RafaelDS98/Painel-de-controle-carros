@@ -45,8 +45,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { AppointmentHistory, ChangeLogDialog } from "@/components/edit-history";
-import { AlertTriangle, ChevronLeft, ChevronRight, History, ListChecks, RefreshCw, Trash2, Unlock, UserCircle } from "lucide-react";
+import { AppointmentHistory } from "@/components/edit-history";
+import { Link } from "@tanstack/react-router";
+import { AdvancedFilterDrawer, type SavedView } from "@/components/advanced-filter-drawer";
+import { activeAdvancedCount, buildAdvancedFields, fieldValue, matchesAdvanced, sanitizeAdvanced, type AdvancedFilters } from "@/lib/advanced-filter";
+import { AlertTriangle, ChevronLeft, ChevronRight, History, ListChecks, RefreshCw, SlidersHorizontal, Trash2, Unlock, UserCircle } from "lucide-react";
 import { MyAccountDialog } from "@/components/my-account";
 import { useQueryClient } from "@tanstack/react-query";
 import { AppointmentForm, columnForField, emptyFields, type AppointmentFields } from "@/components/appointment-form";
@@ -282,7 +285,6 @@ export function MaintenanceDashboard({ onSignOut, currentUser, mode = "agenda", 
   const canCreate = !workshopMode;
   const [myLimit, setMyLimit] = useState(1);
   useEffect(() => { void supabase.rpc("get_my_edit_limit").then(({ data }) => { if (typeof data === "number") setMyLimit(data); }); }, []);
-  const [logOpen, setLogOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const queryClientForAccount = useQueryClient();
@@ -296,6 +298,9 @@ export function MaintenanceDashboard({ onSignOut, currentUser, mode = "agenda", 
   const [newOpen, setNewOpen] = useState(false);
   const [reworkSource, setReworkSource] = useState<Appointment | null>(null);
   const [reworksOnly, setReworksOnly] = useState(false);
+  const [advanced, setAdvanced] = useState<AdvancedFilters>({});
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [views, setViews] = useState<SavedView[]>([]);
   const [today, setToday] = useState(() => dateInBrazil(new Date()));
   const [search, setSearch] = useState("");
   const [plateFilter, setPlateFilter] = useState("");
@@ -476,12 +481,29 @@ export function MaintenanceDashboard({ onSignOut, currentUser, mode = "agenda", 
   }, []);
   useEffect(() => { if (statuses.length) void loadCompletionLogs(appointments); }, [completion]);
 
+  const advancedFields = useMemo(() => buildAdvancedFields(fieldDefinitions), [fieldDefinitions]);
+  const advancedOptions = (key: string) => key === "status" ? serviceStatuses : appointments.map((item) => fieldValue(item as never, key));
+  async function loadViews() {
+    const { data } = await supabase.from("saved_views").select("id, name, filters").eq("user_id", currentUser.id).order("name");
+    setViews((data ?? []) as SavedView[]);
+  }
+  useEffect(() => { void loadViews(); }, []);
+  const viewSnapshot = () => ({ search, plateFilter, contact, workshop, model, operator, reworksOnly, advanced, periodPreset, startDate, endDate });
+  function applyView(view: SavedView) {
+    const raw = (view.filters && typeof view.filters === "object" ? view.filters : {}) as Record<string, unknown>;
+    const text = (value: unknown) => (typeof value === "string" ? value : "");
+    setSearch(text(raw["search"])); setPlateFilter(text(raw["plateFilter"])); setContact(text(raw["contact"])); setWorkshop(text(raw["workshop"])); setModel(text(raw["model"])); setOperator(text(raw["operator"]));
+    setReworksOnly(raw["reworksOnly"] === true); setAdvanced(sanitizeAdvanced(raw["advanced"], advancedFields)); setChartSel({});
+    if (raw["periodPreset"] === "today" || raw["periodPreset"] === "week" || raw["periodPreset"] === "month") setPeriodPreset(raw["periodPreset"]);
+    else { setPeriodPreset("custom"); setStartDate(text(raw["startDate"])); setEndDate(text(raw["endDate"])); }
+    setPage(1); setAdvancedOpen(false); toast(`Visão aplicada: ${view.name}`);
+  }
   const option = (key: keyof Appointment) => foldedOptions(appointments.map((item) => item[key]));
   const baseFiltered = useMemo(() => appointments.filter((item) => {
     const qPlate = normalizePlate(search);
     const hit = !search.trim() || (qPlate !== "" && item.plate.includes(qPlate)) || textMatches(search, [item.plate, item.brand, item.contactNumber, item.contact, item.issue, item.model, item.workshop, item.note, ...fieldDefinitions.filter((field) => field.storage === "custom" && ["text", "textarea"].includes(field.field_type)).map((field) => item.customFields[field.field_key])]);
-    return hit && (!plateFilter || (plateFilter === EMPTY_OPTION ? !item.plate : normalizePlate(item.plate) === normalizePlate(plateFilter))) && matchesFilter(item.contact, contact) && matchesFilter(item.workshop, workshop) && matchesFilter(item.model, model) && matchesFilter(item.operator, operator) && matchesFilter(item.sector, sector) && (!reworksOnly || Boolean(item.reworkOf));
-  }), [appointments, contact, model, operator, sector, plateFilter, reworksOnly, search, workshop, fieldDefinitions]);
+    return hit && (!plateFilter || (plateFilter === EMPTY_OPTION ? !item.plate : normalizePlate(item.plate) === normalizePlate(plateFilter))) && matchesFilter(item.contact, contact) && matchesFilter(item.workshop, workshop) && matchesFilter(item.model, model) && matchesFilter(item.operator, operator) && matchesFilter(item.sector, sector) && (!reworksOnly || Boolean(item.reworkOf)) && matchesAdvanced(item as never, advanced, advancedFields);
+  }), [appointments, contact, model, operator, sector, plateFilter, reworksOnly, search, workshop, fieldDefinitions, advanced, advancedFields]);
   const periodFiltered = useMemo(() => baseFiltered.filter((item) => inPeriod(item.date, startDate, endDate)), [baseFiltered, startDate, endDate]);
   // Seleção dos gráficos (filtro cruzado): vale para KPIs, balões, lista e grade; cada gráfico ignora a própria seleção.
   const filtered = useMemo(() => applySelection(periodFiltered, chartSel), [periodFiltered, chartSel]);
@@ -519,7 +541,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser, mode = "agenda", 
   const average = safeAverage(filtered.filter((item) => normalizeDate(item.date)).length, usedDays);
 
   function resetFilters() {
-    setSearch(""); setPlateFilter(""); setContact(""); setWorkshop(""); setModel(""); setOperator(""); setSector(""); setPeriodPreset("custom"); setStartDate(""); setEndDate(""); setReworksOnly(false); setChartSel({}); setPage(1);
+    setSearch(""); setPlateFilter(""); setContact(""); setWorkshop(""); setModel(""); setOperator(""); setSector(""); setPeriodPreset("custom"); setStartDate(""); setEndDate(""); setReworksOnly(false); setAdvanced({}); setChartSel({}); setPage(1);
   }
 
   function applyDetailFilter(label: string, apply: () => void, undo: () => void) {
@@ -546,7 +568,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser, mode = "agenda", 
     if (previous && normalizePlate(previous) === normalizePlate(value)) { toggleDetailFilter(`Placa: ${value === EMPTY_OPTION ? "Não informado" : value}`, true, () => {}, () => {}, () => setPlateFilter("")); return; }
     applyDetailFilter(`Placa: ${value === EMPTY_OPTION ? "Não informado" : value}`, () => setPlateFilter(value), () => setPlateFilter(previous));
   }
-  function openVehicle(plate: string) { setKpiOpen(null); setLogOpen(false); setSelected(null); setHistoryPlate(plate || EMPTY_OPTION); }
+  function openVehicle(plate: string) { setKpiOpen(null); setSelected(null); setHistoryPlate(plate || EMPTY_OPTION); }
   const activeFilters = [
     search && { key: "search", label: `Busca: ${search}`, remove: () => setSearch("") },
     plateFilter && { key: "plate", label: `Placa: ${plateFilter === EMPTY_OPTION ? "Não informado" : plateFilter}`, remove: () => setPlateFilter("") },
@@ -557,6 +579,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser, mode = "agenda", 
     sector && { key: "sector", label: `Setor: ${sector === EMPTY_OPTION ? "Sem setor" : sector}`, remove: () => setSector("") },
     startDate && { key: "start", label: `De: ${formatDateBR(startDate)}`, remove: () => { setStartDate(""); setPeriodPreset("custom"); } },
     endDate && { key: "end", label: `Até: ${formatDateBR(endDate)}`, remove: () => { setEndDate(""); setPeriodPreset("custom"); } },
+    ...Object.entries(advanced).filter(([, values]) => values.length).map(([key, values]) => ({ key: `adv-${key}`, label: `${advancedFields.find((field) => field.key === key)?.label ?? key}: ${values.map((value) => (value === EMPTY_OPTION ? "Não informado" : value)).join(", ")}`, remove: () => setAdvanced((current) => { const { [key]: _gone, ...rest } = current; return rest; }) })),
     reworksOnly && { key: "reworks", label: "Somente retrabalhos", remove: () => setReworksOnly(false) },
   ].filter((filter): filter is { key: string; label: string; remove: () => void } => Boolean(filter));
 
@@ -875,7 +898,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser, mode = "agenda", 
           <div className="flex items-center gap-2">
             <button type="button" onClick={() => setAccountOpen(true)} title="Minha conta" className="mr-2 min-h-11 rounded-md px-2 text-right text-sm hover:bg-primary-foreground/10"><p className="font-semibold"><UserCircle className="mr-1 inline size-4" />{currentUser.name}</p><p className="text-xs text-primary-foreground/70">{roleLabels[currentUser.role]} · Minha conta</p></button>
             <MyAccountDialog open={accountOpen} onOpenChange={setAccountOpen} userId={currentUser.id} email={currentUser.email ?? ""} name={currentUser.name} onSaved={() => void queryClientForAccount.invalidateQueries({ queryKey: ["profile", currentUser.id] })} />
-            <Button variant="secondary" onClick={() => setLogOpen(true)}><History /> Log de alterações</Button>
+            {!workshopMode && <Button asChild variant="secondary"><Link to="/historicos"><History /> Históricos</Link></Button>}
             {currentUser.role === "gerente" && <Button variant="secondary" onClick={() => setListsOpen(true)}><ListChecks /> Listas</Button>}
             {canCreate && <Button variant="secondary" onClick={() => setNewOpen(true)}><Plus /> Novo agendamento</Button>}
              {currentUser.role === "master" && !workshopMode && <Button variant="secondary" onClick={() => setSettingsOpen(true)}><Settings /> Configurações</Button>}
@@ -927,6 +950,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser, mode = "agenda", 
             <SearchableSelect label="Todos os operadores" value={operator} options={filterOptions(catalog.operator, option("operator"))} onChange={setOperator} />
             <SearchableSelect label="Todos os setores" value={sector} options={filterOptions(catalog.sector, option("sector"))} onChange={(value) => { setSector(value); setPage(1); }} />
             <label className="flex min-h-10 items-center gap-2 text-sm text-foreground"><Checkbox checked={reworksOnly} onCheckedChange={(checked) => { setReworksOnly(checked === true); setPage(1); }} aria-label="Mostrar somente retrabalhos" />Mostrar somente retrabalhos</label>
+            <Button variant="outline" onClick={() => setAdvancedOpen(true)}><SlidersHorizontal /> Filtros avançados{activeAdvancedCount(advanced) > 0 ? ` (${activeAdvancedCount(advanced)})` : ""}</Button>
             <Button variant="outline" onClick={resetFilters}><RotateCcw /> Limpar tudo</Button>
           </div>
           <div className="mt-3 flex flex-wrap gap-1" role="group" aria-label="Período da agenda">{([ ["today", "Hoje"], ["week", "Esta semana"], ["month", "Este mês"], ["custom", "Personalizado"] ] as const).map(([key, label]) => <Button key={key} size="sm" variant={periodPreset === key ? "default" : "outline"} aria-pressed={periodPreset === key} onClick={() => { setPeriodPreset(key); setPage(1); }}>{label}</Button>)}</div>
@@ -1032,10 +1056,10 @@ export function MaintenanceDashboard({ onSignOut, currentUser, mode = "agenda", 
           </SectionBoundary>}
         </DialogContent>
       </Dialog>
-      <ChangeLogDialog open={logOpen} onOpenChange={setLogOpen} onPlateClick={openVehicle} />
       <Toaster richColors position="bottom-right" />
       {currentUser.role === "gerente" && <Dialog open={listsOpen} onOpenChange={setListsOpen}><DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-3xl"><DialogHeader><DialogTitle>Configurações · Listas</DialogTitle><DialogDescription>Adicione, renomeie, desative ou exclua itens das listas de escolha.</DialogDescription></DialogHeader><CatalogPanel onChanged={async () => { await loadCatalog(); await loadAppointments(); }} /></DialogContent></Dialog>}
       {currentUser.role === "master" && !workshopMode && <TrashDialog open={trashOpen} onOpenChange={setTrashOpen} onRestored={() => void loadAppointments()} />}
+      <AdvancedFilterDrawer open={advancedOpen} onOpenChange={setAdvancedOpen} userId={currentUser.id} fields={advancedFields} optionsFor={advancedOptions} value={advanced} onChange={(next) => { setAdvanced(next); setPage(1); }} views={views} onViewsChanged={loadViews} onApplyView={applyView} snapshot={viewSnapshot} />
       {currentUser.role === "master" && !workshopMode && <AgendaSettings open={settingsOpen} onOpenChange={setSettingsOpen} statuses={statuses} fields={fieldDefinitions} currentUserId={currentUser.id} onRefresh={async () => { await loadConfig(); await loadAppointments(); }} />}
     </div>
   );
