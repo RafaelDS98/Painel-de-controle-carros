@@ -1,6 +1,6 @@
 // Movimentações por veículo: regras puras (rótulos, linha do tempo de situações, resumo e exportação).
-import { formatDateBR, formatDateTimeBR, guardFormula, safeText } from "./agenda-safety";
-import { normalizePlate } from "./normalize";
+import { formatDateBR, formatDateTimeBR, guardFormula } from "./agenda-safety";
+import { normalizePlate, safeText } from "./normalize";
 
 export type MovementEvent = { field: string; old: string | null; new: string | null; at: string; by: string | null };
 export type Pass = {
