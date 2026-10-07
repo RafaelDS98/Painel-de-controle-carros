@@ -300,3 +300,9 @@ O repositório é sincronizado com o Lovable. Não reescreva histórico já publ
 
 ## Filtro cruzado dos gráficos
 - Clicar em barra/fatia/ponto seleciona; clicar de novo desmarca; Ctrl/Cmd soma; Esc ou "Limpar tudo" limpa. Seleções filtram cartões, outros gráficos, balões, grade e lista (E entre gráficos, OU no mesmo). Itens dos balões também alternam.
+
+## Lote A — sincronização manual, setor e listas
+- `sgloc_settings.auto_sync_enabled` (padrão desligado) liga a rotina de tempo em tempo; `enabled` continua sendo só a integração/envio. Desligada: "Próxima prevista: desligada (somente manual)" e só um aviso neutro na agenda se a última atualização real tiver mais de 24 h.
+- Botão "Atualizar do SGLOC" (oficina, gerente, master): sincronização real com a conta designada, 1 a cada 2 min no total, mensagens claras se modo simulação, sem conta ou conexão expirada. A recarga da agenda a cada 2 min pausa com a aba oculta.
+- Filtro "Setor": setor do usuário que criou o agendamento (`profiles.sector`, via `appointment_creator_sectors()`); sem criador = "(sem valor)". Entra em filtros ativos, KPIs, gráficos, grade, tabela e exportação (coluna "Setor").
+- Listas: adicionar/renomear/desativar/excluir só master e gerente (`catalog_add` manual, `catalog_update`, `catalog_delete`, `catalog_usage`); importação/SGLOC continuam cadastrando o que falta. Excluir preserva o texto nos agendamentos; excluir setor tira o setor dos usuários. Gerente acessa pelo botão "Listas".
