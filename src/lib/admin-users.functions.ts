@@ -24,11 +24,12 @@ function fail(op: string, error: unknown, context: "create" | "update" | "passwo
   return panelError(t.field, prefix + t.message, code);
 }
 
-const roleEnum = z.enum(["atendimento", "gerente", "master", "oficina"], { message: "Perfil inválido." });
+const roleEnum = z.enum(["atendimento", "oficina", "gerente", "master"], { message: "Perfil inválido." });
 const input = z.object({
   fullName: z.string().trim().min(2, "Informe o nome (mínimo 2 letras).").max(120),
   email: z.string().trim().toLowerCase().email("E-mail inválido ou domínio não aceito.").max(255),
   role: roleEnum,
+  sector: z.string().trim().max(200).optional().default(""),
   password: z.string().min(8, "Senha precisa de no mínimo 8 caracteres.").max(72, "Senha pode ter no máximo 72 caracteres."),
 });
 
@@ -53,7 +54,7 @@ export const createPanelUser = createServerFn({ method: "POST" })
     } catch (caught) { throw fail("createUser", caught, "create"); }
     if (created.error || !created.data.user) throw fail("createUser", created.error, "create");
     const userId = created.data.user.id;
-    await supabaseAdmin.from("profiles").upsert({ id: userId, full_name: data.fullName });
+    await supabaseAdmin.from("profiles").upsert({ id: userId, full_name: data.fullName, sector: data.sector || null });
     const { error: roleError } = await supabaseAdmin.from("user_roles").insert({ user_id: userId, role: data.role });
     if (roleError) {
       const { error: undoError } = await supabaseAdmin.auth.admin.deleteUser(userId);
@@ -71,6 +72,7 @@ const updateInput = z.object({
   fullName: z.string().trim().min(2, "Informe o nome (mínimo 2 letras).").max(120),
   email: z.string().trim().toLowerCase().email("E-mail inválido ou domínio não aceito.").max(255),
   role: roleEnum.nullable(),
+  sector: z.string().trim().max(200).optional().default(""),
 });
 const passwordInput = z.object({
   userId: z.string().uuid("Usuário inválido."),
@@ -87,7 +89,7 @@ export const updatePanelUser = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: current, error: getError } = await supabaseAdmin.auth.admin.getUserById(data.userId);
     if (getError || !current.user) throw fail("getUserById", getError ?? { message: "Usuário não encontrado." }, "update");
-    const { data: profile } = await supabaseAdmin.from("profiles").select("full_name").eq("id", data.userId).maybeSingle();
+    const { data: profile } = await supabaseAdmin.from("profiles").select("full_name, sector").eq("id", data.userId).maybeSingle();
     const { data: roleRow } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", data.userId).maybeSingle();
     const oldRole = roleRow?.role ?? null;
     const changes: string[] = [];
@@ -107,6 +109,11 @@ export const updatePanelUser = createServerFn({ method: "POST" })
       if (error) throw fail("updateName", error, "update", "Falha ao salvar o nome: ");
       await supabaseAdmin.auth.admin.updateUserById(data.userId, { user_metadata: { ...current.user.user_metadata, full_name: data.fullName } });
       changes.push(`Nome: ${profile?.full_name || "—"} → ${data.fullName}`);
+    }
+    if ((profile?.sector ?? "") !== data.sector) {
+      const { error } = await supabaseAdmin.from("profiles").update({ sector: data.sector || null }).eq("id", data.userId);
+      if (error) throw fail("updateSector", error, "update", "Falha ao salvar o setor: ");
+      changes.push(`Setor: ${profile?.sector || "—"} → ${data.sector || "—"}`);
     }
     if (oldRole !== data.role) {
       await supabaseAdmin.from("user_roles").delete().eq("user_id", data.userId);

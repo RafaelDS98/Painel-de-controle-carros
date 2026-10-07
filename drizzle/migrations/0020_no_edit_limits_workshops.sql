@@ -1,3 +1,4 @@
+-- HISTÓRICO: já aplicado em produção; o gatilho atual no banco é o da migração 0019 do main (limite da Previsão de Entrega). Não reaplicar.
 -- 1) Lista cadastrável de oficinas/locais
 CREATE TABLE IF NOT EXISTS public.workshops (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

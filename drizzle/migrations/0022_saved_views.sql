@@ -1,3 +1,4 @@
+-- HISTÓRICO: já aplicado em produção. Não reaplicar.
 CREATE TABLE IF NOT EXISTS public.saved_views (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,

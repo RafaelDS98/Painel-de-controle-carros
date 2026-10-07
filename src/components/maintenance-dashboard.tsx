@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Area,
   AreaChart,
@@ -47,8 +47,9 @@ import {
 import { cn } from "@/lib/utils";
 import { AppointmentHistory } from "@/components/edit-history";
 import { Link } from "@tanstack/react-router";
-import type { ModuleKey } from "@/lib/modules";
-import { AlertTriangle, ChevronLeft, ChevronRight, History, SlidersHorizontal, Trash2, UserCircle } from "lucide-react";
+import { AdvancedFilterDrawer, type SavedView } from "@/components/advanced-filter-drawer";
+import { activeAdvancedCount, buildAdvancedFields, fieldValue, matchesAdvanced, sanitizeAdvanced, type AdvancedFilters } from "@/lib/advanced-filter";
+import { AlertTriangle, ChevronLeft, ChevronRight, History, SlidersHorizontal, Trash2, Unlock, UserCircle } from "lucide-react";
 import { MyAccountDialog } from "@/components/my-account";
 import { useQueryClient } from "@tanstack/react-query";
 import { AppointmentForm, columnForField, emptyFields, type AppointmentFields } from "@/components/appointment-form";
@@ -59,11 +60,8 @@ import { batchChanges, batchColumns, batchIdHeader, batchValidation, type BatchR
 import { periodRange, weekRange, pendingDeliveries, type PeriodPreset } from "@/lib/agenda-period";
 import { ContactRegister } from "@/components/contact-register";
 import { AgendaSettings } from "@/components/agenda-settings";
-import { SglocSyncBar } from "@/components/sgloc-sync-bar";
-import { AdvancedFilterDrawer, type SavedView } from "@/components/advanced-filter-drawer";
-import { activeAdvancedCount, buildAdvancedFields, fieldValue, matchesAdvanced, sanitizeAdvanced, type AdvancedFilters } from "@/lib/advanced-filter";
 import { isEmergency, normalizeDate, normalizePlate, normalizeTime, parseKm, safeText, sglocStateLabels, stripHtml } from "@/lib/normalize";
-import { DASH, EMPTY_OPTION, NO_DATE_GROUP, clampPage, compareDateTime, compareText, countBy, dash, exportHeaders, exportRows, foldedOptions, formatDateBR, groupWeek, inPeriod, matchesFilter, safeAverage, serviceCategory, textMatches, toCsv, buildImportRecords, dropExistingReferences, activeOnly, archiveConfirmText } from "@/lib/agenda-safety";
+import { DASH, EMPTY_OPTION, NO_DATE_GROUP, clampPage, compareDateTime, compareText, countBy, dash, exportHeaders, exportRows, foldedOptions, formatDateBR, groupWeek, inPeriod, matchesFilter, safeAverage, serviceCategory, textMatches, toCsv, buildImportRecords, dropExistingReferences, activeOnly, archiveConfirmText, importErrorReason } from "@/lib/agenda-safety";
 import { TrashDialog } from "@/components/trash-dialog";
 import { applySelection, hasSelection, isSelected, removeSelection, selectionChips, toggleSelection, type ChartDim, type ChartSelection } from "@/lib/chart-selection";
 import { fixSheetRange } from "@/lib/sheet-range";
@@ -74,9 +72,13 @@ import { customValues, statusColorProps, type FieldDefinition, type StatusOption
 import { IndicatorDetails, type IndicatorGroup, type IndicatorAppointment } from "@/components/indicator-details";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
-import { pushAppointmentToSgloc } from "@/lib/sgloc/sgloc.functions";
+import { getSglocSyncStatus, pushAppointmentToSgloc } from "@/lib/sgloc/sgloc.functions";
+import { AGENDA_REFRESH_MS, agendaWarnings, type SyncSnapshot } from "@/lib/agenda-freshness";
+import { canManageDeadline, deadlineBlockReason } from "@/lib/edit-limits";
 import { buildAppointmentUpdate } from "@/lib/appointment-update";
 import { Toaster } from "@/components/ui/sonner";
+import { canonicalName, emptyCatalog, filterOptions, missingNames, type Catalog, type CatalogItem, type CatalogKind } from "@/lib/catalog";
+import { AGENDA_CHANGED_EVENT, agendaChangeToast, type AgendaChange } from "@/lib/agenda-freshness";
 
 type Appointment = {
   dbId: string;
@@ -100,6 +102,8 @@ type Appointment = {
   editsAllowed: number;
   managerEditUsed: boolean;
   managerEditsUsed: number;
+  deadlineChangesUsed: number;
+  deadlineChangesAllowed: number;
   priorityUrgent: boolean;
   reworkOf: string | null;
   reworkReason: string | null;
@@ -112,24 +116,26 @@ type Appointment = {
   sglocReference: string;
   sglocSyncState: string;
   sglocLastError: string;
-  forwardedWorkshopId: string | null;
 };
 
-export type AppRole = "atendimento" | "gerente" | "master" | "oficina";
+export type AppRole = "atendimento" | "oficina" | "gerente" | "master";
 export type CurrentUser = { id: string; name: string; role: AppRole; email?: string };
-const roleLabels: Record<AppRole, string> = { atendimento: "Atendimento", gerente: "Gerente", master: "Master", oficina: "Oficina" };
+const roleLabels: Record<AppRole, string> = { atendimento: "Atendimento", oficina: "Oficina", gerente: "Gerente", master: "Master" };
 
+function deadlineBlock(item: Appointment, role: AppRole, limit = 1): string | null {
+  return deadlineBlockReason({ deadlineChangesUsed: item.deadlineChangesUsed, deadlineChangesAllowed: item.deadlineChangesAllowed }, role, limit);
+}
 
 type ServiceStatus = string;
 
 type AppointmentRow = {
   id: string; sheet_id: string; registered_at: string | null; date: string | null; time: string; plate: string; store: string;
   model: string; contact: string; workshop: string; issue: string; note: string; operator: string; external_order: string; status: string;
-  creator_edits_used: number; creator_edits_allowed: number; manager_edit_used: boolean; manager_edits_used?: number | null; priority_urgent: boolean;
+  creator_edits_used: number; creator_edits_allowed: number; manager_edit_used: boolean; manager_edits_used?: number | null; deadline_changes_used?: number | null; deadline_changes_allowed?: number | null; priority_urgent: boolean;
   original_deadline: string | null; current_deadline: string | null;
   rework_of: string | null; rework_reason: string | null; custom_fields: unknown;
   brand?: string | null; contact_number?: string | null; km_scheduled?: number | null; os_number?: number | null;
-  schedule_type?: string | null; sgloc_reference?: string | null; sgloc_sync_state?: string | null; sgloc_last_error?: string | null; archived_at?: string | null; forwarded_workshop_id?: string | null;
+  schedule_type?: string | null; sgloc_reference?: string | null; sgloc_sync_state?: string | null; sgloc_last_error?: string | null; archived_at?: string | null;
 };
 
 function fromRow(row: AppointmentRow): Appointment {
@@ -138,13 +144,12 @@ function fromRow(row: AppointmentRow): Appointment {
     store: row.store, model: row.model, contact: row.contact, workshop: row.workshop, issue: row.issue, note: row.note,
     operator: row.operator, externalOrder: row.external_order, status: row.status,
     originalDeadline: row.original_deadline, currentDeadline: row.current_deadline,
-    editsUsed: row.creator_edits_used, editsAllowed: row.creator_edits_allowed, managerEditUsed: row.manager_edit_used, managerEditsUsed: row.manager_edits_used ?? (row.manager_edit_used ? 1 : 0), priorityUrgent: row.priority_urgent,
+    editsUsed: row.creator_edits_used, editsAllowed: row.creator_edits_allowed, managerEditUsed: row.manager_edit_used, managerEditsUsed: row.manager_edits_used ?? (row.manager_edit_used ? 1 : 0), deadlineChangesUsed: row.deadline_changes_used ?? 0, deadlineChangesAllowed: row.deadline_changes_allowed ?? 1, priorityUrgent: row.priority_urgent,
     reworkOf: row.rework_of, reworkReason: row.rework_reason, customFields: customValues(row.custom_fields),
     brand: safeText(row.brand), contactNumber: safeText(row.contact_number), kmScheduled: row.km_scheduled ?? null,
     osNumber: row.os_number ?? null, scheduleType: safeText(row.schedule_type) || "N", sglocReference: safeText(row.sgloc_reference),
     sglocSyncState: safeText(row.sgloc_sync_state) || "local_only",
     sglocLastError: safeText(row.sgloc_last_error),
-    forwardedWorkshopId: row.forwarded_workshop_id ?? null,
   };
 }
 
@@ -266,9 +271,14 @@ function UrgentBadge() {
   return <span className="inline-flex w-fit items-center gap-1 rounded border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-[11px] font-semibold text-destructive"><AlertTriangle className="size-3" />Urgente</span>;
 }
 
-const rowColumns = "id, sheet_id, registered_at, date, time, plate, store, model, contact, workshop, issue, note, operator, external_order, status, original_deadline, current_deadline, creator_edits_used, creator_edits_allowed, manager_edit_used, manager_edits_used, priority_urgent, rework_of, rework_reason, custom_fields, brand, contact_number, km_scheduled, os_number, schedule_type, sgloc_reference, sgloc_sync_state, sgloc_last_error, archived_at, forwarded_workshop_id";
+const rowColumns = "id, sheet_id, registered_at, date, time, plate, store, model, contact, workshop, issue, note, operator, external_order, status, original_deadline, current_deadline, creator_edits_used, creator_edits_allowed, manager_edit_used, manager_edits_used, deadline_changes_used, deadline_changes_allowed, priority_urgent, rework_of, rework_reason, custom_fields, brand, contact_number, km_scheduled, os_number, schedule_type, sgloc_reference, sgloc_sync_state, sgloc_last_error, archived_at";
 
-export function MaintenanceDashboard({ onSignOut, currentUser, modules = ["agenda", "historicos"] }: { onSignOut?: () => void; currentUser: CurrentUser; modules?: ModuleKey[] }) {
+export function MaintenanceDashboard({ onSignOut, currentUser, mode = "agenda", tabs }: { onSignOut?: () => void; currentUser: CurrentUser; mode?: "agenda" | "oficina"; tabs?: ReactNode }) {
+  // Módulo Oficina: mesma tela da Agenda, sem criar/importar/lote/excluir/configurar.
+  const workshopMode = mode === "oficina" || currentUser.role === "oficina";
+  const canCreate = !workshopMode;
+  const [myLimit, setMyLimit] = useState(1);
+  useEffect(() => { void supabase.rpc("get_my_edit_limit").then(({ data }) => { if (typeof data === "number") setMyLimit(data); }); }, []);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const queryClientForAccount = useQueryClient();
@@ -282,7 +292,6 @@ export function MaintenanceDashboard({ onSignOut, currentUser, modules = ["agend
   const [newOpen, setNewOpen] = useState(false);
   const [reworkSource, setReworkSource] = useState<Appointment | null>(null);
   const [reworksOnly, setReworksOnly] = useState(false);
-  const [workshopList, setWorkshopList] = useState<{ id: string; name: string }[]>([]);
   const [advanced, setAdvanced] = useState<AdvancedFilters>({});
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [views, setViews] = useState<SavedView[]>([]);
@@ -314,7 +323,15 @@ export function MaintenanceDashboard({ onSignOut, currentUser, modules = ["agend
   const [message, setMessage] = useState("");
   const [batchBusy, setBatchBusy] = useState(false);
   const [batchResult, setBatchResult] = useState<{ updated: number; unchanged: number; skipped: number; errors: { line: number; plate: string; reason: string }[] } | null>(null);
+  const [importResult, setImportResult] = useState<{ created: { line: number; plate: string; date: string | null; time: string; ref: string | null }[]; skippedEmpty: number; skippedExisting: number; errors: { line: number; plate: string; reason: string }[]; catalogAdded: number } | null>(null);
+  const [loadedAt, setLoadedAt] = useState<number | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  const [syncSnap, setSyncSnap] = useState<SyncSnapshot | null>(null);
+  const syncStatus = useServerFn(getSglocSyncStatus);
+  const freshness = agendaWarnings({ loadedAt, now: nowTick, loadFailed, sync: syncSnap });
   const [dark, setDark] = useState(false);
+  const [catalog, setCatalog] = useState<Catalog>(emptyCatalog);
   const inputRef = useRef<HTMLInputElement>(null);
   const batchInputRef = useRef<HTMLInputElement>(null);
 
@@ -359,29 +376,70 @@ export function MaintenanceDashboard({ onSignOut, currentUser, modules = ["agend
     const data: AppointmentRow[] = [];
     for (let offset = 0; ; offset += 500) {
       const result = await supabase.from("appointments").select(rowColumns).is("archived_at", null).order("date").order("time").range(offset, offset + 499);
-      if (result.error) { setLoadError("Não foi possível carregar a agenda. Verifique sua conexão e tente de novo."); return; }
+      if (result.error) { setLoadFailed(true); setLoadError("Não foi possível carregar a agenda. Verifique sua conexão e tente de novo."); return; }
       data.push(...(result.data ?? []));
       if (!result.data || result.data.length < 500) break;
     }
-    setLoadError("");
+    setLoadError(""); setLoadFailed(false); setLoadedAt(Date.now());
     const rows = activeOnly(data).map(fromRow);
     setAppointments(rows);
     void loadCompletionLogs(rows);
   }
 
+  async function loadSyncSnapshot() {
+    if (currentUser.role !== "master") return;
+    try {
+      const s = await syncStatus();
+      setSyncSnap({ syncLive: s.settings.syncLive, intervalMinutes: s.settings.intervalMinutes, last: s.last, lastRealSuccessAt: s.lastRealSuccessAt, accountWarning: s.accountWarning });
+    } catch { /* aviso de sincronização é opcional; a agenda continua */ }
+  }
+
+  async function loadCatalog(): Promise<Catalog> {
+    const [items, shops] = await Promise.all([
+      supabase.from("catalog_items").select("id, kind, name, active, sgloc_id, source").order("name"),
+      supabase.from("workshops").select("id, name, active").order("name"),
+    ]);
+    const next = emptyCatalog();
+    for (const item of items.data ?? []) next[item.kind as CatalogKind]?.push(item as CatalogItem);
+    next.workshop = (shops.data ?? []).map((w) => ({ id: w.id, kind: "workshop", name: w.name, active: w.active, sgloc_id: null }));
+    setCatalog(next);
+    return next;
+  }
+
   async function loadConfig() {
-    const [statusResult, fieldResult, workshopResult] = await Promise.all([
+    const [statusResult, fieldResult] = await Promise.all([
       supabase.from("status_options").select("*").order("sort_order").order("created_at"),
       supabase.from("custom_field_definitions").select("*").order("sort_order").order("created_at"),
-      supabase.from("workshops").select("id, name").eq("active", true).order("name"),
     ]);
     if (statusResult.error || fieldResult.error) { setLoadError("Não foi possível carregar as configurações da agenda. Tente de novo."); return; }
     setStatuses(statusResult.data ?? []);
-    const workshopNames = (workshopResult.data ?? []).map((row) => row.name);
-    setWorkshopList(workshopResult.data ?? []);
-    setFieldDefinitions((fieldResult.data ?? []).map((field) => field.field_key === "workshop" && field.storage === "column" ? { ...field, field_type: "select", select_options: workshopNames } : field));
+    setFieldDefinitions(fieldResult.data ?? []);
   }
-  useEffect(() => { void loadConfig(); void loadAppointments(); }, []);
+  const [, setLimitsTick] = useState(0);
+  useEffect(() => {
+    void (async () => {
+      setLimitsTick((t) => t + 1);
+    })();
+  }, []);
+  useEffect(() => { void loadConfig(); void loadAppointments(); void loadSyncSnapshot(); void loadCatalog(); }, []);
+  // Recarrega na hora quando uma sincronização (ou outra tela) avisa que a agenda mudou.
+  useEffect(() => {
+    const onChange = (event: Event) => {
+      const detail = (event as CustomEvent<AgendaChange>).detail;
+      void loadAppointments(); void loadSyncSnapshot(); void loadCatalog();
+      const text = agendaChangeToast(detail);
+      if (text) toast.success(text);
+    };
+    window.addEventListener(AGENDA_CHANGED_EVENT, onChange);
+    return () => window.removeEventListener(AGENDA_CHANGED_EVENT, onChange);
+  }, []);
+  // Recarrega sozinha a cada 2 min e ao voltar para a aba, para novos agendamentos aparecerem sem recarregar a página.
+  useEffect(() => {
+    const refresh = () => { if (document.visibilityState === "visible") { void loadAppointments(); void loadSyncSnapshot(); } setNowTick(Date.now()); };
+    const interval = window.setInterval(refresh, AGENDA_REFRESH_MS);
+    document.addEventListener("visibilitychange", refresh);
+    return () => { window.clearInterval(interval); document.removeEventListener("visibilitychange", refresh); };
+  }, []);
   useEffect(() => { if (statuses.length) void loadCompletionLogs(appointments); }, [completion]);
 
   const advancedFields = useMemo(() => buildAdvancedFields(fieldDefinitions), [fieldDefinitions]);
@@ -522,8 +580,10 @@ export function MaintenanceDashboard({ onSignOut, currentUser, modules = ["agend
 
   async function saveAppointment(changes: Partial<AppointmentFields>): Promise<boolean> {
     if (!selected) return false;
+    const blocked = "currentDeadline" in changes ? deadlineBlock(selected, currentUser.role, myLimit) : null;
+    if (blocked) { setMessage(blocked); return false; }
     if (changes.status && !serviceStatuses.includes(changes.status)) { setMessage("Situação inválida."); return false; }
-    const update = buildAppointmentUpdate(changes, selected.customFields, { canUrgent: currentUser.role !== "atendimento" }) as TablesUpdate<"appointments">;
+    const update = buildAppointmentUpdate(changes, selected.customFields, { canUrgent: canManageDeadline(currentUser.role) }) as TablesUpdate<"appointments">;
     if (!Object.keys(update).length) return true;
     const { data, error } = await updateAppointmentRow(selected.dbId, update);
     if (error || !data) { setMessage(error?.message || "Não foi possível salvar as alterações."); return false; }
@@ -600,15 +660,10 @@ export function MaintenanceDashboard({ onSignOut, currentUser, modules = ["agend
     setHistoryKey((key) => key + 1);
   }
 
-  async function forwardToWorkshop(item: Appointment, workshopId: string | null) {
-    const target = workshopId ? workshopList.find((entry) => entry.id === workshopId) : null;
-    if (workshopId && !target) { setMessage("Escolha uma oficina da lista."); return; }
-    const update: TablesUpdate<"appointments"> = target ? { forwarded_workshop_id: target.id, workshop: target.name } : { forwarded_workshop_id: null };
-    const { data, error } = await supabase.from("appointments").update(update).eq("id", item.dbId).select(rowColumns).single();
-    if (error || !data) { setMessage(error?.message || "Não foi possível atualizar o encaminhamento."); return; }
-    replaceRow(data); setHistoryKey((key) => key + 1);
-    setMessage(target ? `${item.plate} encaminhado para ${target.name}.` : `${item.plate} retirado da oficina.`);
-    if (target && data.sgloc_reference && item.workshop !== target.name) void sendToSgloc(data.id, "update", ["workshop"]);
+  async function grantDeadlineChange(item: Appointment) {
+    const { data, error } = await supabase.from("appointments").update({ deadline_changes_allowed: item.deadlineChangesAllowed + 1 }).eq("id", item.dbId).select(rowColumns).single();
+    if (error || !data) { setMessage(error?.message || "Não foi possível liberar a alteração da previsão."); return; }
+    replaceRow(data); setMessage(`Nova alteração da previsão liberada para ${item.plate}.`);
   }
 
   async function importFile(file?: File) {
@@ -629,7 +684,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser, modules = ["agend
       const hasDeadline = columns.includes("Previsão de Entrega");
       const { data: userData } = await supabase.auth.getUser();
       const createdBy = userData.user?.id ?? null;
-      const { records: candidates, skippedEmpty } = buildImportRecords(rows, createdBy, hasDeadline);
+      const { records: candidates, skippedEmpty, lines } = buildImportRecords(rows, createdBy, hasDeadline);
       const refs = [...new Set(candidates.map((item) => item.sgloc_reference).filter((ref): ref is string => Boolean(ref)))];
       const existing = new Set<string>();
       for (let start = 0; start < refs.length; start += 200) {
@@ -637,14 +692,42 @@ export function MaintenanceDashboard({ onSignOut, currentUser, modules = ["agend
         if (error) throw new Error("Não foi possível conferir os IDs do SGLOC já cadastrados.");
         for (const ref of data ?? []) if (ref) existing.add(ref);
       }
-      const { kept: records, skippedExisting } = dropExistingReferences(candidates, existing);
-      if (records.length) {
-        const { error } = await supabase.from("appointments").insert(records);
-        if (error) throw new Error(error.code === "23505" ? "Outro usuário cadastrou um ID do SGLOC desta planilha ao mesmo tempo. Importe novamente." : "Não foi possível gravar a agenda importada no banco.");
+      const tagged = candidates.map((record, index) => ({ record, line: lines[index] ?? 0, sgloc_reference: record.sgloc_reference ?? null }));
+      const { kept, skippedExisting } = dropExistingReferences(tagged, existing);
+      // Valores fora das listas: casa pelo nome normalizado; se não existir, cadastra com origem "importação".
+      let lists = await loadCatalog();
+      let catalogAdded = 0;
+      const importKinds = [["store", "store"], ["brand", "brand"], ["operator", "operator"], ["workshop", "workshop"]] as const;
+      for (const [kind, column] of importKinds) {
+        for (const name of missingNames(lists[kind], kept.map((item) => item.record[column]))) {
+          const { data: added } = await supabase.rpc("catalog_add", { _kind: kind, _name: name, _source: "importação" });
+          if ((added as { created?: boolean } | null)?.created) catalogAdded++;
+        }
+      }
+      if (catalogAdded) lists = await loadCatalog();
+      for (const item of kept) for (const [kind, column] of importKinds) if (item.record[column]) item.record[column] = canonicalName(lists[kind], item.record[column]);
+      const created: { line: number; plate: string; date: string | null; time: string; ref: string | null }[] = [];
+      const errors: { line: number; plate: string; reason: string }[] = [];
+      const ok = (item: (typeof kept)[number]) => created.push({ line: item.line, plate: item.record.plate ?? "", date: item.record.date ?? null, time: item.record.time ?? "", ref: item.record.sgloc_reference ?? null });
+      // Grava em blocos; se um bloco falhar, tenta linha a linha para gravar as boas e explicar as recusadas.
+      for (let start = 0; start < kept.length; start += 50) {
+        const chunk = kept.slice(start, start + 50);
+        const { error } = await supabase.from("appointments").insert(chunk.map((item) => item.record));
+        if (!error) { chunk.forEach(ok); continue; }
+        for (const item of chunk) {
+          const single = await supabase.from("appointments").insert(item.record);
+          if (single.error) errors.push({ line: item.line, plate: item.record.plate ?? "", reason: importErrorReason(single.error) });
+          else ok(item);
+        }
       }
       await loadAppointments(); resetFilters();
-      setMessage(`${records.length} agendamento(s) importado(s) • ${skippedEmpty} linha(s) ignorada(s) (sem placa ou vazias) • ${skippedExisting} ignorada(s) por ID do SGLOC já existente.`);
-    } catch (error) { setMessage(error instanceof Error ? error.message : "Não foi possível ler o arquivo."); }
+      setMessage("");
+      setImportResult({ created, skippedEmpty, skippedExisting, errors, catalogAdded });
+      const firstDate = created.map((item) => item.date).filter((d): d is string => Boolean(d)).sort()[0];
+      if (firstDate) window.setTimeout(() => setGridStart(weekRange(firstDate).start), 50);
+      if (created.length) toast.success(`${created.length} agendamento(s) criado(s) pela importação.`);
+      else if (errors.length) toast.error("Nenhum agendamento foi gravado. Veja os erros por linha.");
+    } catch (error) { setImportResult(null); setMessage(error instanceof Error ? error.message : "Não foi possível ler o arquivo."); }
   }
 
   function exportFile(kind: "csv" | "xlsx") {
@@ -775,12 +858,11 @@ export function MaintenanceDashboard({ onSignOut, currentUser, modules = ["agend
           <div className="flex items-center gap-2">
             <button type="button" onClick={() => setAccountOpen(true)} title="Minha conta" className="mr-2 min-h-11 rounded-md px-2 text-right text-sm hover:bg-primary-foreground/10"><p className="font-semibold"><UserCircle className="mr-1 inline size-4" />{currentUser.name}</p><p className="text-xs text-primary-foreground/70">{roleLabels[currentUser.role]} · Minha conta</p></button>
             <MyAccountDialog open={accountOpen} onOpenChange={setAccountOpen} userId={currentUser.id} email={currentUser.email ?? ""} name={currentUser.name} onSaved={() => void queryClientForAccount.invalidateQueries({ queryKey: ["profile", currentUser.id] })} />
-            {modules.includes("historicos") && <Button asChild variant="secondary"><Link to="/historicos"><History /> Históricos</Link></Button>}
-            {modules.includes("oficina") && <Button asChild variant="secondary"><Link to="/oficina"><Wrench /> Oficina</Link></Button>}
-            <Button variant="secondary" onClick={() => setNewOpen(true)}><Plus /> Novo agendamento</Button>
-             {currentUser.role === "master" && <Button variant="secondary" onClick={() => setSettingsOpen(true)}><Settings /> Configurações</Button>}
-            {currentUser.role === "master" && <Button variant="secondary" onClick={() => setTrashOpen(true)}><Trash2 /> Lixeira</Button>}
-            <Button variant="secondary" onClick={() => inputRef.current?.click()}><Upload /> Importar agenda</Button>
+            {!workshopMode && <Button asChild variant="secondary"><Link to="/historicos"><History /> Históricos</Link></Button>}
+            {canCreate && <Button variant="secondary" onClick={() => setNewOpen(true)}><Plus /> Novo agendamento</Button>}
+             {currentUser.role === "master" && !workshopMode && <Button variant="secondary" onClick={() => setSettingsOpen(true)}><Settings /> Configurações</Button>}
+            {currentUser.role === "master" && !workshopMode && <Button variant="secondary" onClick={() => setTrashOpen(true)}><Trash2 /> Lixeira</Button>}
+            {canCreate && <Button variant="secondary" onClick={() => inputRef.current?.click()}><Upload /> Importar agenda</Button>}
             <input ref={inputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(event) => importFile(event.target.files?.[0])} />
             <Button variant="ghost" size="icon" onClick={() => setDark((value) => !value)} className="text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground" aria-label="Alternar tema">{dark ? <Sun /> : <Moon />}</Button>
             {onSignOut && <Button variant="ghost" size="icon" onClick={onSignOut} className="text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground" aria-label="Sair"><LogOut /></Button>}
@@ -789,15 +871,21 @@ export function MaintenanceDashboard({ onSignOut, currentUser, modules = ["agend
       </header>
 
       <main className="mx-auto max-w-[1600px] space-y-6 px-5 py-6 lg:px-8">
+        {tabs}
         <div className="flex flex-wrap items-end justify-between gap-4">
-          <div><p className="mb-1 text-xs font-semibold uppercase text-accent-foreground">Operação semanal</p><h1 className="text-2xl font-bold lg:text-3xl">Agenda de manutenção</h1><p className="mt-1 text-sm text-muted-foreground">Acompanhamento da frota, oficinas e serviços programados.</p></div>
+          <div><p className="mb-1 text-xs font-semibold uppercase text-accent-foreground">Operação semanal</p><h1 className="text-2xl font-bold lg:text-3xl">{workshopMode ? "Oficina" : "Agenda de manutenção"}</h1><p className="mt-1 text-sm text-muted-foreground">{workshopMode ? "Atualize situação, mecânico, observação e previsão dos veículos." : "Acompanhamento da frota, oficinas e serviços programados."}</p></div>
           <div className="rounded-md border bg-card px-4 py-2 text-right"><p className="text-xs text-muted-foreground">Período carregado</p><p className="text-sm font-semibold">{loadedPeriod}</p></div>
         </div>
 
-        <SglocSyncBar role={currentUser.role} onSynced={loadAppointments} />
-
         {loadError && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"><span>{loadError}</span><Button variant="outline" size="sm" onClick={() => { void loadConfig(); void loadAppointments(); }}>Tentar de novo</Button></div>}
+        {freshness.length > 0 && <div role="status" aria-label="Aviso de agenda desatualizada" className="flex items-start gap-3 rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"><AlertTriangle className="mt-0.5 size-4 shrink-0" /><ul className="flex-1 space-y-1">{freshness.map((text) => <li key={text}>{text}</li>)}</ul><Button variant="outline" size="sm" onClick={() => { void loadAppointments(); void loadSyncSnapshot(); }}>Atualizar agora</Button></div>}
         {message && <div className="flex items-center justify-between rounded-md border border-accent bg-accent/30 px-4 py-3 text-sm"><span>{message}</span><Button variant="ghost" size="icon" onClick={() => setMessage("")}><X /></Button></div>}
+        {importResult && <section aria-label="Resultado da importação" className="space-y-2 border-y py-4 text-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-semibold">Importação concluída</h2><Button variant="ghost" size="icon" aria-label="Fechar resultado da importação" onClick={() => setImportResult(null)}><X /></Button></div>
+          <p>{importResult.created.length} criado(s) · 0 atualizado(s) (a importação só cria; para alterar use "Atualizar agenda em lote") · {importResult.skippedEmpty} ignorada(s) sem placa ou vazias · {importResult.skippedExisting} ignorada(s) por ID do SGLOC já existente · {importResult.errors.length} erro(s){importResult.catalogAdded ? ` · ${importResult.catalogAdded} novo(s) item(ns) nas listas (origem importação)` : ""}</p>
+          {importResult.created.length > 0 && <ul className="max-h-40 list-disc space-y-1 overflow-y-auto pl-5">{importResult.created.map((item) => <li key={`c-${item.line}`}>Linha {item.line} · {dash(item.plate)} · {formatDateBR(item.date)} {dash(item.time)}{item.ref ? ` · ID SGLOC ${item.ref}` : ""}</li>)}</ul>}
+          {importResult.errors.length > 0 && <ul className="max-h-64 list-disc space-y-1 overflow-y-auto pl-5 text-destructive">{importResult.errors.map((error) => <li key={`e-${error.line}`}>Linha {error.line} · {dash(error.plate)}: {error.reason}</li>)}</ul>}
+        </section>}
         {batchResult && <section aria-label="Resultado da atualização em lote" className="space-y-2 border-y py-4 text-sm">
           <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-semibold">Atualização em lote concluída</h2><Button variant="ghost" size="icon" aria-label="Fechar resultado" onClick={() => setBatchResult(null)}><X /></Button></div>
           <p>{batchResult.updated} atualizado(s) · {batchResult.unchanged} sem mudança · {batchResult.skipped} ignorada(s) (sem placa ou linha de total) · {batchResult.errors.length} erro(s)</p>
@@ -809,12 +897,12 @@ export function MaintenanceDashboard({ onSignOut, currentUser, modules = ["agend
             <label className="relative min-w-0 flex-[1.4] sm:min-w-64"><Search className="absolute left-3 top-3 size-4 text-muted-foreground" /><Input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Buscar placa, contato ou serviço" className="pl-9" /></label>
             <div className="flex min-w-0 flex-1 flex-wrap gap-2 sm:min-w-64"><Input type="date" aria-label="Data inicial" value={startDate} onChange={(e) => { setStartDate(e.target.value); setPeriodPreset("custom"); setPage(1); }} className="min-w-36 flex-1" /><Input type="date" aria-label="Data final" value={endDate} onChange={(e) => { setEndDate(e.target.value); setPeriodPreset("custom"); setPage(1); }} className="min-w-36 flex-1" /></div>
             <SearchableSelect label="Todos os contatos" value={contact} options={option("contact")} onChange={setContact} />
-            <SearchableSelect label="Todas as oficinas" value={workshop} options={option("workshop")} onChange={setWorkshop} />
+            <SearchableSelect label="Todas as oficinas" value={workshop} options={filterOptions(catalog.workshop, option("workshop"))} onChange={setWorkshop} />
           </div>
           <div className="mt-3 flex flex-col gap-3 md:flex-row">
             <SearchableSelect label="Todas as placas" value={plateFilter} options={option("plate")} onChange={(value) => { setPlateFilter(value); setPage(1); }} />
             <SearchableSelect label="Todos os modelos" value={model} options={option("model")} onChange={setModel} />
-            <SearchableSelect label="Todos os operadores" value={operator} options={option("operator")} onChange={setOperator} />
+            <SearchableSelect label="Todos os operadores" value={operator} options={filterOptions(catalog.operator, option("operator"))} onChange={setOperator} />
             <label className="flex min-h-10 items-center gap-2 text-sm text-foreground"><Checkbox checked={reworksOnly} onCheckedChange={(checked) => { setReworksOnly(checked === true); setPage(1); }} aria-label="Mostrar somente retrabalhos" />Mostrar somente retrabalhos</label>
             <Button variant="outline" onClick={() => setAdvancedOpen(true)}><SlidersHorizontal /> Filtros avançados{activeAdvancedCount(advanced) > 0 ? ` (${activeAdvancedCount(advanced)})` : ""}</Button>
             <Button variant="outline" onClick={resetFilters}><RotateCcw /> Limpar tudo</Button>
@@ -851,7 +939,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser, modules = ["agend
         </div></section></SectionBoundary>
 
         <SectionBoundary name="a tabela"><section ref={agendaRef} className="scroll-mt-4 rounded-lg border bg-card shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4"><div><h2 className="font-semibold">Agenda detalhada</h2><p className="text-xs text-muted-foreground">{sorted.length} registros encontrados</p></div><div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" aria-pressed={extraColumns} onClick={() => setExtraColumns((value) => !value)}>{extraColumns ? "Ocultar colunas extras" : "Mostrar colunas extras"}</Button><Button variant="outline" size="sm" onClick={exportBatch}><Download /> Exportar para edição em lote</Button><Button variant="outline" size="sm" disabled={batchBusy} onClick={() => batchInputRef.current?.click()}><Upload /> {batchBusy ? "Atualizando…" : "Atualizar agenda em lote"}</Button><input ref={batchInputRef} type="file" accept=".xlsx" className="hidden" aria-label="Arquivo de atualização em lote" onChange={(event) => void importBatch(event.target.files?.[0])} /><Button variant="outline" size="sm" onClick={() => exportFile("csv")}><Download /> CSV</Button><Button variant="outline" size="sm" onClick={() => exportFile("xlsx")}><Download /> Excel</Button></div></div>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4"><div><h2 className="font-semibold">Agenda detalhada</h2><p className="text-xs text-muted-foreground">{sorted.length} registros encontrados</p></div><div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" aria-pressed={extraColumns} onClick={() => setExtraColumns((value) => !value)}>{extraColumns ? "Ocultar colunas extras" : "Mostrar colunas extras"}</Button>{!workshopMode && <><Button variant="outline" size="sm" onClick={exportBatch}><Download /> Exportar para edição em lote</Button><Button variant="outline" size="sm" disabled={batchBusy} onClick={() => batchInputRef.current?.click()}><Upload /> {batchBusy ? "Atualizando…" : "Atualizar agenda em lote"}</Button></>}<input ref={batchInputRef} type="file" accept=".xlsx" className="hidden" aria-label="Arquivo de atualização em lote" onChange={(event) => void importBatch(event.target.files?.[0])} /><Button variant="outline" size="sm" onClick={() => exportFile("csv")}><Download /> CSV</Button><Button variant="outline" size="sm" onClick={() => exportFile("xlsx")}><Download /> Excel</Button></div></div>
            <div className="max-w-full overflow-x-auto"><table className="w-full min-w-[1400px] text-sm"><thead className="bg-muted/60 text-left text-xs text-muted-foreground"><tr>{[["priority","Prioridade"],["id","ID"],["date","Atendimento"],["time","Hora"],["plate","Placa"],["status","Situação"],["currentDeadline","Prazo"],["model","Modelo"],["contact","Contato"],["workshop","Local/Oficina"],["issue","Problema relatado"],["note","Observação"],["operator","Operador"], ...(extraColumns ? [["brand","Marca"],["kmScheduled","KM"],["contactNumber","Telefone"],["osNumber","O.S Fornecedor"]] : [])].map(([key,label]) => <th key={key} className="px-4 py-3 font-medium"><Button variant="ghost" size="sm" className="h-auto p-0" onClick={() => changeSort(key as keyof Appointment | "priority")}>{label}<ArrowDownAZ className="size-3" /></Button></th>)}</tr></thead><tbody>{pageRows.map((item) => <tr key={item.dbId} onClick={() => setSelected(item)} className="cursor-pointer border-t hover:bg-muted/40"><td className="px-4 py-3">{item.priorityUrgent && item.status !== completion ? <UrgentBadge /> : <span className="text-xs text-muted-foreground">{["Urgente","Atrasado","Hoje","Futuro","Sem prazo"][priorityLevel(item, today, completion)]}</span>}</td><td className="px-4 py-3 font-mono text-xs">#{item.id}</td><td className="whitespace-nowrap px-4 py-3">{formatDateBR(item.date)}</td><td className="px-4 py-3 font-semibold">{dash(normalizeTime(item.time))}</td><td className="px-4 py-3 font-bold"><Button variant="link" className="min-h-11 h-auto px-0 font-bold text-primary" onClick={(event) => { event.stopPropagation(); openVehicle(item.plate); }}>{item.plate || "Não informado"}<ChevronRight className="size-4" /></Button>{item.reworkOf && <span className="mt-1 block"><ReworkBadge /></span>}{isEmergency(item.scheduleType) && <span className="mt-1 block"><EmergencyBadge /></span>}</td><td className="px-4 py-3"><span className={cn("whitespace-nowrap rounded border px-2 py-1 text-xs font-semibold", statusProps(item.status, statuses).className)} style={statusProps(item.status, statuses).style}>{item.status || "Não atualizada"}</span></td><td className="whitespace-nowrap px-4 py-3"><DeadlineBadge item={item} completedAt={completedAtById[item.dbId]} today={today} completion={completion} /></td><td title={item.model} className="max-w-48 truncate px-4 py-3">{dash(item.model)}</td><td title={item.contact} className="max-w-48 truncate px-4 py-3">{dash(item.contact)}</td><td title={item.workshop} className="max-w-52 truncate px-4 py-3">{dash(item.workshop)}</td><td title={item.issue} className="max-w-72 truncate px-4 py-3 text-muted-foreground">{dash(item.issue.replace(/\s+/g, " "))}</td><td title={item.note} className="max-w-36 truncate px-4 py-3">{dash(item.note.replace(/\s+/g, " "))}</td><td title={item.operator} className="max-w-40 truncate whitespace-nowrap px-4 py-3">{dash(item.operator)}</td>{extraColumns && <><td title={item.brand} className="max-w-36 truncate px-4 py-3">{dash(item.brand)}</td><td className="whitespace-nowrap px-4 py-3">{dash(item.kmScheduled)}</td><td className="whitespace-nowrap px-4 py-3">{dash(item.contactNumber)}</td><td className="whitespace-nowrap px-4 py-3">{dash(item.osNumber)}</td></>}</tr>)}</tbody></table></div>
           <div className="flex items-center justify-between border-t p-4"><p className="text-xs text-muted-foreground">Página {currentPage} de {pages}</p><div className="flex gap-2"><Button variant="outline" size="icon" disabled={currentPage <= 1} onClick={() => setPage((value) => Math.max(1,value-1))} aria-label="Página anterior"><ArrowLeft /></Button><Button variant="outline" size="icon" disabled={currentPage >= pages} onClick={() => setPage((value) => Math.min(pages,value+1))} aria-label="Próxima página"><ArrowRight /></Button></div></div>
         </section></SectionBoundary>
@@ -875,7 +963,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser, modules = ["agend
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader><DialogTitle>Novo agendamento</DialogTitle><DialogDescription>Dados do atendimento</DialogDescription></DialogHeader>
           {newOpen && <label className="mb-3 flex items-center gap-2 text-sm font-medium"><input type="checkbox" className="size-4 accent-destructive" checked={newUrgent && currentUser.role !== "atendimento"} disabled={currentUser.role === "atendimento"} onChange={(event) => setNewUrgent(event.target.checked)} />Marcar como urgente{currentUser.role === "atendimento" && <span className="text-xs font-normal text-muted-foreground">(somente gerente ou master)</span>}</label>}
-          {newOpen && <AppointmentForm initial={emptyFields} definitions={fieldDefinitions} onSave={createAppointment} lockedColumns={currentUser.role === "atendimento" ? ["current_deadline"] : []} />}
+          {newOpen && <AppointmentForm initial={emptyFields} definitions={fieldDefinitions} onSave={createAppointment} catalog={catalog} canAddCatalog={canCreate && currentUser.role !== "oficina"} onCatalogAdded={async () => { await loadCatalog(); }} />}
         </DialogContent>
       </Dialog>
       <Dialog open={Boolean(reworkSource)} onOpenChange={(open) => { if (!open) setReworkSource(null); }}>
@@ -908,9 +996,10 @@ export function MaintenanceDashboard({ onSignOut, currentUser, modules = ["agend
               {selected.sglocLastError && <p>{selected.sglocLastError}</p>}
               <Button size="sm" variant="outline" onClick={() => void sendToSgloc(selected.dbId, "retry")}>Reenviar</Button>
             </div>}
-            <ForwardToWorkshop key={`fw-${selected.dbId}-${selected.forwardedWorkshopId ?? ""}`} current={selected.forwardedWorkshopId} workshops={workshopList} onForward={(id) => forwardToWorkshop(selected, id)} />
-            <AppointmentForm key={`${selected.dbId}-${historyKey}`} initial={fieldsFromAppointment(selected)} definitions={fieldDefinitions} editing lockedColumns={currentUser.role === "atendimento" ? ["current_deadline"] : []} onSave={saveAppointment} statusOptions={serviceStatuses} canUrgent={currentUser.role !== "atendimento"} onDirtyChange={(dirty) => { dirtyRef.current = dirty; }} />
-            <div className="flex flex-wrap gap-2 border-t pt-4"><Button variant="outline" onClick={() => openRework(selected)}><RotateCcw /> Registrar retrabalho</Button>{currentUser.role === "master" && <Button variant="destructive" onClick={() => void archiveAppointment(selected)}><Trash2 /> Excluir</Button>}</div>
+            {deadlineBlock(selected, currentUser.role, myLimit) && <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{deadlineBlock(selected, currentUser.role, myLimit)}</p>}
+            {canManageDeadline(currentUser.role) && <div className="flex flex-wrap items-center gap-3"><Button variant="outline" onClick={() => grantDeadlineChange(selected)}><Unlock /> Liberar nova alteração da previsão</Button><span className="text-xs text-muted-foreground">Previsão: {selected.deadlineChangesUsed} alteração(ões) feita(s) · {selected.deadlineChangesAllowed - 1} extra(s) liberada(s) além do limite de cada pessoa</span></div>}
+            <AppointmentForm key={`${selected.dbId}-${historyKey}`} initial={fieldsFromAppointment(selected)} definitions={fieldDefinitions} catalog={catalog} canAddCatalog={canCreate && currentUser.role !== "oficina"} onCatalogAdded={async () => { await loadCatalog(); }} editing blocked={null} deadlineLocked={Boolean(deadlineBlock(selected, currentUser.role, myLimit))} onSave={saveAppointment} statusOptions={serviceStatuses} canUrgent={canManageDeadline(currentUser.role)} onDirtyChange={(dirty) => { dirtyRef.current = dirty; }} />
+            <div className="flex flex-wrap gap-2 border-t pt-4">{canCreate && <Button variant="outline" onClick={() => openRework(selected)}><RotateCcw /> Registrar retrabalho</Button>}{currentUser.role === "master" && !workshopMode && <Button variant="destructive" onClick={() => void archiveAppointment(selected)}><Trash2 /> Excluir</Button>}</div>
             {(selected.osNumber !== null && fieldDefinitions.find((field) => field.field_key === "os_number")?.visible !== false) || selected.sglocReference ? <div className="grid gap-3 sm:grid-cols-2">
               {selected.osNumber !== null && fieldDefinitions.find((field) => field.field_key === "os_number")?.visible !== false && <Detail label="O.S Fornecedor" value={String(selected.osNumber)} />}
               {selected.sglocReference && <Detail label="ID SGLOC" value={selected.sglocReference} />}
@@ -922,28 +1011,13 @@ export function MaintenanceDashboard({ onSignOut, currentUser, modules = ["agend
         </DialogContent>
       </Dialog>
       <Toaster richColors position="bottom-right" />
-      {currentUser.role === "master" && <TrashDialog open={trashOpen} onOpenChange={setTrashOpen} onRestored={() => void loadAppointments()} />}
+      {currentUser.role === "master" && !workshopMode && <TrashDialog open={trashOpen} onOpenChange={setTrashOpen} onRestored={() => void loadAppointments()} />}
       <AdvancedFilterDrawer open={advancedOpen} onOpenChange={setAdvancedOpen} userId={currentUser.id} fields={advancedFields} optionsFor={advancedOptions} value={advanced} onChange={(next) => { setAdvanced(next); setPage(1); }} views={views} onViewsChanged={loadViews} onApplyView={applyView} snapshot={viewSnapshot} />
-      {currentUser.role === "master" && <AgendaSettings open={settingsOpen} onOpenChange={setSettingsOpen} statuses={statuses} fields={fieldDefinitions} currentUserId={currentUser.id} onRefresh={async () => { await loadConfig(); await loadAppointments(); }} />}
+      {currentUser.role === "master" && !workshopMode && <AgendaSettings open={settingsOpen} onOpenChange={setSettingsOpen} statuses={statuses} fields={fieldDefinitions} currentUserId={currentUser.id} onRefresh={async () => { await loadConfig(); await loadAppointments(); }} />}
     </div>
   );
 }
 
 function Detail({ label, value }: { label: string; value: string }) {
   return <div><p className="text-xs font-medium uppercase text-muted-foreground">{label}</p><p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6">{dash(value)}</p></div>;
-}
-function ForwardToWorkshop({ current, workshops, onForward }: { current: string | null; workshops: { id: string; name: string }[]; onForward: (workshopId: string | null) => Promise<void> }) {
-  const [choice, setChoice] = useState(current ?? "");
-  const [busy, setBusy] = useState(false);
-  const currentName = workshops.find((entry) => entry.id === current)?.name;
-  async function run(id: string | null) { setBusy(true); try { await onForward(id); } finally { setBusy(false); } }
-  return <section aria-label="Encaminhar para oficina" className="space-y-2 rounded-md border bg-muted/30 p-3 text-sm">
-    <p className="font-semibold">Oficina</p>
-    <p className="text-xs text-muted-foreground">{current ? `Encaminhado para ${currentName ?? "uma oficina inativa"}. A oficina enxerga este veículo.` : "A oficina só vê o veículo depois que ele é encaminhado."}</p>
-    <div className="flex flex-wrap items-center gap-2">
-      <select aria-label="Oficina de destino" value={choice} onChange={(event) => setChoice(event.target.value)} className="h-10 min-w-48 flex-1 rounded-md border border-input bg-background px-3 text-sm"><option value="">Selecione a oficina</option>{workshops.map((entry) => <option key={entry.id} value={entry.id}>{entry.name}</option>)}</select>
-      <Button type="button" disabled={busy || !choice || choice === current} onClick={() => void run(choice)}>{choice && choice === current ? "Já encaminhado" : "Encaminhar para oficina"}</Button>
-      {current && <Button type="button" variant="outline" disabled={busy} onClick={() => void run(null)}>Retirar da oficina</Button>}
-    </div>
-  </section>;
 }

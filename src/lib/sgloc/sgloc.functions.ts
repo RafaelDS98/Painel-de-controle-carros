@@ -102,6 +102,7 @@ export const getSglocSyncStatus = createServerFn({ method: "POST" })
     const cols = "id, started_at, finished_at, status, trigger_source, dry_run, fetched, inserted, updated, linked, protected, ambiguous, not_returned, skipped, errors, error_detail, sample";
     const { data: last } = await supabaseAdmin.from("sgloc_sync_runs").select(cols).order("started_at", { ascending: false }).limit(1).maybeSingle();
     const { data: lastSim } = await supabaseAdmin.from("sgloc_sync_runs").select(cols).eq("dry_run", true).neq("status", "running").order("started_at", { ascending: false }).limit(1).maybeSingle();
+    const { data: lastReal } = await supabaseAdmin.from("sgloc_sync_runs").select("started_at").eq("dry_run", false).in("status", ["success", "partial"]).order("started_at", { ascending: false }).limit(1).maybeSingle();
     let accountWarning: string | null = null;
     if (!s?.sync_user_id) accountWarning = "Nenhuma conta SGLOC designada para a sincronização.";
     else {
@@ -113,7 +114,7 @@ export const getSglocSyncStatus = createServerFn({ method: "POST" })
     return {
       settings: { intervalMinutes: s?.interval_minutes ?? 480, windowDaysBack: s?.window_days_back ?? 7, windowDaysAhead: s?.window_days_ahead ?? 45,
         syncUserId: s?.sync_user_id ?? null, syncLive: Boolean(s?.sync_live) },
-      last: last ?? null, lastSimulation: lastSim ?? null,
+      last: last ?? null, lastSimulation: lastSim ?? null, lastRealSuccessAt: lastReal?.started_at ?? null,
       nextRunAt: nextRunAt(tick, await lastCompletedStart("schedule")), accountWarning,
     };
   });
@@ -314,7 +315,7 @@ export const pushAppointmentToSgloc = createServerFn({ method: "POST" })
     await assertApproved(context);
     // Leitura com RLS do usuário: confirma que ele enxerga o agendamento.
     const { data: row, error } = await context.supabase.from("appointments")
-      .select("id, date, time, plate, km_scheduled, contact, contact_number, issue, note, workshop, external_order, sgloc_reference, archived_at")
+      .select("id, date, time, plate, km_scheduled, contact, contact_number, issue, note, workshop, external_order, sgloc_reference, archived_at, store")
       .eq("id", data.appointmentId).maybeSingle();
     if (error || !row) throw new Error("Agendamento não encontrado.");
     if (row.archived_at) return { status: "skipped", message: "Agendamento na Lixeira não é enviado ao SGLOC." };
@@ -332,6 +333,13 @@ export const pushAppointmentToSgloc = createServerFn({ method: "POST" })
     let warning: string | undefined;
     try {
       const baseUrl = client.assertUsable(settings);
+      // Loja sem ID SGLOC: falha só este agendamento, com mensagem clara (nunca silenciosa).
+      if ((row.store ?? "").trim()) {
+        const { storeLinkError } = await import("@/lib/catalog");
+        const { data: stores } = await supabaseAdmin.from("catalog_items").select("name, sgloc_id").eq("kind", "store");
+        const linkError = storeLinkError(row.store, stores ?? []);
+        if (linkError) throw new core.SglocError("validation", linkError);
+      }
       let supplierId: number | null = null;
       if (changed.includes("workshop") && (row.workshop ?? "").trim()) {
         const { data: sup } = await supabaseAdmin.from("sgloc_suppliers").select("supplier_id, name");

@@ -16,9 +16,6 @@ export type Database = {
     Tables: {
       appointments: {
         Row: {
-          forwarded_at: string | null
-          forwarded_by: string | null
-          forwarded_workshop_id: string | null
           archived_at: string | null
           archived_by: string | null
           brand: string
@@ -32,7 +29,12 @@ export type Database = {
           current_deadline: string | null
           custom_fields: Json
           date: string | null
+          deadline_changes_allowed: number
+          deadline_changes_used: number
           external_order: string
+          forwarded_at: string | null
+          forwarded_by: string | null
+          forwarded_workshop_id: string | null
           id: string
           issue: string
           km_scheduled: number | null
@@ -66,9 +68,6 @@ export type Database = {
           workshop: string
         }
         Insert: {
-          forwarded_at?: string | null
-          forwarded_by?: string | null
-          forwarded_workshop_id?: string | null
           archived_at?: string | null
           archived_by?: string | null
           brand?: string
@@ -82,7 +81,12 @@ export type Database = {
           current_deadline?: string | null
           custom_fields?: Json
           date?: string | null
+          deadline_changes_allowed?: number
+          deadline_changes_used?: number
           external_order?: string
+          forwarded_at?: string | null
+          forwarded_by?: string | null
+          forwarded_workshop_id?: string | null
           id?: string
           issue?: string
           km_scheduled?: number | null
@@ -116,9 +120,6 @@ export type Database = {
           workshop?: string
         }
         Update: {
-          forwarded_at?: string | null
-          forwarded_by?: string | null
-          forwarded_workshop_id?: string | null
           archived_at?: string | null
           archived_by?: string | null
           brand?: string
@@ -132,7 +133,12 @@ export type Database = {
           current_deadline?: string | null
           custom_fields?: Json
           date?: string | null
+          deadline_changes_allowed?: number
+          deadline_changes_used?: number
           external_order?: string
+          forwarded_at?: string | null
+          forwarded_by?: string | null
+          forwarded_workshop_id?: string | null
           id?: string
           issue?: string
           km_scheduled?: number | null
@@ -174,6 +180,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "appointments_forwarded_workshop_id_fkey"
+            columns: ["forwarded_workshop_id"]
+            isOneToOne: false
+            referencedRelation: "workshops"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "appointments_rework_of_fkey"
             columns: ["rework_of"]
             isOneToOne: false
@@ -181,6 +194,75 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      catalog_items: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          id: string
+          kind: string
+          name: string
+          name_key: string | null
+          sgloc_id: number | null
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind: string
+          name: string
+          name_key?: string | null
+          sgloc_id?: number | null
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: string
+          name?: string
+          name_key?: string | null
+          sgloc_id?: number | null
+          source?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      catalog_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          changed_at: string
+          detail: string
+          id: string
+          item_name: string
+          kind: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          changed_at?: string
+          detail?: string
+          id?: string
+          item_name: string
+          kind: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          changed_at?: string
+          detail?: string
+          id?: string
+          item_name?: string
+          kind?: string
+        }
+        Relationships: []
       }
       contact_log: {
         Row: {
@@ -358,41 +440,65 @@ export type Database = {
           created_at: string
           full_name: string | null
           id: string
+          sector: string | null
         }
         Insert: {
           created_at?: string
           full_name?: string | null
           id: string
+          sector?: string | null
         }
         Update: {
           created_at?: string
           full_name?: string | null
           id?: string
+          sector?: string | null
+        }
+        Relationships: []
+      }
+      saved_views: {
+        Row: {
+          created_at: string
+          filters: Json
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          filters?: Json
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          filters?: Json
+          id?: string
+          name?: string
+          user_id?: string
         }
         Relationships: []
       }
       sectors: {
-        Row: { created_at: string; id: string; modules: string[]; name: string }
-        Insert: { created_at?: string; id?: string; modules?: string[]; name: string }
-        Update: { created_at?: string; id?: string; modules?: string[]; name?: string }
-        Relationships: []
-      }
-      user_sectors: {
-        Row: { sector_id: string; user_id: string }
-        Insert: { sector_id: string; user_id: string }
-        Update: { sector_id?: string; user_id?: string }
-        Relationships: []
-      }
-      workshop_users: {
-        Row: { user_id: string; workshop_id: string }
-        Insert: { user_id: string; workshop_id: string }
-        Update: { user_id?: string; workshop_id?: string }
-        Relationships: []
-      }
-      saved_views: {
-        Row: { created_at: string; filters: Json; id: string; name: string; user_id: string }
-        Insert: { created_at?: string; filters?: Json; id?: string; name: string; user_id: string }
-        Update: { created_at?: string; filters?: Json; id?: string; name?: string; user_id?: string }
+        Row: {
+          created_at: string
+          id: string
+          modules: string[]
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          modules?: string[]
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          modules?: string[]
+          name?: string
+        }
         Relationships: []
       }
       sgloc_accounts: {
@@ -692,10 +798,77 @@ export type Database = {
         }
         Relationships: []
       }
+      user_sectors: {
+        Row: {
+          sector_id: string
+          user_id: string
+        }
+        Insert: {
+          sector_id: string
+          user_id: string
+        }
+        Update: {
+          sector_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_sectors_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "sectors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workshop_users: {
+        Row: {
+          user_id: string
+          workshop_id: string
+        }
+        Insert: {
+          user_id: string
+          workshop_id: string
+        }
+        Update: {
+          user_id?: string
+          workshop_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workshop_users_workshop_id_fkey"
+            columns: ["workshop_id"]
+            isOneToOne: false
+            referencedRelation: "workshops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workshops: {
-        Row: { active: boolean; created_at: string; created_by: string | null; id: string; name: string }
-        Insert: { active?: boolean; created_at?: string; created_by?: string | null; id?: string; name: string }
-        Update: { active?: boolean; created_at?: string; created_by?: string | null; id?: string; name?: string }
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          source: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          source?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          source?: string
+        }
         Relationships: []
       }
     }
@@ -703,6 +876,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      catalog_add: {
+        Args: {
+          _kind: string
+          _name: string
+          _sgloc_id?: number
+          _source?: string
+        }
+        Returns: Json
+      }
+      catalog_update: {
+        Args: {
+          _active: boolean
+          _id: string
+          _kind: string
+          _name: string
+          _sgloc_id: number
+        }
+        Returns: number
+      }
       edit_limit_for: { Args: { _uid: string }; Returns: number }
       existing_sgloc_references: {
         Args: { _refs: string[] }
@@ -710,8 +902,6 @@ export type Database = {
       }
       get_my_edit_limit: { Args: never; Returns: number }
       get_my_modules: { Args: never; Returns: string[] }
-      user_modules: { Args: { _uid: string }; Returns: string[] }
-      has_module: { Args: { _module: string; _uid: string }; Returns: boolean }
       get_my_sgloc_status: {
         Args: never
         Returns: {
@@ -721,6 +911,7 @@ export type Database = {
         }[]
       }
       has_access: { Args: { _user_id: string }; Returns: boolean }
+      has_module: { Args: { _module: string; _uid: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -747,6 +938,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      norm_name: { Args: { _v: string }; Returns: string }
       revoke_user_sessions: { Args: { _user_id: string }; Returns: undefined }
       set_edit_limit_default: {
         Args: { _max: number; _role: Database["public"]["Enums"]["app_role"] }
@@ -763,6 +955,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      user_modules: { Args: { _uid: string }; Returns: string[] }
     }
     Enums: {
       app_role: "atendimento" | "gerente" | "master" | "oficina"

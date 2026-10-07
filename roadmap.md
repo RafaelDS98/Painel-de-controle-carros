@@ -23,4 +23,11 @@
 - [x] Limite de edições configurável pelo master (perfil e usuário).
 - [x] Cor livre nas Situações (seletor de cor).
 - [x] Sincronização SGLOC → painel (simulação, manual, tela, rota do tick, testes).
+- [x] Previsão de entrega 1x para atendimento/oficina com liberação por gerente/master; Oficina edita encaminhados e não cria.
 - [ ] Cadastrar a tarefa agendada de 15 min chamando a rota do tick (bloqueado: sem mecanismo de agendamento da plataforma disponível ao agente; pg_cron não aprovado).
+- [x] Importação manual: grava linha a linha com resumo (criados/ignorados/erros por linha), leva a grade à semana importada; agenda recarrega a cada 2 min e ao voltar à aba; aviso de carga/sincronização falha, atrasada ou em simulação.
+- [x] Agenda recarrega na hora após sincronizar/simular/importar, com aviso do que entrou.
+- [x] Loja, Marca, Operador, Mecânico e Local/Oficina como listas com "Adicionar ...", aba Configurações > Listas, importação/sincronização cadastram o que falta, loja sem ID SGLOC bloqueia só o envio dela.
+- [x] Perfil Oficina operacional + aba Oficina (vê/edita todos os ativos, sem criar/importar/lote/excluir/urgência).
+- [x] Campo Setor no usuário (lista "Setores", semeada com Oficina).
+- [x] Limite de alterações da Previsão de Entrega por perfil/usuário (Atendimento e Oficina, padrão 1).

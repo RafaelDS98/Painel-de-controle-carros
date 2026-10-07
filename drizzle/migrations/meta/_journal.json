@@ -113,6 +113,34 @@
       "when": 1791225129306,
       "tag": "0015_sgloc_auto_sync",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1791236276223,
+      "tag": "0016_deadline_changes_and_oficina_edit",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1791236421396,
+      "tag": "0017_deadline_message_wording",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1791297143043,
+      "tag": "0018_catalog_lists",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1791298496143,
+      "tag": "0019_oficina_module_sector_deadline_limit",
+      "breakpoints": true
     }
   ]
 }

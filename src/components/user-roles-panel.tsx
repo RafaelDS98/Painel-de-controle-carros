@@ -7,12 +7,16 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Pencil, UserPlus } from "lucide-react";
 import { PasswordInput, isWeakPassword } from "@/components/my-account";
+import { CatalogSelect } from "@/components/catalog-select";
+import type { CatalogItem } from "@/lib/catalog";
 import { parsePanelError, type AuthField } from "@/lib/auth-errors";
 
-type Role = "atendimento" | "gerente" | "master" | "oficina";
+type Role = "atendimento" | "oficina" | "gerente" | "master";
 type UserRow = { user_id: string; full_name: string | null; email: string | null; role: Role | null };
 type LogRow = { id: string; changed_at: string; actor_id: string | null; target_label: string; action: string; detail: string };
-const roleNames: Record<Role, string> = { atendimento: "Atendimento", gerente: "Gerente", master: "Master", oficina: "Oficina" };
+const roleNames: Record<Role, string> = { atendimento: "Atendimento", oficina: "Oficina", gerente: "Gerente", master: "Master" };
+const limitRoles = ["atendimento", "oficina"] as const;
+const hasLimit = (r: Role | null): r is "atendimento" | "oficina" => r === "atendimento" || r === "oficina";
 const selectClass = "h-10 w-full rounded-md border border-input bg-background px-2 text-sm text-foreground disabled:opacity-60";
 
 export function UserRolesPanel({ currentUserId }: { currentUserId: string }) {
@@ -26,12 +30,17 @@ export function UserRolesPanel({ currentUserId }: { currentUserId: string }) {
   const fe = (f: AuthField) => fieldErr.field === f && fieldErr.message ? <span role="alert" className="mt-1 block text-xs text-destructive">{fieldErr.message}</span> : null;
   const local = (f: AuthField, m: string) => { setError(m); setFieldErr({ field: f, message: m }); };
   const [formOpen, setFormOpen] = useState(false);
-  const [draft, setDraft] = useState({ fullName: "", email: "", role: "atendimento" as Role, password: "" });
+  const [draft, setDraft] = useState({ fullName: "", email: "", role: "atendimento" as Role, sector: "", password: "" });
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [edit, setEdit] = useState({ fullName: "", email: "", role: "" as Role | "" });
+  const [edit, setEdit] = useState({ fullName: "", email: "", role: "" as Role | "", sector: "" });
   const [pw, setPw] = useState({ password: "", confirm: "", requireChange: false });
   const [busy, setBusy] = useState(false);
+  const [limits, setLimits] = useState({ atendimento: "1", oficina: "1" });
+  const [sectors, setSectors] = useState<CatalogItem[]>([]);
+  const [userSector, setUserSector] = useState<Record<string, string>>({});
+  const [overrides, setOverrides] = useState<Record<string, number>>({});
+  const [overrideDraft, setOverrideDraft] = useState("");
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const createUser = useServerFn(createPanelUser);
   const updateUser = useServerFn(updatePanelUser);
@@ -44,8 +53,23 @@ export function UserRolesPanel({ currentUserId }: { currentUserId: string }) {
       supabase.from("user_admin_log").select("id, changed_at, actor_id, target_label, action, detail").order("changed_at", { ascending: false }).limit(50),
     ]);
     if (error) setError(error.message); else setUsers((data ?? []) as UserRow[]);
+    const [defs, ovs] = await Promise.all([
+      supabase.from("edit_limit_defaults").select("role, max_edits"),
+      supabase.from("edit_limit_overrides").select("user_id, max_edits"),
+    ]);
+    await loadSectors();
+    const profs = await supabase.from("profiles").select("id, sector");
+    setUserSector(Object.fromEntries((profs.data ?? []).filter((p) => p.sector).map((p) => [p.id, p.sector as string])));
+    const d = { atendimento: "1", oficina: "1" };
+    for (const r of defs.data ?? []) if (hasLimit(r.role as Role)) d[r.role as "atendimento" | "oficina"] = String(r.max_edits);
+    setLimits(d);
+    setOverrides(Object.fromEntries((ovs.data ?? []).map((r) => [r.user_id, r.max_edits])));
     setLog((logResult.data ?? []) as LogRow[]);
     setLoading(false);
+  }
+  async function loadSectors() {
+    const { data } = await supabase.from("catalog_items").select("id, kind, name, active, sgloc_id").eq("kind", "sector").order("name");
+    setSectors((data ?? []) as CatalogItem[]);
   }
   useEffect(() => { void load(); }, []);
 
@@ -57,8 +81,35 @@ export function UserRolesPanel({ currentUserId }: { currentUserId: string }) {
     setError(""); setNotice(""); setFieldErr({ field: "", message: "" });
     if (editingId === row.user_id) { close(row.user_id); return; }
     setEditingId(row.user_id);
-    setEdit({ fullName: row.full_name ?? "", email: row.email ?? "", role: row.role ?? "" });
+    setEdit({ fullName: row.full_name ?? "", email: row.email ?? "", role: row.role ?? "", sector: userSector[row.user_id] ?? "" });
     setPw({ password: "", confirm: "", requireChange: false });
+    setOverrideDraft(overrides[row.user_id] ? String(overrides[row.user_id]) : "");
+  }
+
+  const validLimit = (v: string) => /^\d+$/.test(v.trim()) && Number(v) >= 1 && Number(v) <= 20;
+  async function saveDefaults(event: React.FormEvent) {
+    event.preventDefault();
+    setError(""); setNotice(""); setFieldErr({ field: "", message: "" });
+    if (!validLimit(limits.atendimento) || !validLimit(limits.oficina)) { setError("Use um número de 1 a 20 em cada perfil."); return; }
+    setBusy(true);
+    try {
+      for (const role of limitRoles) {
+        const { error } = await supabase.rpc("set_edit_limit_default", { _role: role, _max: Number(limits[role]) });
+        if (error) throw error;
+      }
+      setNotice("Limites da Previsão de Entrega salvos."); await load();
+    } catch (caught) { setError(caught instanceof Error ? caught.message : (caught as { message?: string })?.message || "Não foi possível salvar os limites."); } finally { setBusy(false); }
+  }
+  async function saveOverride(row: UserRow, remove: boolean) {
+    setError(""); setNotice(""); setFieldErr({ field: "", message: "" });
+    if (!remove && !validLimit(overrideDraft)) { setError("Limite individual: use um número de 1 a 20 (ou remova)."); return; }
+    setBusy(true);
+    try {
+      const { error } = await supabase.rpc("set_edit_limit_override", { _user_id: row.user_id, _max: remove ? (null as unknown as number) : Number(overrideDraft) });
+      if (error) throw error;
+      if (remove) setOverrideDraft("");
+      setNotice(remove ? "Limite individual removido; vale o padrão do perfil." : "Limite individual salvo."); await load();
+    } catch (caught) { setError((caught as { message?: string })?.message || "Não foi possível salvar o limite."); } finally { setBusy(false); }
   }
 
   async function submitNew(event: React.FormEvent) {
@@ -72,7 +123,7 @@ export function UserRolesPanel({ currentUserId }: { currentUserId: string }) {
     try {
       await createUser({ data: { ...draft, email } });
       setNotice(`Usuário ${draft.fullName.trim()} criado como ${roleNames[draft.role]}. Ele deverá trocar a senha no primeiro acesso.`);
-      setDraft({ fullName: "", email: "", role: "atendimento", password: "" });
+      setDraft({ fullName: "", email: "", role: "atendimento", sector: "", password: "" });
       setFormOpen(false);
       await load();
     } catch (caught) { showErr(caught, "Não foi possível criar o usuário."); } finally { setCreating(false); }
@@ -89,7 +140,7 @@ export function UserRolesPanel({ currentUserId }: { currentUserId: string }) {
       !window.confirm("Você está removendo o seu próprio perfil master e perderá acesso às configurações. Confirmar?")) return;
     setBusy(true);
     try {
-      const result = await updateUser({ data: { userId: row.user_id, fullName: edit.fullName.trim(), email, role } });
+      const result = await updateUser({ data: { userId: row.user_id, fullName: edit.fullName.trim(), email, role, sector: edit.sector } });
       setNotice(result.changed ? `Cadastro de ${edit.fullName.trim()} atualizado.` : "Nenhuma alteração para salvar.");
       close(row.user_id); await load();
     } catch (caught) { showErr(caught, "Não foi possível salvar."); } finally { setBusy(false); }
@@ -112,10 +163,21 @@ export function UserRolesPanel({ currentUserId }: { currentUserId: string }) {
 
   return <section className="space-y-3">
     <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold">Usuários e permissões</h3><Button size="sm" variant="outline" onClick={() => { setFormOpen((v) => !v); setError(""); }}><UserPlus /> Novo usuário</Button></div>
+    <form noValidate onSubmit={saveDefaults} className="space-y-2 rounded-md border p-3" aria-label="Limite de alterações da Previsão de Entrega">
+      <h4 className="font-semibold">Limite de alterações da Previsão de Entrega</h4>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <label className="text-sm">Atendimento<Input type="number" min={1} max={20} value={limits.atendimento} onChange={(e) => setLimits({ ...limits, atendimento: e.target.value })} /></label>
+        <label className="text-sm">Oficina<Input type="number" min={1} max={20} value={limits.oficina} onChange={(e) => setLimits({ ...limits, oficina: e.target.value })} /></label>
+        <div className="text-sm">Gerente e Master<p className="flex h-10 items-center text-muted-foreground">Sem limite</p></div>
+      </div>
+      <p className="text-xs text-muted-foreground">Quantas vezes cada pessoa pode mudar a Previsão de Entrega de um agendamento. Liberações extras do gerente/master somam. Os demais campos não têm limite.</p>
+      <Button type="submit" size="sm" disabled={busy}>Salvar</Button>
+    </form>
     {formOpen && <form noValidate onSubmit={submitNew} className="grid gap-3 rounded-md border p-4 sm:grid-cols-2" aria-label="Novo usuário">
       <label className="text-sm">Nome<Input value={draft.fullName} onChange={(e) => setDraft({ ...draft, fullName: e.target.value })} maxLength={120} />{fe("fullName")}</label>
       <label className="text-sm">E-mail<Input type="email" value={draft.email} onChange={(e) => setDraft({ ...draft, email: e.target.value })} maxLength={255} />{fe("email")}</label>
       <label className="text-sm">Perfil<select className={selectClass} value={draft.role} onChange={(e) => setDraft({ ...draft, role: e.target.value as Role })}>{(Object.keys(roleNames) as Role[]).map((r) => <option key={r} value={r}>{roleNames[r]}</option>)}</select>{fe("role")}</label>
+      <label className="text-sm">Setor<CatalogSelect kind="sector" items={sectors} value={draft.sector} canAdd onChange={(v) => setDraft({ ...draft, sector: v })} onAdded={loadSectors} /></label>
       <label className="text-sm">Senha provisória<Input type="password" autoComplete="new-password" value={draft.password} onChange={(e) => setDraft({ ...draft, password: e.target.value })} />{fe("password")}<span className="text-xs text-muted-foreground">Mínimo 8 caracteres. Não fica salva no painel; o usuário troca no primeiro acesso.</span></label>
       <div className="flex gap-2 sm:col-span-2"><Button type="submit" disabled={creating}>{creating ? "Criando…" : "Criar usuário"}</Button><Button type="button" variant="outline" onClick={() => setFormOpen(false)}>Cancelar</Button></div>
     </form>}
@@ -126,7 +188,7 @@ export function UserRolesPanel({ currentUserId }: { currentUserId: string }) {
       const open = editingId === row.user_id;
       return <div key={row.user_id} ref={(el) => { rowRefs.current[row.user_id] = el; }} className="border-b py-2 text-sm">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="min-w-0 flex-1"><p className="font-medium">{row.full_name || "Sem nome"}{self && <span className="ml-2 text-xs text-muted-foreground">(você)</span>}</p><p className="truncate text-xs text-muted-foreground">{row.email || "—"} · {row.role ? roleNames[row.role] : "Sem acesso"}</p></div>
+          <div className="min-w-0 flex-1"><p className="font-medium">{row.full_name || "Sem nome"}{self && <span className="ml-2 text-xs text-muted-foreground">(você)</span>}</p><p className="truncate text-xs text-muted-foreground">{row.email || "—"} · {row.role ? roleNames[row.role] : "Sem acesso"}{userSector[row.user_id] ? ` · ${userSector[row.user_id]}` : ""}{overrides[row.user_id] && hasLimit(row.role) ? ` · limite individual: ${overrides[row.user_id]}` : ""}</p></div>
           <Button size="sm" variant={open ? "secondary" : "outline"} className="min-h-11 sm:min-h-9" aria-expanded={open} onClick={() => openEdit(row)}><Pencil /> Editar</Button>
         </div>
         {open && <div className="mt-3 space-y-4 rounded-md border bg-muted/30 p-3">
@@ -134,8 +196,13 @@ export function UserRolesPanel({ currentUserId }: { currentUserId: string }) {
             <label className="text-sm">Nome<Input value={edit.fullName} onChange={(e) => setEdit({ ...edit, fullName: e.target.value })} maxLength={120} />{editingId && fe("fullName")}</label>
             <label className="text-sm">E-mail<Input type="email" value={edit.email} onChange={(e) => setEdit({ ...edit, email: e.target.value })} maxLength={255} />{fe("email")}</label>
             <label className="text-sm">Perfil<select className={selectClass} value={edit.role} onChange={(e) => setEdit({ ...edit, role: e.target.value as Role | "" })}><option value="">Sem acesso</option>{(Object.keys(roleNames) as Role[]).map((r) => <option key={r} value={r}>{roleNames[r]}</option>)}</select>{fe("role")}</label>
+            <label className="text-sm">Setor<CatalogSelect kind="sector" items={sectors} value={edit.sector} canAdd onChange={(v) => setEdit({ ...edit, sector: v })} onAdded={loadSectors} /></label>
             <div className="flex flex-wrap gap-2 sm:col-span-3"><Button type="submit" disabled={busy}>Salvar cadastro</Button><Button type="button" variant="outline" onClick={() => close(row.user_id)}>Cancelar</Button></div>
           </form>
+          {hasLimit(row.role) && <div className="grid gap-2 border-t pt-3 sm:grid-cols-2" role="group" aria-label="Limite individual da Previsão de Entrega">
+            <label className="text-sm">Limite individual da Previsão de Entrega<Input type="number" min={1} max={20} placeholder={`Padrão do perfil (${limits[row.role as "atendimento" | "oficina"]})`} value={overrideDraft} onChange={(e) => setOverrideDraft(e.target.value)} /></label>
+            <div className="flex flex-wrap items-end gap-2"><Button type="button" variant="outline" disabled={busy} onClick={() => saveOverride(row, false)}>Salvar limite</Button><Button type="button" variant="ghost" disabled={busy || !overrides[row.user_id]} onClick={() => saveOverride(row, true)}>Remover limite individual</Button></div>
+          </div>}
           <div className="grid gap-3 border-t pt-3 sm:grid-cols-2" role="group" aria-label="Redefinir senha">
             <h4 className="font-semibold sm:col-span-2">Redefinir senha</h4>
             <PasswordInput label="Nova senha" value={pw.password} onChange={(v) => setPw({ ...pw, password: v })} />

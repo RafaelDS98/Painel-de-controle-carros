@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { announceAgendaChange } from "@/lib/agenda-freshness";
 import { getSglocSyncStatus, listSglocConnectedUsers, runSglocSyncNow, saveSglocSettings } from "@/lib/sgloc/sgloc.functions";
 
 type Status = Awaited<ReturnType<typeof getSglocSyncStatus>>;
@@ -15,6 +16,7 @@ function RunCard({ run, title }: { run: Run; title: string }) {
   const detail = Array.isArray(run.error_detail) ? (run.error_detail as { message?: string; kind?: string }[]) : [];
   return <div className="rounded-md border p-3 text-sm">
     <p className="font-medium">{title}: {when(run.started_at)} · {run.trigger_source === "manual" ? "manual" : "agendada"}{run.dry_run ? " · simulação" : ""} · {statusLabel[run.status] ?? run.status}</p>
+    {run.dry_run && <p className="mt-1 font-medium">Simulação: nada foi gravado na agenda.</p>}
     <p className="mt-1 text-muted-foreground">Lidos {run.fetched} · {run.dry_run ? "criaria" : "criados"} {run.inserted} · {run.dry_run ? "atualizaria" : "atualizados"} {run.updated} · vinculados {run.linked} · não retornados {run.not_returned} · protegidos {run.protected} · ambíguos {run.ambiguous} · ignorados {run.skipped} · erros {run.errors}</p>
     {detail[0]?.message && <p className="mt-1 text-destructive">{detail[0].message}</p>}
   </div>;
@@ -55,7 +57,10 @@ export function SglocSyncPanel({ base }: { base: { baseUrl: string; enabled: boo
   }
   async function onRun(simulate: boolean) {
     setBusy(true); setMsg({});
-    try { const r = await run({ data: { simulate } }); setMsg(r.status === "failed" ? { error: r.message } : { ok: r.message }); await reload(); }
+    try {
+      const r = await run({ data: { simulate } }); setMsg(r.status === "failed" ? { error: r.message } : { ok: r.message }); await reload();
+      announceAgendaChange({ source: r.dryRun ? "simulation" : "sync", inserted: r.counts?.["inserted"] ?? 0, updated: (r.counts?.["updated"] ?? 0) + (r.counts?.["linked"] ?? 0) });
+    }
     catch (e) { setMsg({ error: e instanceof Error ? e.message : "Não foi possível executar." }); }
     setBusy(false);
   }

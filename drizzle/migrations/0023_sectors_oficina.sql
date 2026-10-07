@@ -1,3 +1,4 @@
+-- HISTÓRICO: já aplicado em produção; o gatilho atual no banco é o da migração 0019 do main (limite da Previsão de Entrega). Não reaplicar.
 -- Perfil Oficina (valor 'oficina' do enum já adicionado), setores/módulos e encaminhamento para oficina.
 -- 1) Oficina nunca entra pelo caminho comum de acesso; só pelas políticas explícitas abaixo.
 CREATE OR REPLACE FUNCTION public.has_access(_user_id uuid) RETURNS boolean

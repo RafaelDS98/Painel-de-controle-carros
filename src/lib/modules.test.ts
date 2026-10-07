@@ -7,7 +7,7 @@ describe("modules", () => {
     expect(knownModules(null)).toEqual([]);
   });
   it("escolhe a primeira tela disponível", () => {
-    expect(landingPath(["oficina"])).toBe("/oficina");
+    expect(landingPath(["oficina"])).toBe("/");
     expect(landingPath(["historicos", "oficina"])).toBe("/historicos");
     expect(landingPath([])).toBeNull();
   });
