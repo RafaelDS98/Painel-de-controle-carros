@@ -32,7 +32,7 @@ export function SglocSyncPanel({ base }: { base: { baseUrl: string; enabled: boo
   const [list, setList] = useState<User[]>([]);
   const [hours, setHours] = useState(8); const [mins, setMins] = useState(0);
   const [back, setBack] = useState(7); const [ahead, setAhead] = useState(45);
-  const [userId, setUserId] = useState<string>(""); const [live, setLive] = useState(false);
+  const [userId, setUserId] = useState<string>(""); const [live, setLive] = useState(false); const [auto, setAuto] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ error?: string; ok?: string }>({});
 
@@ -40,7 +40,7 @@ export function SglocSyncPanel({ base }: { base: { baseUrl: string; enabled: boo
     const [s, u] = await Promise.all([status(), users().catch(() => [] as User[])]);
     setSt(s); setList(u);
     setHours(Math.floor(s.settings.intervalMinutes / 60)); setMins(s.settings.intervalMinutes % 60);
-    setBack(s.settings.windowDaysBack); setAhead(s.settings.windowDaysAhead); setUserId(s.settings.syncUserId ?? ""); setLive(s.settings.syncLive);
+    setBack(s.settings.windowDaysBack); setAhead(s.settings.windowDaysAhead); setUserId(s.settings.syncUserId ?? ""); setLive(s.settings.syncLive); setAuto(s.settings.autoSyncEnabled);
   }, [status, users]);
   useEffect(() => { void reload().catch((e) => setMsg({ error: e instanceof Error ? e.message : "Não foi possível carregar." })); }, [reload]);
 
@@ -50,7 +50,7 @@ export function SglocSyncPanel({ base }: { base: { baseUrl: string; enabled: boo
     if (live && !st?.settings.syncLive && !window.confirm("Ligar a sincronização de verdade? A partir daí o painel passa a receber criações e alterações do SGLOC.")) return;
     setBusy(true); setMsg({});
     try {
-      await save({ data: { ...base, intervalMinutes: total, windowDaysBack: Number(back), windowDaysAhead: Number(ahead), syncUserId: userId || null, syncLive: live } });
+      await save({ data: { ...base, intervalMinutes: total, windowDaysBack: Number(back), windowDaysAhead: Number(ahead), syncUserId: userId || null, syncLive: live, autoSyncEnabled: auto } });
       setMsg({ ok: "Sincronização salva." }); await reload();
     } catch (e) { setMsg({ error: e instanceof Error ? e.message : "Não foi possível salvar." }); }
     setBusy(false);
@@ -70,6 +70,11 @@ export function SglocSyncPanel({ base }: { base: { baseUrl: string; enabled: boo
     <h3 className="font-semibold">Sincronização automática (SGLOC → painel)</h3>
     <p className="rounded-md border bg-muted px-3 py-2 text-sm">{st.settings.syncLive ? "Modo real: a cada intervalo o painel lê a agenda do SGLOC e grava criações e alterações." : "Modo simulação: as execuções só contam o que seria criado ou alterado, sem gravar nada no painel."} O painel continua sendo a fonte: agendamentos aguardando envio ou com falha no envio nunca são sobrescritos.</p>
     {st.accountWarning && <p role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{st.accountWarning}</p>}
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border-2 border-primary/40 p-3">
+      <div><p className="font-semibold">Sincronização automática (de tempo em tempo)</p><p className="text-xs text-muted-foreground">{auto ? "Ligada: roda sozinha no intervalo abaixo." : "Desligada: só atualiza pelos botões manuais."} Clique em Salvar para aplicar.</p></div>
+      <Button type="button" role="switch" aria-checked={auto} variant={auto ? "default" : "outline"} onClick={() => setAuto((v) => !v)}>{auto ? "Ligada" : "Desligada"}</Button>
+    </div>
+    {!auto && <p className="text-xs text-muted-foreground">Com a automática desligada, intervalo e janela abaixo são só informativos (a janela continua valendo para as execuções manuais).</p>}
     <div className="flex flex-wrap items-end gap-3 text-sm">
       <label className="block">Intervalo (horas)<Input type="number" min={0} max={24} value={hours} onChange={(e) => setHours(Number(e.target.value))} className="w-24" /></label>
       <label className="block">e minutos<Input type="number" min={0} max={59} value={mins} onChange={(e) => setMins(Number(e.target.value))} className="w-24" /></label>
@@ -89,7 +94,7 @@ export function SglocSyncPanel({ base }: { base: { baseUrl: string; enabled: boo
     </div>
     {msg.error && <p role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{msg.error}</p>}
     {msg.ok && <p role="status" className="text-sm text-muted-foreground">{msg.ok}</p>}
-    <p className="text-sm">Próxima prevista: <strong>{st.nextRunAt ? when(st.nextRunAt) : "desligada"}</strong></p>
+    <p className="text-sm">Próxima prevista: <strong>{!st.settings.autoSyncEnabled ? "desligada (somente manual)" : st.nextRunAt ? when(st.nextRunAt) : "desligada"}</strong></p>
     {st.last ? <RunCard run={st.last} title="Última execução" /> : <p className="text-sm text-muted-foreground">Nenhuma sincronização executada ainda.</p>}
     {st.lastSimulation && st.lastSimulation.id !== st.last?.id && <RunCard run={st.lastSimulation} title="Última simulação" />}
   </section>;
