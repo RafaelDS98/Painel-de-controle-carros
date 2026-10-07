@@ -148,6 +148,13 @@
       "when": 1791376932543,
       "tag": "0020_lote_a_auto_sync_catalog_sector",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791377588918,
+      "tag": "0021_vehicle_movements",
+      "breakpoints": true
     }
   ]
 }

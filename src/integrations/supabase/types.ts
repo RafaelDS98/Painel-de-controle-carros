@@ -951,7 +951,28 @@ export type Database = {
         }[]
       }
       norm_name: { Args: { _v: string }; Returns: string }
+      norm_plate: { Args: { _v: string }; Returns: string }
       revoke_user_sessions: { Args: { _user_id: string }; Returns: undefined }
+      search_vehicle_movements: {
+        Args: {
+          _from?: string
+          _include_archived?: boolean
+          _mechanic?: string
+          _page?: number
+          _page_size?: number
+          _plate?: string
+          _rework?: boolean
+          _sector?: string
+          _service?: string
+          _status?: string
+          _store?: string
+          _to?: string
+          _urgent?: boolean
+          _workshop?: string
+        }
+        Returns: Json
+      }
+      service_category: { Args: { _issue: string }; Returns: string }
       set_edit_limit_default: {
         Args: { _max: number; _role: Database["public"]["Enums"]["app_role"] }
         Returns: undefined
