@@ -59,18 +59,20 @@ describe("planSync", () => {
 });
 
 describe("agenda", () => {
-  const s = { enabled: true, base_url: "https://x.com", interval_minutes: 480, sync_user_id: "u" };
+  const s = { enabled: true, auto_sync_enabled: true, base_url: "https://x.com", interval_minutes: 480, sync_user_id: "u" };
   it("shouldRunTick respeita intervalo, desligado e conta", () => {
     const now = Date.parse("2026-10-05T12:00:00Z");
     expect(shouldRunTick(s, null, now).run).toBe(true);
     expect(shouldRunTick(s, "2026-10-05T09:00:00Z", now).run).toBe(false);
     expect(shouldRunTick(s, "2026-10-05T04:00:00Z", now).run).toBe(true);
     expect(shouldRunTick({ ...s, enabled: false }, null, now).run).toBe(false);
+    expect(shouldRunTick({ ...s, auto_sync_enabled: false }, null, now)).toEqual({ run: false, reason: "sincronização automática desligada" });
     expect(shouldRunTick({ ...s, sync_user_id: null }, null, now).run).toBe(false);
   });
   it("nextRunAt arredonda ao tick de 15 min", () => {
     expect(nextRunAt(s, "2026-10-05T04:07:00Z", Date.parse("2026-10-05T05:00:00Z"))).toBe("2026-10-05T12:15:00.000Z");
     expect(nextRunAt({ ...s, enabled: false }, null)).toBeNull();
+    expect(nextRunAt({ ...s, auto_sync_enabled: false }, null)).toBeNull();
   });
   it("syncWindow", () => expect(syncWindow("2026-10-05", 7, 45)).toEqual({ start: "2026-09-28", end: "2026-11-19" }));
 });
@@ -83,5 +85,19 @@ describe("rota do tick (authenticateCronRequest)", () => {
     expect((await authenticateCronRequest(req()))?.status).toBe(401);
     expect((await authenticateCronRequest(req("Bearer errado")))?.status).toBe(401);
     expect(await authenticateCronRequest(req("Bearer segredo-de-teste"))).toBeNull();
+  });
+});
+
+import { canRefreshFromSgloc, refreshWaitSeconds } from "./sync-core";
+describe("Atualizar do SGLOC", () => {
+  it("só oficina, gerente e master", () => {
+    expect(["oficina", "gerente", "master"].every(canRefreshFromSgloc)).toBe(true);
+    expect(canRefreshFromSgloc("atendimento")).toBe(false); expect(canRefreshFromSgloc(undefined)).toBe(false);
+  });
+  it("limite de 1 a cada 2 min", () => {
+    const now = Date.parse("2026-10-07T12:02:00Z");
+    expect(refreshWaitSeconds(null, now, 120_000)).toBe(0);
+    expect(refreshWaitSeconds("2026-10-07T12:00:00Z", now, 120_000)).toBe(0);
+    expect(refreshWaitSeconds("2026-10-07T12:01:30Z", now, 120_000)).toBe(90);
   });
 });

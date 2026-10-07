@@ -122,10 +122,11 @@ export function syncWindow(today: string, back: number, ahead: number): { start:
   return { start: fmt(-back), end: fmt(ahead) };
 }
 
-export type TickSettings = { enabled: boolean; base_url: string | null; interval_minutes: number; sync_user_id: string | null };
+export type TickSettings = { enabled: boolean; auto_sync_enabled: boolean; base_url: string | null; interval_minutes: number; sync_user_id: string | null };
 
 /** O tick deve rodar agora? `lastStartedAt` = início da última execução agendada concluída (success/partial). */
 export function shouldRunTick(s: TickSettings, lastStartedAt: string | null, now = Date.now()): { run: boolean; reason: string } {
+  if (!s.auto_sync_enabled) return { run: false, reason: "sincronização automática desligada" };
   if (!s.enabled || !s.base_url) return { run: false, reason: "integração desligada" };
   if (!s.sync_user_id) return { run: false, reason: "sem conta designada" };
   if (lastStartedAt) {
@@ -137,7 +138,7 @@ export function shouldRunTick(s: TickSettings, lastStartedAt: string | null, now
 
 /** Próxima execução prevista (ISO) ou null se desligada. */
 export function nextRunAt(s: TickSettings, lastStartedAt: string | null, now = Date.now()): string | null {
-  if (!s.enabled || !s.base_url || !s.sync_user_id) return null;
+  if (!s.auto_sync_enabled || !s.enabled || !s.base_url || !s.sync_user_id) return null;
   const t = lastStartedAt ? Date.parse(lastStartedAt) : NaN;
   const due = Number.isNaN(t) ? now : Math.max(now, t + s.interval_minutes * 60_000);
   const tick = 15 * 60_000;
@@ -155,3 +156,12 @@ export function maskedSample(plan: SyncPlan, max = 20) {
 }
 
 export const intervalValid = (m: number) => Number.isInteger(m) && m >= 15 && m <= 1440;
+
+/** Perfis que podem usar "Atualizar do SGLOC". */
+export const canRefreshFromSgloc = (role: unknown) => role === "oficina" || role === "gerente" || role === "master";
+/** Segundos de espera até poder atualizar de novo (0 = pode). */
+export function refreshWaitSeconds(lastStartedAt: string | null, now: number, gapMs: number): number {
+  const t = lastStartedAt ? Date.parse(lastStartedAt) : NaN;
+  if (Number.isNaN(t) || now - t >= gapMs) return 0;
+  return Math.ceil((gapMs - (now - t)) / 1000);
+}
