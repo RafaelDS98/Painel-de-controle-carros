@@ -46,7 +46,7 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { AppointmentHistory, ChangeLogDialog } from "@/components/edit-history";
-import { AlertTriangle, ChevronLeft, ChevronRight, History, Trash2, Unlock, UserCircle } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, History, ListChecks, RefreshCw, Trash2, Unlock, UserCircle } from "lucide-react";
 import { MyAccountDialog } from "@/components/my-account";
 import { useQueryClient } from "@tanstack/react-query";
 import { AppointmentForm, columnForField, emptyFields, type AppointmentFields } from "@/components/appointment-form";
@@ -69,12 +69,14 @@ import { customValues, statusColorProps, type FieldDefinition, type StatusOption
 import { IndicatorDetails, type IndicatorGroup, type IndicatorAppointment } from "@/components/indicator-details";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
-import { getSglocSyncStatus, pushAppointmentToSgloc } from "@/lib/sgloc/sgloc.functions";
+import { getAgendaSyncInfo, getSglocSyncStatus, pushAppointmentToSgloc, refreshAgendaFromSgloc } from "@/lib/sgloc/sgloc.functions";
+import { canRefreshFromSgloc } from "@/lib/sgloc/sync-core";
+import { CatalogPanel } from "@/components/catalog-panel";
 import { AGENDA_REFRESH_MS, agendaWarnings, type SyncSnapshot } from "@/lib/agenda-freshness";
 import { canManageDeadline, deadlineBlockReason } from "@/lib/edit-limits";
 import { buildAppointmentUpdate } from "@/lib/appointment-update";
 import { Toaster } from "@/components/ui/sonner";
-import { canonicalName, emptyCatalog, filterOptions, missingNames, type Catalog, type CatalogItem, type CatalogKind } from "@/lib/catalog";
+import { canManageCatalog, canonicalName, emptyCatalog, filterOptions, missingNames, type Catalog, type CatalogItem, type CatalogKind } from "@/lib/catalog";
 import { AGENDA_CHANGED_EVENT, agendaChangeToast, type AgendaChange } from "@/lib/agenda-freshness";
 
 type Appointment = {
@@ -113,6 +115,9 @@ type Appointment = {
   sglocReference: string;
   sglocSyncState: string;
   sglocLastError: string;
+  createdBy: string | null;
+  /** Setor do usuário que criou (rótulo); vazio = sem setor. */
+  sector: string;
 };
 
 export type AppRole = "atendimento" | "oficina" | "gerente" | "master";
@@ -132,7 +137,7 @@ type AppointmentRow = {
   original_deadline: string | null; current_deadline: string | null;
   rework_of: string | null; rework_reason: string | null; custom_fields: unknown;
   brand?: string | null; contact_number?: string | null; km_scheduled?: number | null; os_number?: number | null;
-  schedule_type?: string | null; sgloc_reference?: string | null; sgloc_sync_state?: string | null; sgloc_last_error?: string | null; archived_at?: string | null;
+  schedule_type?: string | null; sgloc_reference?: string | null; sgloc_sync_state?: string | null; sgloc_last_error?: string | null; archived_at?: string | null; created_by?: string | null;
 };
 
 function fromRow(row: AppointmentRow): Appointment {
@@ -147,6 +152,7 @@ function fromRow(row: AppointmentRow): Appointment {
     osNumber: row.os_number ?? null, scheduleType: safeText(row.schedule_type) || "N", sglocReference: safeText(row.sgloc_reference),
     sglocSyncState: safeText(row.sgloc_sync_state) || "local_only",
     sglocLastError: safeText(row.sgloc_last_error),
+    createdBy: row.created_by ?? null, sector: "",
   };
 }
 
@@ -268,7 +274,7 @@ function UrgentBadge() {
   return <span className="inline-flex w-fit items-center gap-1 rounded border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-[11px] font-semibold text-destructive"><AlertTriangle className="size-3" />Urgente</span>;
 }
 
-const rowColumns = "id, sheet_id, registered_at, date, time, plate, store, model, contact, workshop, issue, note, operator, external_order, status, original_deadline, current_deadline, creator_edits_used, creator_edits_allowed, manager_edit_used, manager_edits_used, deadline_changes_used, deadline_changes_allowed, priority_urgent, rework_of, rework_reason, custom_fields, brand, contact_number, km_scheduled, os_number, schedule_type, sgloc_reference, sgloc_sync_state, sgloc_last_error, archived_at";
+const rowColumns = "id, sheet_id, registered_at, date, time, plate, store, model, contact, workshop, issue, note, operator, external_order, status, original_deadline, current_deadline, creator_edits_used, creator_edits_allowed, manager_edit_used, manager_edits_used, deadline_changes_used, deadline_changes_allowed, priority_urgent, rework_of, rework_reason, custom_fields, brand, contact_number, km_scheduled, os_number, schedule_type, sgloc_reference, sgloc_sync_state, sgloc_last_error, archived_at, created_by";
 
 export function MaintenanceDashboard({ onSignOut, currentUser, mode = "agenda", tabs }: { onSignOut?: () => void; currentUser: CurrentUser; mode?: "agenda" | "oficina"; tabs?: ReactNode }) {
   // Módulo Oficina: mesma tela da Agenda, sem criar/importar/lote/excluir/configurar.
@@ -297,6 +303,16 @@ export function MaintenanceDashboard({ onSignOut, currentUser, mode = "agenda", 
   const [workshop, setWorkshop] = useState("");
   const [model, setModel] = useState("");
   const [operator, setOperator] = useState("");
+  const [sector, setSector] = useState("");
+  const sectorRef = useRef<Map<string, string>>(new Map());
+  const withSector = (item: Appointment): Appointment => ({ ...item, sector: (item.createdBy && sectorRef.current.get(item.createdBy)) || "" });
+  const [listsOpen, setListsOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastSglocAt, setLastSglocAt] = useState<string | null>(null);
+  const refreshFn = useServerFn(refreshAgendaFromSgloc);
+  const syncInfoFn = useServerFn(getAgendaSyncInfo);
+  const canRefresh = canRefreshFromSgloc(currentUser.role);
+  const canLists = canManageCatalog(currentUser.role);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [periodPreset, setPeriodPreset] = useState<PeriodPreset>("week");
@@ -369,6 +385,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser, mode = "agenda", 
 
   async function loadAppointments() {
     const data: AppointmentRow[] = [];
+    const sectorsPromise = supabase.rpc("appointment_creator_sectors");
     for (let offset = 0; ; offset += 500) {
       const result = await supabase.from("appointments").select(rowColumns).is("archived_at", null).order("date").order("time").range(offset, offset + 499);
       if (result.error) { setLoadFailed(true); setLoadError("Não foi possível carregar a agenda. Verifique sua conexão e tente de novo."); return; }
@@ -376,7 +393,9 @@ export function MaintenanceDashboard({ onSignOut, currentUser, mode = "agenda", 
       if (!result.data || result.data.length < 500) break;
     }
     setLoadError(""); setLoadFailed(false); setLoadedAt(Date.now());
-    const rows = activeOnly(data).map(fromRow);
+    const { data: sectorRows } = await sectorsPromise;
+    sectorRef.current = new Map(((sectorRows ?? []) as { user_id: string; sector: string | null }[]).map((r) => [r.user_id, safeText(r.sector)]));
+    const rows = activeOnly(data).map(fromRow).map(withSector);
     setAppointments(rows);
     void loadCompletionLogs(rows);
   }
@@ -385,7 +404,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser, mode = "agenda", 
     if (currentUser.role !== "master") return;
     try {
       const s = await syncStatus();
-      setSyncSnap({ syncLive: s.settings.syncLive, intervalMinutes: s.settings.intervalMinutes, last: s.last, lastRealSuccessAt: s.lastRealSuccessAt, accountWarning: s.accountWarning });
+      setSyncSnap({ syncLive: s.settings.syncLive, autoSyncEnabled: s.settings.autoSyncEnabled, intervalMinutes: s.settings.intervalMinutes, last: s.last, lastRealSuccessAt: s.lastRealSuccessAt, accountWarning: s.accountWarning });
     } catch { /* aviso de sincronização é opcional; a agenda continua */ }
   }
 
@@ -416,7 +435,22 @@ export function MaintenanceDashboard({ onSignOut, currentUser, mode = "agenda", 
       setLimitsTick((t) => t + 1);
     })();
   }, []);
-  useEffect(() => { void loadConfig(); void loadAppointments(); void loadSyncSnapshot(); void loadCatalog(); }, []);
+  useEffect(() => { void loadConfig(); void loadAppointments(); void loadSyncSnapshot(); void loadCatalog(); void loadSyncInfo(); }, []);
+  async function loadSyncInfo() {
+    if (!canRefresh) return;
+    try { setLastSglocAt((await syncInfoFn()).lastRealSuccessAt); } catch { /* opcional */ }
+  }
+  async function refreshFromSgloc() {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      const r = await refreshFn();
+      if (!r.ok) toast.error(r.message);
+      else announceAgendaChange({ source: r.dryRun ? "simulation" : "sync", inserted: r.counts?.["inserted"] ?? 0, updated: (r.counts?.["updated"] ?? 0) + (r.counts?.["linked"] ?? 0) });
+      await loadSyncInfo();
+    } catch { toast.error("Não foi possível atualizar do SGLOC agora. Tente de novo em alguns minutos."); }
+    setRefreshing(false);
+  }
   // Recarrega na hora quando uma sincronização (ou outra tela) avisa que a agenda mudou.
   useEffect(() => {
     const onChange = (event: Event) => {
@@ -430,10 +464,15 @@ export function MaintenanceDashboard({ onSignOut, currentUser, mode = "agenda", 
   }, []);
   // Recarrega sozinha a cada 2 min e ao voltar para a aba, para novos agendamentos aparecerem sem recarregar a página.
   useEffect(() => {
-    const refresh = () => { if (document.visibilityState === "visible") { void loadAppointments(); void loadSyncSnapshot(); } setNowTick(Date.now()); };
-    const interval = window.setInterval(refresh, AGENDA_REFRESH_MS);
-    document.addEventListener("visibilitychange", refresh);
-    return () => { window.clearInterval(interval); document.removeEventListener("visibilitychange", refresh); };
+    // Pausa com a aba oculta; ao voltar, recarrega na hora e retoma o intervalo.
+    let interval: number | undefined;
+    const tick = () => { void loadAppointments(); void loadSyncSnapshot(); setNowTick(Date.now()); };
+    const start = () => { if (interval === undefined) interval = window.setInterval(tick, AGENDA_REFRESH_MS); };
+    const stop = () => { if (interval !== undefined) { window.clearInterval(interval); interval = undefined; } };
+    const onVisibility = () => { if (document.hidden) stop(); else { tick(); start(); } };
+    if (!document.hidden) start();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => { stop(); document.removeEventListener("visibilitychange", onVisibility); };
   }, []);
   useEffect(() => { if (statuses.length) void loadCompletionLogs(appointments); }, [completion]);
 
@@ -441,8 +480,8 @@ export function MaintenanceDashboard({ onSignOut, currentUser, mode = "agenda", 
   const baseFiltered = useMemo(() => appointments.filter((item) => {
     const qPlate = normalizePlate(search);
     const hit = !search.trim() || (qPlate !== "" && item.plate.includes(qPlate)) || textMatches(search, [item.plate, item.brand, item.contactNumber, item.contact, item.issue, item.model, item.workshop, item.note, ...fieldDefinitions.filter((field) => field.storage === "custom" && ["text", "textarea"].includes(field.field_type)).map((field) => item.customFields[field.field_key])]);
-    return hit && (!plateFilter || (plateFilter === EMPTY_OPTION ? !item.plate : normalizePlate(item.plate) === normalizePlate(plateFilter))) && matchesFilter(item.contact, contact) && matchesFilter(item.workshop, workshop) && matchesFilter(item.model, model) && matchesFilter(item.operator, operator) && (!reworksOnly || Boolean(item.reworkOf));
-  }), [appointments, contact, model, operator, plateFilter, reworksOnly, search, workshop, fieldDefinitions]);
+    return hit && (!plateFilter || (plateFilter === EMPTY_OPTION ? !item.plate : normalizePlate(item.plate) === normalizePlate(plateFilter))) && matchesFilter(item.contact, contact) && matchesFilter(item.workshop, workshop) && matchesFilter(item.model, model) && matchesFilter(item.operator, operator) && matchesFilter(item.sector, sector) && (!reworksOnly || Boolean(item.reworkOf));
+  }), [appointments, contact, model, operator, sector, plateFilter, reworksOnly, search, workshop, fieldDefinitions]);
   const periodFiltered = useMemo(() => baseFiltered.filter((item) => inPeriod(item.date, startDate, endDate)), [baseFiltered, startDate, endDate]);
   // Seleção dos gráficos (filtro cruzado): vale para KPIs, balões, lista e grade; cada gráfico ignora a própria seleção.
   const filtered = useMemo(() => applySelection(periodFiltered, chartSel), [periodFiltered, chartSel]);
@@ -480,7 +519,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser, mode = "agenda", 
   const average = safeAverage(filtered.filter((item) => normalizeDate(item.date)).length, usedDays);
 
   function resetFilters() {
-    setSearch(""); setPlateFilter(""); setContact(""); setWorkshop(""); setModel(""); setOperator(""); setPeriodPreset("custom"); setStartDate(""); setEndDate(""); setReworksOnly(false); setChartSel({}); setPage(1);
+    setSearch(""); setPlateFilter(""); setContact(""); setWorkshop(""); setModel(""); setOperator(""); setSector(""); setPeriodPreset("custom"); setStartDate(""); setEndDate(""); setReworksOnly(false); setChartSel({}); setPage(1);
   }
 
   function applyDetailFilter(label: string, apply: () => void, undo: () => void) {
@@ -515,6 +554,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser, mode = "agenda", 
     workshop && { key: "workshop", label: `Oficina: ${workshop === EMPTY_OPTION ? "Não informado" : workshop}`, remove: () => setWorkshop("") },
     model && { key: "model", label: `Modelo: ${model === EMPTY_OPTION ? "Não informado" : model}`, remove: () => setModel("") },
     operator && { key: "operator", label: `Operador: ${operator === EMPTY_OPTION ? "Não informado" : operator}`, remove: () => setOperator("") },
+    sector && { key: "sector", label: `Setor: ${sector === EMPTY_OPTION ? "Sem setor" : sector}`, remove: () => setSector("") },
     startDate && { key: "start", label: `De: ${formatDateBR(startDate)}`, remove: () => { setStartDate(""); setPeriodPreset("custom"); } },
     endDate && { key: "end", label: `Até: ${formatDateBR(endDate)}`, remove: () => { setEndDate(""); setPeriodPreset("custom"); } },
     reworksOnly && { key: "reworks", label: "Somente retrabalhos", remove: () => setReworksOnly(false) },
@@ -525,7 +565,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser, mode = "agenda", 
   }
 
   function replaceRow(row: AppointmentRow) {
-    const next = fromRow(row);
+    const next = withSector(fromRow(row));
     setAppointments((current) => current.map((item) => item.dbId === next.dbId ? next : item));
     setSelected((current) => current?.dbId === next.dbId ? next : current);
     setHistoryKey((k) => k + 1);
@@ -622,7 +662,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser, mode = "agenda", 
     setReworkSource(null);
     resetFilters();
     await loadAppointments();
-    setSelected(fromRow(data));
+    setSelected(withSector(fromRow(data)));
     setMessage(`Retrabalho de ${plate} registrado com sucesso.`);
     return true;
   }
@@ -836,6 +876,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser, mode = "agenda", 
             <button type="button" onClick={() => setAccountOpen(true)} title="Minha conta" className="mr-2 min-h-11 rounded-md px-2 text-right text-sm hover:bg-primary-foreground/10"><p className="font-semibold"><UserCircle className="mr-1 inline size-4" />{currentUser.name}</p><p className="text-xs text-primary-foreground/70">{roleLabels[currentUser.role]} · Minha conta</p></button>
             <MyAccountDialog open={accountOpen} onOpenChange={setAccountOpen} userId={currentUser.id} email={currentUser.email ?? ""} name={currentUser.name} onSaved={() => void queryClientForAccount.invalidateQueries({ queryKey: ["profile", currentUser.id] })} />
             <Button variant="secondary" onClick={() => setLogOpen(true)}><History /> Log de alterações</Button>
+            {currentUser.role === "gerente" && <Button variant="secondary" onClick={() => setListsOpen(true)}><ListChecks /> Listas</Button>}
             {canCreate && <Button variant="secondary" onClick={() => setNewOpen(true)}><Plus /> Novo agendamento</Button>}
              {currentUser.role === "master" && !workshopMode && <Button variant="secondary" onClick={() => setSettingsOpen(true)}><Settings /> Configurações</Button>}
             {currentUser.role === "master" && !workshopMode && <Button variant="secondary" onClick={() => setTrashOpen(true)}><Trash2 /> Lixeira</Button>}
@@ -851,7 +892,11 @@ export function MaintenanceDashboard({ onSignOut, currentUser, mode = "agenda", 
         {tabs}
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div><p className="mb-1 text-xs font-semibold uppercase text-accent-foreground">Operação semanal</p><h1 className="text-2xl font-bold lg:text-3xl">{workshopMode ? "Oficina" : "Agenda de manutenção"}</h1><p className="mt-1 text-sm text-muted-foreground">{workshopMode ? "Atualize situação, mecânico, observação e previsão dos veículos." : "Acompanhamento da frota, oficinas e serviços programados."}</p></div>
-          <div className="rounded-md border bg-card px-4 py-2 text-right"><p className="text-xs text-muted-foreground">Período carregado</p><p className="text-sm font-semibold">{loadedPeriod}</p></div>
+          <div className="flex flex-wrap items-center gap-2">
+            {canRefresh && <div className="flex items-center gap-2 rounded-md border bg-card px-3 py-2"><div className="text-right"><p className="text-xs text-muted-foreground">Última atualização</p><p className="text-sm font-semibold">{lastSglocAt ? new Date(lastSglocAt).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—"}</p></div><Button onClick={() => void refreshFromSgloc()} disabled={refreshing} aria-busy={refreshing}><RefreshCw className={cn(refreshing && "animate-spin")} />{refreshing ? "Atualizando…" : "Atualizar do SGLOC"}</Button></div>}
+            <Button variant="outline" onClick={() => void loadAppointments()} aria-label="Recarregar agenda"><RotateCcw /> Recarregar</Button>
+            <div className="rounded-md border bg-card px-4 py-2 text-right"><p className="text-xs text-muted-foreground">Período carregado</p><p className="text-sm font-semibold">{loadedPeriod}</p></div>
+          </div>
         </div>
 
         {loadError && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"><span>{loadError}</span><Button variant="outline" size="sm" onClick={() => { void loadConfig(); void loadAppointments(); }}>Tentar de novo</Button></div>}
@@ -880,6 +925,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser, mode = "agenda", 
             <SearchableSelect label="Todas as placas" value={plateFilter} options={option("plate")} onChange={(value) => { setPlateFilter(value); setPage(1); }} />
             <SearchableSelect label="Todos os modelos" value={model} options={option("model")} onChange={setModel} />
             <SearchableSelect label="Todos os operadores" value={operator} options={filterOptions(catalog.operator, option("operator"))} onChange={setOperator} />
+            <SearchableSelect label="Todos os setores" value={sector} options={filterOptions(catalog.sector, option("sector"))} onChange={(value) => { setSector(value); setPage(1); }} />
             <label className="flex min-h-10 items-center gap-2 text-sm text-foreground"><Checkbox checked={reworksOnly} onCheckedChange={(checked) => { setReworksOnly(checked === true); setPage(1); }} aria-label="Mostrar somente retrabalhos" />Mostrar somente retrabalhos</label>
             <Button variant="outline" onClick={resetFilters}><RotateCcw /> Limpar tudo</Button>
           </div>
@@ -939,7 +985,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser, mode = "agenda", 
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader><DialogTitle>Novo agendamento</DialogTitle><DialogDescription>Dados do atendimento</DialogDescription></DialogHeader>
           {newOpen && <label className="mb-3 flex items-center gap-2 text-sm font-medium"><input type="checkbox" className="size-4 accent-destructive" checked={newUrgent && currentUser.role !== "atendimento"} disabled={currentUser.role === "atendimento"} onChange={(event) => setNewUrgent(event.target.checked)} />Marcar como urgente{currentUser.role === "atendimento" && <span className="text-xs font-normal text-muted-foreground">(somente gerente ou master)</span>}</label>}
-          {newOpen && <AppointmentForm initial={emptyFields} definitions={fieldDefinitions} onSave={createAppointment} catalog={catalog} canAddCatalog={canCreate && currentUser.role !== "oficina"} onCatalogAdded={async () => { await loadCatalog(); }} />}
+          {newOpen && <AppointmentForm initial={emptyFields} definitions={fieldDefinitions} onSave={createAppointment} catalog={catalog} canAddCatalog={canLists} onCatalogAdded={async () => { await loadCatalog(); }} />}
         </DialogContent>
       </Dialog>
       <Dialog open={Boolean(reworkSource)} onOpenChange={(open) => { if (!open) setReworkSource(null); }}>
@@ -974,7 +1020,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser, mode = "agenda", 
             </div>}
             {deadlineBlock(selected, currentUser.role, myLimit) && <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{deadlineBlock(selected, currentUser.role, myLimit)}</p>}
             {canManageDeadline(currentUser.role) && <div className="flex flex-wrap items-center gap-3"><Button variant="outline" onClick={() => grantDeadlineChange(selected)}><Unlock /> Liberar nova alteração da previsão</Button><span className="text-xs text-muted-foreground">Previsão: {selected.deadlineChangesUsed} alteração(ões) feita(s) · {selected.deadlineChangesAllowed - 1} extra(s) liberada(s) além do limite de cada pessoa</span></div>}
-            <AppointmentForm key={`${selected.dbId}-${historyKey}`} initial={fieldsFromAppointment(selected)} definitions={fieldDefinitions} catalog={catalog} canAddCatalog={canCreate && currentUser.role !== "oficina"} onCatalogAdded={async () => { await loadCatalog(); }} editing blocked={null} deadlineLocked={Boolean(deadlineBlock(selected, currentUser.role, myLimit))} onSave={saveAppointment} statusOptions={serviceStatuses} canUrgent={canManageDeadline(currentUser.role)} onDirtyChange={(dirty) => { dirtyRef.current = dirty; }} />
+            <AppointmentForm key={`${selected.dbId}-${historyKey}`} initial={fieldsFromAppointment(selected)} definitions={fieldDefinitions} catalog={catalog} canAddCatalog={canLists} onCatalogAdded={async () => { await loadCatalog(); }} editing blocked={null} deadlineLocked={Boolean(deadlineBlock(selected, currentUser.role, myLimit))} onSave={saveAppointment} statusOptions={serviceStatuses} canUrgent={canManageDeadline(currentUser.role)} onDirtyChange={(dirty) => { dirtyRef.current = dirty; }} />
             <div className="flex flex-wrap gap-2 border-t pt-4">{canCreate && <Button variant="outline" onClick={() => openRework(selected)}><RotateCcw /> Registrar retrabalho</Button>}{currentUser.role === "master" && !workshopMode && <Button variant="destructive" onClick={() => void archiveAppointment(selected)}><Trash2 /> Excluir</Button>}</div>
             {(selected.osNumber !== null && fieldDefinitions.find((field) => field.field_key === "os_number")?.visible !== false) || selected.sglocReference ? <div className="grid gap-3 sm:grid-cols-2">
               {selected.osNumber !== null && fieldDefinitions.find((field) => field.field_key === "os_number")?.visible !== false && <Detail label="O.S Fornecedor" value={String(selected.osNumber)} />}
@@ -988,6 +1034,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser, mode = "agenda", 
       </Dialog>
       <ChangeLogDialog open={logOpen} onOpenChange={setLogOpen} onPlateClick={openVehicle} />
       <Toaster richColors position="bottom-right" />
+      {currentUser.role === "gerente" && <Dialog open={listsOpen} onOpenChange={setListsOpen}><DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-3xl"><DialogHeader><DialogTitle>Configurações · Listas</DialogTitle><DialogDescription>Adicione, renomeie, desative ou exclua itens das listas de escolha.</DialogDescription></DialogHeader><CatalogPanel onChanged={async () => { await loadCatalog(); await loadAppointments(); }} /></DialogContent></Dialog>}
       {currentUser.role === "master" && !workshopMode && <TrashDialog open={trashOpen} onOpenChange={setTrashOpen} onRestored={() => void loadAppointments()} />}
       {currentUser.role === "master" && !workshopMode && <AgendaSettings open={settingsOpen} onOpenChange={setSettingsOpen} statuses={statuses} fields={fieldDefinitions} currentUserId={currentUser.id} onRefresh={async () => { await loadConfig(); await loadAppointments(); }} />}
     </div>
