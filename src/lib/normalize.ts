@@ -88,7 +88,7 @@ export const sglocStateLabels: Record<string, string> = {
 };
 
 export function authorLabel(changedBy: string | null | undefined, fullName: string | null | undefined): string {
-  if (!changedBy) return "Sincronização SGLOC";
+  if (!changedBy) return "Sincronização SGLOC ou usuário excluído";
   return fullName?.trim() || "Usuário sem nome";
 }
 

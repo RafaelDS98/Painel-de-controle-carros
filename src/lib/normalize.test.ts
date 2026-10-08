@@ -68,8 +68,8 @@ describe("filtro de linhas da importação", () => {
 });
 
 describe("outros", () => {
-  it("autor nulo vira Sincronização SGLOC", () => {
-    expect(authorLabel(null, null)).toBe("Sincronização SGLOC");
+  it("autor nulo vira Sincronização SGLOC ou usuário excluído", () => {
+    expect(authorLabel(null, null)).toBe("Sincronização SGLOC ou usuário excluído");
     expect(authorLabel("u1", null)).toBe("Usuário sem nome");
     expect(authorLabel("u1", "Ana")).toBe("Ana");
   });
