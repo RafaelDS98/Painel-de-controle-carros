@@ -92,7 +92,7 @@ function Index() {
     <div className={movements ? "hidden" : undefined}>
       <MaintenanceDashboard key={active} mode={active} tabs={tabs} onSignOut={signOut} currentUser={currentUser} onOpenMovements={(plate) => { setMovReq({ plate, nonce: Date.now() }); go(true); }} />
     </div>
-    {movements && <div className="min-h-screen bg-background text-foreground"><main className="mx-auto max-w-[1600px] space-y-6 px-5 py-6 lg:px-8">{tabs}</main></div>}
+    {movements && <div className="bg-background text-foreground"><main className="mx-auto max-w-[1600px] space-y-6 px-5 py-6 lg:px-8">{tabs}</main></div>}
     <div className={movements ? "mx-auto -mt-2 max-w-[1600px] bg-background px-5 pb-10 text-foreground lg:px-8" : "hidden"}><MovementsPanel isMaster={currentUser.role === "master"} request={movReq} /></div>
   </>;
 }
