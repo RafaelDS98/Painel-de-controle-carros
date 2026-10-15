@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MaintenanceDashboard } from "@/components/maintenance-dashboard";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { FirstPasswordScreen } from "@/components/first-password";
 import { useEffect, useRef, useState } from "react";
 import { MovementsPanel } from "@/components/movements-panel";
+import { ClipboardList } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
@@ -83,9 +84,11 @@ function Index() {
   const available = (["agenda", "oficina"] as const).filter((m) => modules.includes(m));
   const active = tab && available.includes(tab) ? tab : available[0] ?? "agenda";
   const tabBtn = (key: string, label: string, on: boolean, click: () => void) => <Button key={key} role="tab" aria-selected={on} variant={on ? "default" : "outline"} onClick={click}>{label}</Button>;
-  const tabs = <div role="tablist" aria-label="Módulos" className="flex flex-wrap gap-2">
+  const hasOs = modules.includes("os");
+  const tabs = <div role="tablist" aria-label="Módulos" className="flex flex-wrap items-center gap-2">
     {available.map((m) => tabBtn(m, m === "agenda" ? "Agenda" : "Oficina", !movements && m === active, () => { go(false); setTab(m); }))}
     {tabBtn("mov", "Movimentações", movements, () => go(true))}
+    {hasOs && <Link to="/os"><Button variant="outline" className="gap-1.5"><ClipboardList className="h-4 w-4" />Ordens de Serviço</Button></Link>}
   </div>;
   const currentUser = { id: user.id, name: profile.data.full_name || user.email || "Usuário", role: profile.data.role, email: user.email ?? "" };
   return <>
