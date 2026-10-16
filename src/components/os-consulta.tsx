@@ -27,6 +27,21 @@ export function OsConsultaPanel({ onOpenPlate }: { onOpenPlate?: (plate: string)
     queryKey: ["os-brands"],
     queryFn: async () => (await supabase.from("catalog_items").select("name").eq("kind", "brand").eq("active", true).order("name")).data?.map((b) => b.name) ?? [],
   });
+  const lists = useQuery({
+    queryKey: ["os-consulta-lists"],
+    queryFn: async () => {
+      const [os, itens] = await Promise.all([
+        supabase.from("ordens_servico").select("modelo, cliente").is("archived_at", null).limit(20000),
+        supabase.from("os_itens").select("part_code, description, item_type").neq("item_type", "S").limit(20000),
+      ]);
+      const uniq = (v: (string | null | undefined)[]) => [...new Set(v.map((x) => (x ?? "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+      return {
+        modelos: uniq((os.data ?? []).map((r) => r.modelo)),
+        clientes: uniq((os.data ?? []).map((r) => r.cliente)),
+        pecas: uniq((itens.data ?? []).map((r) => r.part_code || r.description)),
+      };
+    },
+  });
   const [draft, setDraft] = useState<Draft>(EMPTY);
   const [more, setMore] = useState(false);
   const [filters, setFilters] = useState<Record<string, string> | null>(null);
@@ -90,9 +105,9 @@ export function OsConsultaPanel({ onOpenPlate }: { onOpenPlate?: (plate: string)
         <div><Label>Tipo de atendimento</Label><select className={sel} value={draft.tipo_atendimento} onChange={set("tipo_atendimento")}><option value="">Todos</option>{Object.entries(TIPO_ATENDIMENTO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
         <div className="flex flex-col"><Label className="mb-1">Mecânico</Label><SearchableSelect label="Todos" value={draft.mecanico} options={config.data?.mechanics ?? []} onChange={(v) => setDraft((d) => ({ ...d, mecanico: v }))} /></div>
         <div className="flex flex-col"><Label className="mb-1">Montadora</Label><SearchableSelect label="Todas" value={draft.montadora} options={brands.data ?? []} onChange={(v) => setDraft((d) => ({ ...d, montadora: v }))} /></div>
-        <div><Label>Modelo</Label><Input value={draft.modelo} onChange={set("modelo")} /></div>
-        <div><Label>Cliente</Label><Input value={draft.cliente} onChange={set("cliente")} /></div>
-        <div><Label>Peça (estoque)</Label><Input value={draft.peca} onChange={set("peca")} placeholder="Código ou descrição" /></div>
+        <div className="flex flex-col"><Label className="mb-1">Modelo</Label><SearchableSelect label="Todos" value={draft.modelo} options={lists.data?.modelos ?? []} onChange={(v) => setDraft((d) => ({ ...d, modelo: v }))} /></div>
+        <div className="flex flex-col"><Label className="mb-1">Cliente</Label><SearchableSelect label="Todos" value={draft.cliente} options={lists.data?.clientes ?? []} onChange={(v) => setDraft((d) => ({ ...d, cliente: v }))} /></div>
+        <div className="flex flex-col"><Label className="mb-1">Peça (estoque)</Label><SearchableSelect label="Todas" value={draft.peca} options={lists.data?.pecas ?? []} onChange={(v) => setDraft((d) => ({ ...d, peca: v }))} /></div>
       </div>}
       <div className="flex flex-wrap gap-2">
         <Button type="submit">Pesquisar</Button>
