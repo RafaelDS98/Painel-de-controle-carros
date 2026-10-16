@@ -127,7 +127,7 @@ export function OsListPage({ canCreate }: { canCreate: boolean }) {
   </Shell>;
 }
 
-export function OsNewPage({ appointmentId }: { appointmentId?: string }) {
+export function OsNewPage({ appointmentId }: { appointmentId?: string | undefined }) {
   const config = useOsConfig();
   const navigate = useNavigate();
   const appt = useQuery({
