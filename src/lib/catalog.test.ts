@@ -1,7 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { canonicalName, catalogKey, filterOptions, missingNames, selectOptions, storeLinkError, type CatalogItem } from "./catalog";
+import {
+  canonicalName,
+  catalogKey,
+  filterOptions,
+  missingNames,
+  selectOptions,
+  storeLinkError,
+  type CatalogItem,
+} from "./catalog";
 
-const item = (name: string, active = true, sgloc_id: number | null = null): CatalogItem => ({ id: name, kind: "store", name, active, sgloc_id });
+const item = (name: string, active = true, sgloc_id: number | null = null): CatalogItem => ({
+  id: name,
+  kind: "store",
+  name,
+  active,
+  sgloc_id,
+});
 
 describe("listas de seleção", () => {
   it("normaliza sem acento, caixa e espaços extras", () => {
@@ -15,7 +29,11 @@ describe("listas de seleção", () => {
     expect(selectOptions(items, "mat")).toEqual(["FI2", "MAT"]);
   });
   it("filtros juntam lista e registros sem duplicar", () => {
-    expect(filterOptions([item("Oficina X")], ["OFICINA X ", "Outra", "(sem valor)"])).toEqual(["Oficina X", "Outra", "(sem valor)"]);
+    expect(filterOptions([item("Oficina X")], ["OFICINA X ", "Outra", "(sem valor)"])).toEqual([
+      "Oficina X",
+      "Outra",
+      "(sem valor)",
+    ]);
   });
   it("só cria o que falta, uma vez por nome normalizado", () => {
     expect(missingNames([item("MAT")], ["mat", "Nova", " NOVA ", ""])).toEqual(["Nova"]);
@@ -32,8 +50,10 @@ describe("listas de seleção", () => {
 import { canManageCatalog, deleteConfirmText } from "./catalog";
 describe("gestão das listas", () => {
   it("só master e gerente gerenciam", () => {
-    expect(canManageCatalog("master")).toBe(true); expect(canManageCatalog("gerente")).toBe(true);
-    expect(canManageCatalog("atendimento")).toBe(false); expect(canManageCatalog("oficina")).toBe(false);
+    expect(canManageCatalog("master")).toBe(true);
+    expect(canManageCatalog("gerente")).toBe(true);
+    expect(canManageCatalog("atendimento")).toBe(false);
+    expect(canManageCatalog("oficina")).toBe(false);
   });
   it("confirmação mostra uso e avisa setor", () => {
     expect(deleteConfirmText("store", "MAT", 3)).toMatch(/3 agendamento\(s\)/);

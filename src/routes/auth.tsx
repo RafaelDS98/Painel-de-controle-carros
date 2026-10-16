@@ -9,9 +9,15 @@ export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
       { title: "Entrar | ANPEXC Agenda de Manutenção" },
-      { name: "description", content: "Acesso ao painel de agendamentos de manutenção da frota ANPEXC." },
+      {
+        name: "description",
+        content: "Acesso ao painel de agendamentos de manutenção da frota ANPEXC.",
+      },
       { property: "og:title", content: "Entrar | ANPEXC Agenda de Manutenção" },
-      { property: "og:description", content: "Acesso ao painel de agendamentos de manutenção da frota ANPEXC." },
+      {
+        property: "og:description",
+        content: "Acesso ao painel de agendamentos de manutenção da frota ANPEXC.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -57,17 +63,58 @@ function AuthPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <form onSubmit={submit} className="w-full max-w-sm space-y-4 rounded-lg border bg-card p-8 shadow-sm">
+      <form
+        onSubmit={submit}
+        className="w-full max-w-sm space-y-4 rounded-lg border bg-card p-8 shadow-sm"
+      >
         <div className="flex flex-col items-center">
-          <img src={logoAsset.url} alt="ANPEXC — Administração, Negócios, Produção, Excelência e Multiplicação de Conhecimento" className="w-44 max-w-full" />
-          <p className="mt-2 text-center text-sm text-muted-foreground">{mode === "login" ? "Entre para acessar a agenda de manutenção." : "Crie sua conta de acesso."}</p>
+          <img
+            src={logoAsset.url}
+            alt="ANPEXC — Administração, Negócios, Produção, Excelência e Multiplicação de Conhecimento"
+            className="w-44 max-w-full"
+          />
+          <p className="mt-2 text-center text-sm text-muted-foreground">
+            {mode === "login"
+              ? "Entre para acessar a agenda de manutenção."
+              : "Crie sua conta de acesso."}
+          </p>
         </div>
-        {mode === "signup" && <Input placeholder="Nome completo" value={fullName} onChange={(e) => setFullName(e.target.value)} required />}
-        <Input type="email" placeholder="E-mail" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        <Input type="password" placeholder="Senha" value={password} onChange={(e) => setPassword(e.target.value)} minLength={6} required />
+        {mode === "signup" && (
+          <Input
+            placeholder="Nome completo"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            required
+          />
+        )}
+        <Input
+          type="email"
+          placeholder="E-mail"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+        <Input
+          type="password"
+          placeholder="Senha"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          minLength={6}
+          required
+        />
         {message && <p className="text-sm text-muted-foreground">{message}</p>}
-        <Button type="submit" className="w-full" disabled={loading}>{mode === "login" ? "Entrar" : "Cadastrar"}</Button>
-        <Button type="button" variant="link" className="w-full font-medium text-foreground hover:text-foreground" onClick={() => { setMode(mode === "login" ? "signup" : "login"); setMessage(""); }}>
+        <Button type="submit" className="w-full" disabled={loading}>
+          {mode === "login" ? "Entrar" : "Cadastrar"}
+        </Button>
+        <Button
+          type="button"
+          variant="link"
+          className="w-full font-medium text-foreground hover:text-foreground"
+          onClick={() => {
+            setMode(mode === "login" ? "signup" : "login");
+            setMessage("");
+          }}
+        >
           {mode === "login" ? "Não tem conta? Cadastre-se" : "Já tem conta? Entrar"}
         </Button>
       </form>

@@ -12,9 +12,15 @@ export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
       { title: "Agenda de Manutenção | ANPEXC" },
-      { name: "description", content: "Painel semanal de agendamentos de manutenção da frota ANPEXC." },
+      {
+        name: "description",
+        content: "Painel semanal de agendamentos de manutenção da frota ANPEXC.",
+      },
       { property: "og:title", content: "Agenda de Manutenção | ANPEXC" },
-      { property: "og:description", content: "Painel semanal de agendamentos de manutenção da frota ANPEXC." },
+      {
+        property: "og:description",
+        content: "Painel semanal de agendamentos de manutenção da frota ANPEXC.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -33,8 +39,13 @@ function Index() {
   const [movReq, setMovReq] = useState<{ plate: string; nonce: number } | null>(null);
   const scrolls = useRef<Record<string, number>>({});
   const view = movements ? "mov" : "dash";
-  useEffect(() => { window.scrollTo(0, scrolls.current[view] ?? 0); }, [view]);
-  const go = (next: boolean) => { scrolls.current[view] = window.scrollY; setMovements(next); };
+  useEffect(() => {
+    window.scrollTo(0, scrolls.current[view] ?? 0);
+  }, [view]);
+  const go = (next: boolean) => {
+    scrolls.current[view] = window.scrollY;
+    setMovements(next);
+  };
   const profile = useQuery({
     queryKey: ["profile", user.id],
     queryFn: async () => {
@@ -45,7 +56,11 @@ function Index() {
       ]);
       if (profileResult.error) throw profileResult.error;
       if (roleResult.error) throw roleResult.error;
-      return { full_name: profileResult.data?.full_name ?? null, role: roleResult.data?.role ?? null, modules: (modulesResult.data ?? []) as string[] };
+      return {
+        full_name: profileResult.data?.full_name ?? null,
+        role: roleResult.data?.role ?? null,
+        modules: (modulesResult.data ?? []) as string[],
+      };
     },
   });
 
@@ -57,19 +72,28 @@ function Index() {
   }
 
   if (profile.isLoading) {
-    return <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">Carregando…</div>;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
+        Carregando…
+      </div>
+    );
   }
 
   if (!profile.data?.role) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-4">
         <div className="max-w-md rounded-lg border bg-card p-8 text-center shadow-sm">
-          <h1 className="text-xl font-semibold text-card-foreground">Aguardando liberação de acesso</h1>
+          <h1 className="text-xl font-semibold text-card-foreground">
+            Aguardando liberação de acesso
+          </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Sua conta ({user.email}) foi criada, mas ainda não possui um perfil atribuído. Solicite a liberação a um usuário master.
+            Sua conta ({user.email}) foi criada, mas ainda não possui um perfil atribuído. Solicite
+            a liberação a um usuário master.
           </p>
           <div className="mt-6 flex justify-center gap-2">
-            <Button variant="outline" onClick={() => profile.refetch()}>Verificar novamente</Button>
+            <Button variant="outline" onClick={() => profile.refetch()}>
+              Verificar novamente
+            </Button>
             <Button onClick={signOut}>Sair</Button>
           </div>
         </div>
@@ -77,31 +101,96 @@ function Index() {
     );
   }
 
-  if (user.user_metadata?.['must_change_password'] === true && !passwordChanged) {
-    return <FirstPasswordScreen email={user.email ?? ""} onDone={() => setPasswordChanged(true)} onSignOut={signOut} />;
+  if (user.user_metadata?.["must_change_password"] === true && !passwordChanged) {
+    return (
+      <FirstPasswordScreen
+        email={user.email ?? ""}
+        onDone={() => setPasswordChanged(true)}
+        onSignOut={signOut}
+      />
+    );
   }
 
   const modules = profile.data.modules;
   const available = (["agenda", "oficina"] as const).filter((m) => modules.includes(m));
-  const active = tab && available.includes(tab) ? tab : available[0] ?? "agenda";
-  const tabBtn = (key: string, label: string, on: boolean, click: () => void) => <Button key={key} role="tab" aria-selected={on} variant={on ? "default" : "outline"} onClick={click}>{label}</Button>;
-  const tabs = <div role="tablist" aria-label="Módulos" className="flex flex-wrap gap-2">
-    {available.map((m) => tabBtn(m, m === "agenda" ? "Agenda" : "Oficina", !movements && m === active, () => { go(false); setTab(m); }))}
-    {tabBtn("mov", "Consultas", movements, () => go(true))}
-    <Button variant="outline" onClick={() => navigate({ to: "/ordens-servico" })}>Ordens de Serviço</Button>
-  </div>;
-  const currentUser = { id: user.id, name: profile.data.full_name || user.email || "Usuário", role: profile.data.role, email: user.email ?? "" };
-  return <>
-    <div className={movements ? "hidden" : undefined}>
-      <MaintenanceDashboard key={active} mode={active} tabs={tabs} onSignOut={signOut} currentUser={currentUser} onOpenMovements={(plate) => { setMovReq({ plate, nonce: Date.now() }); setSub("veiculos"); go(true); }} />
+  const active = tab && available.includes(tab) ? tab : (available[0] ?? "agenda");
+  const tabBtn = (key: string, label: string, on: boolean, click: () => void) => (
+    <Button
+      key={key}
+      role="tab"
+      aria-selected={on}
+      variant={on ? "default" : "outline"}
+      onClick={click}
+    >
+      {label}
+    </Button>
+  );
+  const tabs = (
+    <div role="tablist" aria-label="Módulos" className="flex flex-wrap gap-2">
+      {available.map((m) =>
+        tabBtn(m, m === "agenda" ? "Agenda" : "Oficina", !movements && m === active, () => {
+          go(false);
+          setTab(m);
+        }),
+      )}
+      {tabBtn("mov", "Consultas", movements, () => go(true))}
+      <Button variant="outline" onClick={() => navigate({ to: "/ordens-servico" })}>
+        Ordens de Serviço
+      </Button>
     </div>
-    {movements && <div className="bg-background text-foreground"><main className="mx-auto max-w-[1600px] space-y-4 px-5 py-6 lg:px-8">{tabs}
-      <div role="tablist" aria-label="Consultas" className="flex gap-2 border-b pb-2">
-        {tabBtn("sub-v", "Veículos", sub === "veiculos", () => setSub("veiculos"))}
-        {tabBtn("sub-os", "O.S.", sub === "os", () => setSub("os"))}
+  );
+  const currentUser = {
+    id: user.id,
+    name: profile.data.full_name || user.email || "Usuário",
+    role: profile.data.role,
+    email: user.email ?? "",
+  };
+  return (
+    <>
+      <div className={movements ? "hidden" : undefined}>
+        <MaintenanceDashboard
+          key={active}
+          mode={active}
+          tabs={tabs}
+          onSignOut={signOut}
+          currentUser={currentUser}
+          onOpenMovements={(plate) => {
+            setMovReq({ plate, nonce: Date.now() });
+            setSub("veiculos");
+            go(true);
+          }}
+        />
       </div>
-    </main></div>}
-    <div className={movements && sub === "veiculos" ? "mx-auto -mt-2 max-w-[1600px] bg-background px-5 pb-10 text-foreground lg:px-8" : "hidden"}><MovementsPanel isMaster={currentUser.role === "master"} request={movReq} /></div>
-    {movements && sub === "os" && <div className="mx-auto -mt-2 max-w-[1600px] bg-background px-5 pb-10 text-foreground lg:px-8"><OsConsultaPanel onOpenPlate={(plate) => { setMovReq({ plate, nonce: Date.now() }); setSub("veiculos"); }} /></div>}
-  </>;
+      {movements && (
+        <div className="bg-background text-foreground">
+          <main className="mx-auto max-w-[1600px] space-y-4 px-5 py-6 lg:px-8">
+            {tabs}
+            <div role="tablist" aria-label="Consultas" className="flex gap-2 border-b pb-2">
+              {tabBtn("sub-v", "Veículos", sub === "veiculos", () => setSub("veiculos"))}
+              {tabBtn("sub-os", "O.S.", sub === "os", () => setSub("os"))}
+            </div>
+          </main>
+        </div>
+      )}
+      <div
+        className={
+          movements && sub === "veiculos"
+            ? "mx-auto -mt-2 max-w-[1600px] bg-background px-5 pb-10 text-foreground lg:px-8"
+            : "hidden"
+        }
+      >
+        <MovementsPanel isMaster={currentUser.role === "master"} request={movReq} />
+      </div>
+      {movements && sub === "os" && (
+        <div className="mx-auto -mt-2 max-w-[1600px] bg-background px-5 pb-10 text-foreground lg:px-8">
+          <OsConsultaPanel
+            onOpenPlate={(plate) => {
+              setMovReq({ plate, nonce: Date.now() });
+              setSub("veiculos");
+            }}
+          />
+        </div>
+      )}
+    </>
+  );
 }

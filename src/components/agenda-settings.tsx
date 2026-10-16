@@ -4,113 +4,688 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { HexColorPicker } from "react-colorful";
-import { colorNames, fieldKey, normalizeHex, statusColorProps, tokenHex, type FieldDefinition, type StatusOption } from "@/lib/agenda-config";
+import {
+  colorNames,
+  fieldKey,
+  normalizeHex,
+  statusColorProps,
+  tokenHex,
+  type FieldDefinition,
+  type StatusOption,
+} from "@/lib/agenda-config";
 import { UserRolesPanel } from "@/components/user-roles-panel";
 import { SglocSettingsPanel } from "@/components/sgloc-settings";
 import { CatalogPanel } from "@/components/catalog-panel";
 
-type Props = { open: boolean; onOpenChange: (open: boolean) => void; statuses: StatusOption[]; fields: FieldDefinition[]; onRefresh: () => Promise<void>; currentUserId: string };
-type StatusDraft = { id?: string; label: string; color_token: string; sort_order: number; is_completion: boolean };
-type FieldDraft = { id?: string; label: string; field_type: string; select_options: string; sort_order: number; visible: boolean; required: boolean; storage: string; field_key: string };
-const fieldTypes = { text: "Texto", textarea: "Texto longo", date: "Data", select: "Lista de opções" };
-const inputClass = "h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground";
-const fromField = (field: FieldDefinition): FieldDraft => ({ id: field.id, label: field.label, field_type: field.field_type, select_options: Array.isArray(field.select_options) ? field.select_options.join(", ") : "", sort_order: field.sort_order, visible: field.visible, required: field.required, storage: field.storage, field_key: field.field_key });
+type Props = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  statuses: StatusOption[];
+  fields: FieldDefinition[];
+  onRefresh: () => Promise<void>;
+  currentUserId: string;
+};
+type StatusDraft = {
+  id?: string;
+  label: string;
+  color_token: string;
+  sort_order: number;
+  is_completion: boolean;
+};
+type FieldDraft = {
+  id?: string;
+  label: string;
+  field_type: string;
+  select_options: string;
+  sort_order: number;
+  visible: boolean;
+  required: boolean;
+  storage: string;
+  field_key: string;
+};
+const fieldTypes = {
+  text: "Texto",
+  textarea: "Texto longo",
+  date: "Data",
+  select: "Lista de opções",
+};
+const inputClass =
+  "h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground";
+const fromField = (field: FieldDefinition): FieldDraft => ({
+  id: field.id,
+  label: field.label,
+  field_type: field.field_type,
+  select_options: Array.isArray(field.select_options) ? field.select_options.join(", ") : "",
+  sort_order: field.sort_order,
+  visible: field.visible,
+  required: field.required,
+  storage: field.storage,
+  field_key: field.field_key,
+});
 
-export function AgendaSettings({ open, onOpenChange, statuses, fields, onRefresh, currentUserId }: Props) {
+export function AgendaSettings({
+  open,
+  onOpenChange,
+  statuses,
+  fields,
+  onRefresh,
+  currentUserId,
+}: Props) {
   const [tab, setTab] = useState<"statuses" | "fields" | "users" | "sgloc" | "lists">("statuses");
   const [statusDraft, setStatusDraft] = useState<StatusDraft | null>(null);
   const [fieldDraft, setFieldDraft] = useState<FieldDraft | null>(null);
   const [busy, setBusy] = useState(false);
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const scrollBack = (id?: string) => { if (id) requestAnimationFrame(() => rowRefs.current[id]?.scrollIntoView({ block: "nearest", behavior: "smooth" })); };
-  const closeStatus = () => { const id = statusDraft?.id; setStatusDraft(null); scrollBack(id); };
-  const closeField = () => { const id = fieldDraft?.id; setFieldDraft(null); scrollBack(id); };
+  const scrollBack = (id?: string) => {
+    if (id)
+      requestAnimationFrame(() =>
+        rowRefs.current[id]?.scrollIntoView({ block: "nearest", behavior: "smooth" }),
+      );
+  };
+  const closeStatus = () => {
+    const id = statusDraft?.id;
+    setStatusDraft(null);
+    scrollBack(id);
+  };
+  const closeField = () => {
+    const id = fieldDraft?.id;
+    setFieldDraft(null);
+    scrollBack(id);
+  };
   const [error, setError] = useState("");
-  const [confirmDelete, setConfirmDelete] = useState<{ type: "status" | "field"; id: string; label: string } | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{
+    type: "status" | "field";
+    id: string;
+    label: string;
+  } | null>(null);
   async function perform(action: () => PromiseLike<{ error: { message: string } | null }>) {
-    setBusy(true); setError("");
+    setBusy(true);
+    setError("");
     try {
       const result = await action();
-      if (result.error) { setError(result.error.message); return false; }
+      if (result.error) {
+        setError(result.error.message);
+        return false;
+      }
       await onRefresh();
       return true;
-    } catch (caught) { setError(caught instanceof Error ? caught.message : "Não foi possível salvar."); return false; }
-    finally { setBusy(false); }
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Não foi possível salvar.");
+      return false;
+    } finally {
+      setBusy(false);
+    }
   }
   async function saveStatus(event: React.FormEvent) {
     event.preventDefault();
     if (!statusDraft) return;
     const label = statusDraft.label.trim();
-    if (!label) { setError("Informe o nome da situação."); return; }
-    const values = { label, color_token: statusDraft.color_token, sort_order: Number(statusDraft.sort_order), is_completion: statusDraft.is_completion };
+    if (!label) {
+      setError("Informe o nome da situação.");
+      return;
+    }
+    const values = {
+      label,
+      color_token: statusDraft.color_token,
+      sort_order: Number(statusDraft.sort_order),
+      is_completion: statusDraft.is_completion,
+    };
     const id = statusDraft.id;
-    if (await perform(() => id ? supabase.from("status_options").update(values).eq("id", id) : supabase.from("status_options").insert(values))) closeStatus();
+    if (
+      await perform(() =>
+        id
+          ? supabase.from("status_options").update(values).eq("id", id)
+          : supabase.from("status_options").insert(values),
+      )
+    )
+      closeStatus();
   }
   async function saveField(event: React.FormEvent) {
     event.preventDefault();
     if (!fieldDraft) return;
     const label = fieldDraft.label.trim();
-    const options = fieldDraft.select_options.split(",").map((value) => value.trim()).filter(Boolean);
-    if (!label || (fieldDraft.field_type === "select" && !options.length)) { setError("Informe o nome e, para uma lista, as opções."); return; }
-    const values = { label, field_type: fieldDraft.field_type, select_options: fieldDraft.field_type === "select" ? options : null, visible: fieldDraft.visible, required: fieldDraft.required, sort_order: Number(fieldDraft.sort_order) };
+    const options = fieldDraft.select_options
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
+    if (!label || (fieldDraft.field_type === "select" && !options.length)) {
+      setError("Informe o nome e, para uma lista, as opções.");
+      return;
+    }
+    const values = {
+      label,
+      field_type: fieldDraft.field_type,
+      select_options: fieldDraft.field_type === "select" ? options : null,
+      visible: fieldDraft.visible,
+      required: fieldDraft.required,
+      sort_order: Number(fieldDraft.sort_order),
+    };
     const id = fieldDraft.id;
     const key = fieldKey(label);
-    if (!id && (!/^[a-z][a-z0-9_]*$/.test(key) || fields.some((field) => field.field_key === key))) { setError("Escolha outro nome para o campo."); return; }
+    if (
+      !id &&
+      (!/^[a-z][a-z0-9_]*$/.test(key) || fields.some((field) => field.field_key === key))
+    ) {
+      setError("Escolha outro nome para o campo.");
+      return;
+    }
     const existing = fields.find((field) => field.id === id);
-    const safeValues = existing?.storage === "column" ? { label, visible: values.visible, required: values.required, sort_order: values.sort_order } : values;
-    if (await perform(() => id ? supabase.from("custom_field_definitions").update(safeValues).eq("id", id) : supabase.from("custom_field_definitions").insert({ ...values, field_key: key, storage: "custom" })))  closeField();
+    const safeValues =
+      existing?.storage === "column"
+        ? {
+            label,
+            visible: values.visible,
+            required: values.required,
+            sort_order: values.sort_order,
+          }
+        : values;
+    if (
+      await perform(() =>
+        id
+          ? supabase.from("custom_field_definitions").update(safeValues).eq("id", id)
+          : supabase
+              .from("custom_field_definitions")
+              .insert({ ...values, field_key: key, storage: "custom" }),
+      )
+    )
+      closeField();
   }
   async function remove() {
     if (!confirmDelete) return;
     const { type, id } = confirmDelete;
-    const success = await perform(() => type === "status" ? supabase.from("status_options").delete().eq("id", id) : supabase.from("custom_field_definitions").delete().eq("id", id));
+    const success = await perform(() =>
+      type === "status"
+        ? supabase.from("status_options").delete().eq("id", id)
+        : supabase.from("custom_field_definitions").delete().eq("id", id),
+    );
     if (success) setConfirmDelete(null);
   }
-  const statusForm = statusDraft && <form onSubmit={saveStatus} className="grid gap-3 rounded-md border bg-muted/30 p-4 sm:grid-cols-2"><h4 className="font-semibold sm:col-span-2">{statusDraft.id ? "Editar situação" : "Nova situação"}</h4><label className="text-sm">Nome<Input required value={statusDraft.label} onChange={(e) => setStatusDraft({ ...statusDraft, label: e.target.value })} /></label><StatusColorField label={statusDraft.label} token={statusDraft.color_token} onChange={(token) => setStatusDraft({ ...statusDraft, color_token: token })} /><label className="text-sm">Ordem<Input type="number" value={statusDraft.sort_order} onChange={(e) => setStatusDraft({ ...statusDraft, sort_order: Number(e.target.value) })} /></label><label className="flex items-center gap-2 text-sm"><Checkbox checked={statusDraft.is_completion} onCheckedChange={(value) => setStatusDraft({ ...statusDraft, is_completion: value === true })} />Situação de conclusão</label><p className="text-xs leading-5 text-muted-foreground sm:col-span-2">Marque a situação que significa “serviço entregue”. Agendamentos nela deixam de contar como atrasados e como veículos a entregar, perdem o selo Urgente e saem do topo da ordenação por prioridade; o selo de prazo passa a mostrar “Entregue no prazo” ou “Entregue com atraso”, conforme a data em que a situação foi aplicada. Só uma situação pode ser de conclusão.</p><div className="flex gap-2 sm:col-span-2"><Button disabled={busy} type="submit">Salvar</Button><Button type="button" variant="outline" onClick={closeStatus}>Cancelar</Button></div></form>;
-  const fieldForm = fieldDraft && <form onSubmit={saveField} className="grid gap-3 rounded-md border bg-muted/30 p-4 sm:grid-cols-2"><h4 className="font-semibold sm:col-span-2">{fieldDraft.id ? "Editar campo" : "Novo campo"}</h4><label className="text-sm">Nome<Input required value={fieldDraft.label} onChange={(e) => setFieldDraft({ ...fieldDraft, label: e.target.value })} /></label>{fieldDraft.storage === "custom" && <label className="text-sm">Tipo<select className={inputClass} value={fieldDraft.field_type} onChange={(e) => setFieldDraft({ ...fieldDraft, field_type: e.target.value })}>{Object.entries(fieldTypes).map(([key, name]) => <option key={key} value={key}>{name}</option>)}</select></label>}{fieldDraft.field_type === "select" && fieldDraft.storage === "custom" && <label className="text-sm sm:col-span-2">Opções separadas por vírgula<Input required value={fieldDraft.select_options} onChange={(e) => setFieldDraft({ ...fieldDraft, select_options: e.target.value })} /></label>}<label className="text-sm">Ordem<Input type="number" value={fieldDraft.sort_order} onChange={(e) => setFieldDraft({ ...fieldDraft, sort_order: Number(e.target.value) })} /></label><div className="flex items-center gap-5"><label className="flex items-center gap-2 text-sm"><Checkbox checked={fieldDraft.visible} onCheckedChange={(value) => setFieldDraft({ ...fieldDraft, visible: value === true })} />Visível</label><label className="flex items-center gap-2 text-sm"><Checkbox checked={fieldDraft.required} onCheckedChange={(value) => setFieldDraft({ ...fieldDraft, required: value === true })} />Obrigatório</label></div><div className="flex gap-2 sm:col-span-2"><Button disabled={busy} type="submit">Salvar</Button><Button type="button" variant="outline" onClick={closeField}>Cancelar</Button></div></form>;
-  return <Dialog open={open} onOpenChange={(value) => { onOpenChange(value); setError(""); setStatusDraft(null); setFieldDraft(null); setConfirmDelete(null); }}>
-    <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
-      <DialogHeader><DialogTitle>Configurações</DialogTitle><DialogDescription>Agenda ANPEXC</DialogDescription></DialogHeader>
-      <div className="flex flex-wrap gap-2 border-b pb-3" role="tablist" aria-label="Configurações">
-        <Button role="tab" aria-selected={tab === "statuses"} variant={tab === "statuses" ? "default" : "outline"} onClick={() => { setTab("statuses"); setError(""); setFieldDraft(null); }}>Situações</Button>
-        <Button role="tab" aria-selected={tab === "fields"} variant={tab === "fields" ? "default" : "outline"} onClick={() => { setTab("fields"); setError(""); setStatusDraft(null); }}>Campos do formulário</Button>
-        <Button role="tab" aria-selected={tab === "users"} variant={tab === "users" ? "default" : "outline"} onClick={() => { setTab("users"); setError(""); setStatusDraft(null); setFieldDraft(null); }}>Usuários e permissões</Button>
-        <Button role="tab" aria-selected={tab === "sgloc"} variant={tab === "sgloc" ? "default" : "outline"} onClick={() => { setTab("sgloc"); setError(""); setStatusDraft(null); setFieldDraft(null); }}>SGLOC</Button>
-        <Button role="tab" aria-selected={tab === "lists"} variant={tab === "lists" ? "default" : "outline"} onClick={() => { setTab("lists"); setError(""); setStatusDraft(null); setFieldDraft(null); }}>Listas</Button>
+  const statusForm = statusDraft && (
+    <form
+      onSubmit={saveStatus}
+      className="grid gap-3 rounded-md border bg-muted/30 p-4 sm:grid-cols-2"
+    >
+      <h4 className="font-semibold sm:col-span-2">
+        {statusDraft.id ? "Editar situação" : "Nova situação"}
+      </h4>
+      <label className="text-sm">
+        Nome
+        <Input
+          required
+          value={statusDraft.label}
+          onChange={(e) => setStatusDraft({ ...statusDraft, label: e.target.value })}
+        />
+      </label>
+      <StatusColorField
+        label={statusDraft.label}
+        token={statusDraft.color_token}
+        onChange={(token) => setStatusDraft({ ...statusDraft, color_token: token })}
+      />
+      <label className="text-sm">
+        Ordem
+        <Input
+          type="number"
+          value={statusDraft.sort_order}
+          onChange={(e) => setStatusDraft({ ...statusDraft, sort_order: Number(e.target.value) })}
+        />
+      </label>
+      <label className="flex items-center gap-2 text-sm">
+        <Checkbox
+          checked={statusDraft.is_completion}
+          onCheckedChange={(value) =>
+            setStatusDraft({ ...statusDraft, is_completion: value === true })
+          }
+        />
+        Situação de conclusão
+      </label>
+      <p className="text-xs leading-5 text-muted-foreground sm:col-span-2">
+        Marque a situação que significa “serviço entregue”. Agendamentos nela deixam de contar como
+        atrasados e como veículos a entregar, perdem o selo Urgente e saem do topo da ordenação por
+        prioridade; o selo de prazo passa a mostrar “Entregue no prazo” ou “Entregue com atraso”,
+        conforme a data em que a situação foi aplicada. Só uma situação pode ser de conclusão.
+      </p>
+      <div className="flex gap-2 sm:col-span-2">
+        <Button disabled={busy} type="submit">
+          Salvar
+        </Button>
+        <Button type="button" variant="outline" onClick={closeStatus}>
+          Cancelar
+        </Button>
       </div>
-      {error && <p role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>}
-      {confirmDelete && <div role="alertdialog" aria-label="Confirmar remoção" className="flex flex-wrap items-center gap-3 border-b pb-3 text-sm"><span>Remover “{confirmDelete.label}”?</span><Button size="sm" variant="destructive" disabled={busy} onClick={remove}>Remover</Button><Button size="sm" variant="outline" onClick={() => setConfirmDelete(null)}>Cancelar</Button></div>}
-      {tab === "lists" ? <CatalogPanel onChanged={onRefresh} /> : tab === "sgloc" ? <SglocSettingsPanel /> : tab === "users" ? <UserRolesPanel currentUserId={currentUserId} /> : tab === "statuses" ? <section className="space-y-3">
-        <div className="flex items-center justify-between"><h3 className="font-semibold">Situações</h3><Button size="sm" variant="outline" onClick={() => { setStatusDraft({ label: "", color_token: "status-blue", sort_order: (Math.max(0, ...statuses.map((row) => row.sort_order)) + 1), is_completion: false }); setError(""); }}><Plus /> Nova situação</Button></div>
-        {statuses.map((row) => <div key={row.id} ref={(el) => { rowRefs.current[row.id] = el; }} className="space-y-2"><div className="flex flex-wrap items-center gap-3 border-b py-2 text-sm"><span className={cn("h-6 w-8 rounded border", statusColorProps(row.color_token).className)} style={statusColorProps(row.color_token).style} aria-label={colorNames[row.color_token] ?? `Cor ${row.color_token}`} /><span className="min-w-0 flex-1 font-medium">{row.label}{row.is_completion && <span className="ml-2 text-xs text-muted-foreground">Conclusão</span>}</span><span className="text-xs text-muted-foreground">#{row.sort_order}</span><Button size="icon" variant="ghost" aria-label={`Editar ${row.label}`} onClick={() => { setStatusDraft({ ...row }); setError(""); }}><Pencil /></Button><Button size="icon" variant="ghost" aria-label={`Remover ${row.label}`} onClick={() => { setConfirmDelete({ type: "status", id: row.id, label: row.label }); setError(""); }}><Trash2 /></Button></div>{statusDraft?.id === row.id && statusForm}</div>)}
-        {statusDraft && !statusDraft.id && statusForm}
-      </section> : <section className="space-y-3">
-        <div className="flex items-center justify-between"><h3 className="font-semibold">Campos do formulário</h3><Button size="sm" variant="outline" onClick={() => { setFieldDraft({ label: "", field_type: "text", select_options: "", sort_order: Math.max(0, ...fields.map((row) => row.sort_order)) + 10, visible: true, required: false, storage: "custom", field_key: "" }); setError(""); }}><Plus /> Novo campo</Button></div>
-        {fields.map((row) => <div key={row.id} ref={(el) => { rowRefs.current[row.id] = el; }} className="space-y-2"><div className="flex flex-wrap items-center gap-2 border-b py-2 text-sm"><span className="min-w-0 flex-1 font-medium">{row.label}<span className="ml-2 text-xs font-normal text-muted-foreground">{row.storage === "column" ? "Campo padrão" : "Personalizado"}</span></span><span className="text-xs text-muted-foreground">{fieldTypes[row.field_type as keyof typeof fieldTypes] || row.field_type} · {row.visible ? "Visível" : "Oculto"} · {row.required ? "Obrigatório" : "Opcional"} · #{row.sort_order}</span><Button size="icon" variant="ghost" aria-label={`Editar campo ${row.label}`} onClick={() => { setFieldDraft(fromField(row)); setError(""); }}><Pencil /></Button>{row.storage === "custom" && <Button size="icon" variant="ghost" aria-label={`Remover campo ${row.label}`} onClick={() => { setConfirmDelete({ type: "field", id: row.id, label: row.label }); setError(""); }}><Trash2 /></Button>}</div>{fieldDraft?.id === row.id && fieldForm}</div>)}
-        {fieldDraft && !fieldDraft.id && fieldForm}
-      </section>}
-    </DialogContent>
-  </Dialog>;
+    </form>
+  );
+  const fieldForm = fieldDraft && (
+    <form
+      onSubmit={saveField}
+      className="grid gap-3 rounded-md border bg-muted/30 p-4 sm:grid-cols-2"
+    >
+      <h4 className="font-semibold sm:col-span-2">
+        {fieldDraft.id ? "Editar campo" : "Novo campo"}
+      </h4>
+      <label className="text-sm">
+        Nome
+        <Input
+          required
+          value={fieldDraft.label}
+          onChange={(e) => setFieldDraft({ ...fieldDraft, label: e.target.value })}
+        />
+      </label>
+      {fieldDraft.storage === "custom" && (
+        <label className="text-sm">
+          Tipo
+          <select
+            className={inputClass}
+            value={fieldDraft.field_type}
+            onChange={(e) => setFieldDraft({ ...fieldDraft, field_type: e.target.value })}
+          >
+            {Object.entries(fieldTypes).map(([key, name]) => (
+              <option key={key} value={key}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      {fieldDraft.field_type === "select" && fieldDraft.storage === "custom" && (
+        <label className="text-sm sm:col-span-2">
+          Opções separadas por vírgula
+          <Input
+            required
+            value={fieldDraft.select_options}
+            onChange={(e) => setFieldDraft({ ...fieldDraft, select_options: e.target.value })}
+          />
+        </label>
+      )}
+      <label className="text-sm">
+        Ordem
+        <Input
+          type="number"
+          value={fieldDraft.sort_order}
+          onChange={(e) => setFieldDraft({ ...fieldDraft, sort_order: Number(e.target.value) })}
+        />
+      </label>
+      <div className="flex items-center gap-5">
+        <label className="flex items-center gap-2 text-sm">
+          <Checkbox
+            checked={fieldDraft.visible}
+            onCheckedChange={(value) => setFieldDraft({ ...fieldDraft, visible: value === true })}
+          />
+          Visível
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <Checkbox
+            checked={fieldDraft.required}
+            onCheckedChange={(value) => setFieldDraft({ ...fieldDraft, required: value === true })}
+          />
+          Obrigatório
+        </label>
+      </div>
+      <div className="flex gap-2 sm:col-span-2">
+        <Button disabled={busy} type="submit">
+          Salvar
+        </Button>
+        <Button type="button" variant="outline" onClick={closeField}>
+          Cancelar
+        </Button>
+      </div>
+    </form>
+  );
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(value) => {
+        onOpenChange(value);
+        setError("");
+        setStatusDraft(null);
+        setFieldDraft(null);
+        setConfirmDelete(null);
+      }}
+    >
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>Configurações</DialogTitle>
+          <DialogDescription>Agenda ANPEXC</DialogDescription>
+        </DialogHeader>
+        <div
+          className="flex flex-wrap gap-2 border-b pb-3"
+          role="tablist"
+          aria-label="Configurações"
+        >
+          <Button
+            role="tab"
+            aria-selected={tab === "statuses"}
+            variant={tab === "statuses" ? "default" : "outline"}
+            onClick={() => {
+              setTab("statuses");
+              setError("");
+              setFieldDraft(null);
+            }}
+          >
+            Situações
+          </Button>
+          <Button
+            role="tab"
+            aria-selected={tab === "fields"}
+            variant={tab === "fields" ? "default" : "outline"}
+            onClick={() => {
+              setTab("fields");
+              setError("");
+              setStatusDraft(null);
+            }}
+          >
+            Campos do formulário
+          </Button>
+          <Button
+            role="tab"
+            aria-selected={tab === "users"}
+            variant={tab === "users" ? "default" : "outline"}
+            onClick={() => {
+              setTab("users");
+              setError("");
+              setStatusDraft(null);
+              setFieldDraft(null);
+            }}
+          >
+            Usuários e permissões
+          </Button>
+          <Button
+            role="tab"
+            aria-selected={tab === "sgloc"}
+            variant={tab === "sgloc" ? "default" : "outline"}
+            onClick={() => {
+              setTab("sgloc");
+              setError("");
+              setStatusDraft(null);
+              setFieldDraft(null);
+            }}
+          >
+            SGLOC
+          </Button>
+          <Button
+            role="tab"
+            aria-selected={tab === "lists"}
+            variant={tab === "lists" ? "default" : "outline"}
+            onClick={() => {
+              setTab("lists");
+              setError("");
+              setStatusDraft(null);
+              setFieldDraft(null);
+            }}
+          >
+            Listas
+          </Button>
+        </div>
+        {error && (
+          <p
+            role="alert"
+            className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          >
+            {error}
+          </p>
+        )}
+        {confirmDelete && (
+          <div
+            role="alertdialog"
+            aria-label="Confirmar remoção"
+            className="flex flex-wrap items-center gap-3 border-b pb-3 text-sm"
+          >
+            <span>Remover “{confirmDelete.label}”?</span>
+            <Button size="sm" variant="destructive" disabled={busy} onClick={remove}>
+              Remover
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setConfirmDelete(null)}>
+              Cancelar
+            </Button>
+          </div>
+        )}
+        {tab === "lists" ? (
+          <CatalogPanel onChanged={onRefresh} />
+        ) : tab === "sgloc" ? (
+          <SglocSettingsPanel />
+        ) : tab === "users" ? (
+          <UserRolesPanel currentUserId={currentUserId} />
+        ) : tab === "statuses" ? (
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold">Situações</h3>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setStatusDraft({
+                    label: "",
+                    color_token: "status-blue",
+                    sort_order: Math.max(0, ...statuses.map((row) => row.sort_order)) + 1,
+                    is_completion: false,
+                  });
+                  setError("");
+                }}
+              >
+                <Plus /> Nova situação
+              </Button>
+            </div>
+            {statuses.map((row) => (
+              <div
+                key={row.id}
+                ref={(el) => {
+                  rowRefs.current[row.id] = el;
+                }}
+                className="space-y-2"
+              >
+                <div className="flex flex-wrap items-center gap-3 border-b py-2 text-sm">
+                  <span
+                    className={cn(
+                      "h-6 w-8 rounded border",
+                      statusColorProps(row.color_token).className,
+                    )}
+                    style={statusColorProps(row.color_token).style}
+                    aria-label={colorNames[row.color_token] ?? `Cor ${row.color_token}`}
+                  />
+                  <span className="min-w-0 flex-1 font-medium">
+                    {row.label}
+                    {row.is_completion && (
+                      <span className="ml-2 text-xs text-muted-foreground">Conclusão</span>
+                    )}
+                  </span>
+                  <span className="text-xs text-muted-foreground">#{row.sort_order}</span>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    aria-label={`Editar ${row.label}`}
+                    onClick={() => {
+                      setStatusDraft({ ...row });
+                      setError("");
+                    }}
+                  >
+                    <Pencil />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    aria-label={`Remover ${row.label}`}
+                    onClick={() => {
+                      setConfirmDelete({ type: "status", id: row.id, label: row.label });
+                      setError("");
+                    }}
+                  >
+                    <Trash2 />
+                  </Button>
+                </div>
+                {statusDraft?.id === row.id && statusForm}
+              </div>
+            ))}
+            {statusDraft && !statusDraft.id && statusForm}
+          </section>
+        ) : (
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold">Campos do formulário</h3>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setFieldDraft({
+                    label: "",
+                    field_type: "text",
+                    select_options: "",
+                    sort_order: Math.max(0, ...fields.map((row) => row.sort_order)) + 10,
+                    visible: true,
+                    required: false,
+                    storage: "custom",
+                    field_key: "",
+                  });
+                  setError("");
+                }}
+              >
+                <Plus /> Novo campo
+              </Button>
+            </div>
+            {fields.map((row) => (
+              <div
+                key={row.id}
+                ref={(el) => {
+                  rowRefs.current[row.id] = el;
+                }}
+                className="space-y-2"
+              >
+                <div className="flex flex-wrap items-center gap-2 border-b py-2 text-sm">
+                  <span className="min-w-0 flex-1 font-medium">
+                    {row.label}
+                    <span className="ml-2 text-xs font-normal text-muted-foreground">
+                      {row.storage === "column" ? "Campo padrão" : "Personalizado"}
+                    </span>
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {fieldTypes[row.field_type as keyof typeof fieldTypes] || row.field_type} ·{" "}
+                    {row.visible ? "Visível" : "Oculto"} ·{" "}
+                    {row.required ? "Obrigatório" : "Opcional"} · #{row.sort_order}
+                  </span>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    aria-label={`Editar campo ${row.label}`}
+                    onClick={() => {
+                      setFieldDraft(fromField(row));
+                      setError("");
+                    }}
+                  >
+                    <Pencil />
+                  </Button>
+                  {row.storage === "custom" && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label={`Remover campo ${row.label}`}
+                      onClick={() => {
+                        setConfirmDelete({ type: "field", id: row.id, label: row.label });
+                        setError("");
+                      }}
+                    >
+                      <Trash2 />
+                    </Button>
+                  )}
+                </div>
+                {fieldDraft?.id === row.id && fieldForm}
+              </div>
+            ))}
+            {fieldDraft && !fieldDraft.id && fieldForm}
+          </section>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
 }
 
-function StatusColorField({ label, token, onChange }: { label: string; token: string; onChange: (token: string) => void }) {
+function StatusColorField({
+  label,
+  token,
+  onChange,
+}: {
+  label: string;
+  token: string;
+  onChange: (token: string) => void;
+}) {
   const shown = normalizeHex(token) ?? tokenHex[token] ?? "#E5E7EB";
   const [text, setText] = useState(shown);
   const [textError, setTextError] = useState("");
-  const pick = (hex: string) => { const n = normalizeHex(hex); if (!n) return; setText(n); setTextError(""); onChange(n); };
+  const pick = (hex: string) => {
+    const n = normalizeHex(hex);
+    if (!n) return;
+    setText(n);
+    setTextError("");
+    onChange(n);
+  };
   const preview = statusColorProps(token);
-  return <div className="space-y-2 text-sm sm:col-span-2">
-    <span className="block">Cor</span>
-    <div className="flex flex-wrap gap-4">
-      <HexColorPicker color={shown} onChange={pick} aria-label="Seletor de cor" />
-      <div className="min-w-48 flex-1 space-y-3">
-        <label className="block">Cor (código #RRGGBB)<Input value={text} maxLength={7} onChange={(e) => { setText(e.target.value); const n = normalizeHex(e.target.value); if (n) { setTextError(""); onChange(n); } else setTextError("Cor inválida. Use o formato #RRGGBB."); }} onBlur={() => { const n = normalizeHex(text); if (n) setText(n); }} aria-invalid={Boolean(textError)} />{textError && <span role="alert" className="mt-1 block text-xs text-destructive">{textError}</span>}</label>
-        <div><span className="mb-1 block text-xs text-muted-foreground">Cores rápidas</span><div className="flex flex-wrap gap-2">{Object.entries(tokenHex).map(([key, hex]) => <button key={key} type="button" title={colorNames[key]} aria-label={`Cor rápida ${colorNames[key]}`} onClick={() => pick(hex)} className="size-8 rounded-full border focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring" style={{ backgroundColor: hex }} />)}</div></div>
-        <div><span className="mb-1 block text-xs text-muted-foreground">Prévia</span><span className={cn("inline-block rounded border px-2 py-1 text-xs font-semibold", preview.className)} style={preview.style}>{label.trim() || "Nome da situação"}</span></div>
+  return (
+    <div className="space-y-2 text-sm sm:col-span-2">
+      <span className="block">Cor</span>
+      <div className="flex flex-wrap gap-4">
+        <HexColorPicker color={shown} onChange={pick} aria-label="Seletor de cor" />
+        <div className="min-w-48 flex-1 space-y-3">
+          <label className="block">
+            Cor (código #RRGGBB)
+            <Input
+              value={text}
+              maxLength={7}
+              onChange={(e) => {
+                setText(e.target.value);
+                const n = normalizeHex(e.target.value);
+                if (n) {
+                  setTextError("");
+                  onChange(n);
+                } else setTextError("Cor inválida. Use o formato #RRGGBB.");
+              }}
+              onBlur={() => {
+                const n = normalizeHex(text);
+                if (n) setText(n);
+              }}
+              aria-invalid={Boolean(textError)}
+            />
+            {textError && (
+              <span role="alert" className="mt-1 block text-xs text-destructive">
+                {textError}
+              </span>
+            )}
+          </label>
+          <div>
+            <span className="mb-1 block text-xs text-muted-foreground">Cores rápidas</span>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(tokenHex).map(([key, hex]) => (
+                <button
+                  key={key}
+                  type="button"
+                  title={colorNames[key]}
+                  aria-label={`Cor rápida ${colorNames[key]}`}
+                  onClick={() => pick(hex)}
+                  className="size-8 rounded-full border focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring"
+                  style={{ backgroundColor: hex }}
+                />
+              ))}
+            </div>
+          </div>
+          <div>
+            <span className="mb-1 block text-xs text-muted-foreground">Prévia</span>
+            <span
+              className={cn(
+                "inline-block rounded border px-2 py-1 text-xs font-semibold",
+                preview.className,
+              )}
+              style={preview.style}
+            >
+              {label.trim() || "Nome da situação"}
+            </span>
+          </div>
+        </div>
       </div>
     </div>
-  </div>;
+  );
 }

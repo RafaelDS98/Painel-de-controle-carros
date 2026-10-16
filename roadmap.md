@@ -58,4 +58,6 @@
 - [x] Dashboard Home em /dashboard com KPIs reais (veículos ativos, agendamentos 30 dias, O.S. em aberto, prazos vencidos), gráfico de agendamentos por dia, veículos por situação e últimas O.S.
 - [x] Tokens visuais novos (accent-brand, accent-warm, row-hover/selected, kpi-number) em oklch para os dois temas.
 - [x] Link "Não tem conta? Cadastre-se" na tela de login com contraste maior (fonte clara).
+- [x] Compilação confirmada após o ajuste do styles.css; código formatado e `bun run lint` sem erros (arquivos gerados de `src/integrations` fora da verificação).
+- [x] Botão "Nova O.S." legível na barra da Agenda nos dois temas (variante `outline` passou a definir a cor do texto).
 - [ ] Módulos Frota (lista), Motoristas, Contratos, Financeiro, Relatórios — aguardando dados/tabelas (frota: decidir lista própria).

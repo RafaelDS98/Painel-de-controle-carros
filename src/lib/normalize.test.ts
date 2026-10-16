@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { authorLabel, importRowSkipReason, isEmergency, normalizeDate, normalizePlate, normalizeTime, parseKm, safeText, sglocExtras, stripHtml } from "./normalize";
+import {
+  authorLabel,
+  importRowSkipReason,
+  isEmergency,
+  normalizeDate,
+  normalizePlate,
+  normalizeTime,
+  parseKm,
+  safeText,
+  sglocExtras,
+  stripHtml,
+} from "./normalize";
 
 describe("normalizePlate", () => {
   it("apara, maiúsculas e remove símbolos", () => {
@@ -54,7 +65,13 @@ describe("stripHtml e safeText", () => {
 });
 
 describe("filtro de linhas da importação", () => {
-  const base = { ID: "123", Placa: "abc1234", Realizado: "<span>Não</span>", Tipo: "Normal", "OS FORNEC": "" };
+  const base = {
+    ID: "123",
+    Placa: "abc1234",
+    Realizado: "<span>Não</span>",
+    Tipo: "Normal",
+    "OS FORNEC": "",
+  };
   it("ignora linha de total, vazia e sem placa; aceita colunas extras", () => {
     expect(importRowSkipReason({ ID: "127 registro(s)", Placa: "" })).toBe("vazia");
     expect(importRowSkipReason({ ID: "", Placa: "  " })).toBe("vazia");
@@ -62,8 +79,14 @@ describe("filtro de linhas da importação", () => {
     expect(importRowSkipReason(base)).toBeNull();
   });
   it("mapeia OS FORNEC, Tipo e ID", () => {
-    expect(sglocExtras({ ...base, "OS FORNEC": "4567", Tipo: '<span class="badge">EMERGENCIAL</span>' })).toEqual({ os_number: 4567, schedule_type: "E", sgloc_reference: "123" });
-    expect(sglocExtras({ ...base, "OS FORNEC": "abc", ID: "X-1" })).toEqual({ os_number: null, schedule_type: "N", sgloc_reference: null });
+    expect(
+      sglocExtras({ ...base, "OS FORNEC": "4567", Tipo: '<span class="badge">EMERGENCIAL</span>' }),
+    ).toEqual({ os_number: 4567, schedule_type: "E", sgloc_reference: "123" });
+    expect(sglocExtras({ ...base, "OS FORNEC": "abc", ID: "X-1" })).toEqual({
+      os_number: null,
+      schedule_type: "N",
+      sgloc_reference: null,
+    });
   });
 });
 

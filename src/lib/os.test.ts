@@ -23,6 +23,9 @@ describe("consulta de O.S.", () => {
     expect(osConsultaFilters({ status_id: "nao_finalizadas" })).toEqual({ nao_finalizadas: "1" });
   });
   it("Sim/Não vira verdadeiro/falso e vazios saem", () => {
-    expect(osConsultaFilters({ recuperado: "Sim", com_pendencia: "Não", plate: "" })).toEqual({ recuperado: "true", com_pendencia: "false" });
+    expect(osConsultaFilters({ recuperado: "Sim", com_pendencia: "Não", plate: "" })).toEqual({
+      recuperado: "true",
+      com_pendencia: "false",
+    });
   });
 });
