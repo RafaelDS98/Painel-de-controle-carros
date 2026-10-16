@@ -13,6 +13,9 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedHistoricosRouteImport } from './routes/_authenticated/historicos'
+import { Route as AuthenticatedOrdensServicoIndexRouteImport } from './routes/_authenticated/ordens-servico.index'
+import { Route as AuthenticatedOrdensServicoIdRouteImport } from './routes/_authenticated/ordens-servico.$id'
+import { Route as AuthenticatedOrdensServicoNovaRouteImport } from './routes/_authenticated/ordens-servico.nova'
 import { Route as AuthenticatedVeiculoPlateRouteImport } from './routes/_authenticated/veiculo.$plate'
 import { Route as ApiPublicHooksSglocSyncRouteImport } from './routes/api/public/hooks/sgloc-sync'
 
@@ -35,6 +38,24 @@ const AuthenticatedHistoricosRoute = AuthenticatedHistoricosRouteImport.update({
   path: '/historicos',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedOrdensServicoIndexRoute =
+  AuthenticatedOrdensServicoIndexRouteImport.update({
+    id: '/ordens-servico/',
+    path: '/ordens-servico/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedOrdensServicoIdRoute =
+  AuthenticatedOrdensServicoIdRouteImport.update({
+    id: '/ordens-servico/$id',
+    path: '/ordens-servico/$id',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedOrdensServicoNovaRoute =
+  AuthenticatedOrdensServicoNovaRouteImport.update({
+    id: '/ordens-servico/nova',
+    path: '/ordens-servico/nova',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedVeiculoPlateRoute =
   AuthenticatedVeiculoPlateRouteImport.update({
     id: '/veiculo/$plate',
@@ -51,14 +72,20 @@ export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthRoute
   '/historicos': typeof AuthenticatedHistoricosRoute
+  '/ordens-servico/$id': typeof AuthenticatedOrdensServicoIdRoute
+  '/ordens-servico/nova': typeof AuthenticatedOrdensServicoNovaRoute
   '/veiculo/$plate': typeof AuthenticatedVeiculoPlateRoute
+  '/ordens-servico/': typeof AuthenticatedOrdensServicoIndexRoute
   '/api/public/hooks/sgloc-sync': typeof ApiPublicHooksSglocSyncRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/historicos': typeof AuthenticatedHistoricosRoute
   '/': typeof AuthenticatedIndexRoute
+  '/ordens-servico/$id': typeof AuthenticatedOrdensServicoIdRoute
+  '/ordens-servico/nova': typeof AuthenticatedOrdensServicoNovaRoute
   '/veiculo/$plate': typeof AuthenticatedVeiculoPlateRoute
+  '/ordens-servico': typeof AuthenticatedOrdensServicoIndexRoute
   '/api/public/hooks/sgloc-sync': typeof ApiPublicHooksSglocSyncRoute
 }
 export interface FileRoutesById {
@@ -67,7 +94,10 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/historicos': typeof AuthenticatedHistoricosRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/ordens-servico/$id': typeof AuthenticatedOrdensServicoIdRoute
+  '/_authenticated/ordens-servico/nova': typeof AuthenticatedOrdensServicoNovaRoute
   '/_authenticated/veiculo/$plate': typeof AuthenticatedVeiculoPlateRoute
+  '/_authenticated/ordens-servico/': typeof AuthenticatedOrdensServicoIndexRoute
   '/api/public/hooks/sgloc-sync': typeof ApiPublicHooksSglocSyncRoute
 }
 export interface FileRouteTypes {
@@ -76,14 +106,20 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/historicos'
+    | '/ordens-servico/$id'
+    | '/ordens-servico/nova'
     | '/veiculo/$plate'
+    | '/ordens-servico/'
     | '/api/public/hooks/sgloc-sync'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
     | '/historicos'
     | '/'
+    | '/ordens-servico/$id'
+    | '/ordens-servico/nova'
     | '/veiculo/$plate'
+    | '/ordens-servico'
     | '/api/public/hooks/sgloc-sync'
   id:
     | '__root__'
@@ -91,7 +127,10 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/historicos'
     | '/_authenticated/'
+    | '/_authenticated/ordens-servico/$id'
+    | '/_authenticated/ordens-servico/nova'
     | '/_authenticated/veiculo/$plate'
+    | '/_authenticated/ordens-servico/'
     | '/api/public/hooks/sgloc-sync'
   fileRoutesById: FileRoutesById
 }
@@ -131,6 +170,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHistoricosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/ordens-servico/': {
+      id: '/_authenticated/ordens-servico/'
+      path: '/ordens-servico'
+      fullPath: '/ordens-servico/'
+      preLoaderRoute: typeof AuthenticatedOrdensServicoIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/ordens-servico/$id': {
+      id: '/_authenticated/ordens-servico/$id'
+      path: '/ordens-servico/$id'
+      fullPath: '/ordens-servico/$id'
+      preLoaderRoute: typeof AuthenticatedOrdensServicoIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/ordens-servico/nova': {
+      id: '/_authenticated/ordens-servico/nova'
+      path: '/ordens-servico/nova'
+      fullPath: '/ordens-servico/nova'
+      preLoaderRoute: typeof AuthenticatedOrdensServicoNovaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/veiculo/$plate': {
       id: '/_authenticated/veiculo/$plate'
       path: '/veiculo/$plate'
@@ -151,13 +211,19 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedHistoricosRoute: typeof AuthenticatedHistoricosRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedOrdensServicoIdRoute: typeof AuthenticatedOrdensServicoIdRoute
+  AuthenticatedOrdensServicoNovaRoute: typeof AuthenticatedOrdensServicoNovaRoute
   AuthenticatedVeiculoPlateRoute: typeof AuthenticatedVeiculoPlateRoute
+  AuthenticatedOrdensServicoIndexRoute: typeof AuthenticatedOrdensServicoIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedHistoricosRoute: AuthenticatedHistoricosRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedOrdensServicoIdRoute: AuthenticatedOrdensServicoIdRoute,
+  AuthenticatedOrdensServicoNovaRoute: AuthenticatedOrdensServicoNovaRoute,
   AuthenticatedVeiculoPlateRoute: AuthenticatedVeiculoPlateRoute,
+  AuthenticatedOrdensServicoIndexRoute: AuthenticatedOrdensServicoIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

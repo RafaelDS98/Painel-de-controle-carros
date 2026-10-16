@@ -86,6 +86,7 @@ function Index() {
   const tabs = <div role="tablist" aria-label="Módulos" className="flex flex-wrap gap-2">
     {available.map((m) => tabBtn(m, m === "agenda" ? "Agenda" : "Oficina", !movements && m === active, () => { go(false); setTab(m); }))}
     {tabBtn("mov", "Movimentações", movements, () => go(true))}
+    <Button variant="outline" onClick={() => navigate({ to: "/ordens-servico" })}>Ordens de Serviço</Button>
   </div>;
   const currentUser = { id: user.id, name: profile.data.full_name || user.email || "Usuário", role: profile.data.role, email: user.email ?? "" };
   return <>
