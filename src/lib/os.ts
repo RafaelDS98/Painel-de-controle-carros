@@ -3,7 +3,7 @@ export type OsRow = {
   id: string; numero: number; plate: string; opened_at: string; status_id: number; status_label?: string | null;
   status_color?: string | null; tipo_label?: string | null; workshop_name?: string | null; store_code?: string | null;
   centro_custo_name?: string | null; total_os?: number | null; km?: number | null; tipo_atendimento?: string | null;
-  pendencia?: boolean | null; closed_at?: string | null; [k: string]: unknown;
+  pendencia?: boolean | null; closed_at?: string | null; previsao_conclusao?: string | null; externa_ref?: string | null; condutor_nome?: string | null; obs1?: string | null; [k: string]: unknown;
 };
 export type OsItem = { id: string; description: string; qty: number; unit_price: number; total: number | null; item_type: string; approval: string | null; mechanic_name: string | null; service_code: string | null; part_code: string | null };
 

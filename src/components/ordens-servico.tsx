@@ -12,6 +12,11 @@ import { buildFilters, itemTotal, money, osDate, parseSearch, TIPO_ATENDIMENTO, 
 type Opt = { id: string | number; label: string };
 type Config = { tipos: Opt[]; status: (Opt & { color?: string; allows_finalize?: boolean })[]; centros: Opt[]; stores: Opt[]; workshops: Opt[]; mechanics: string[] };
 
+/** Remove campos vazios antes de chamar o banco. */
+function clean<T extends Record<string, unknown>>(o: T): { [K in keyof T]: Exclude<T[K], undefined> } {
+  return Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as never;
+}
+
 const sel = "h-10 w-full rounded-md border border-input bg-background px-3 text-sm";
 
 function errMsg(e: unknown) {
@@ -31,11 +36,11 @@ function useOsConfig() {
       ]);
       if (cfg.error) throw cfg.error;
       const c = (cfg.data ?? {}) as Record<string, Array<Record<string, unknown>>>;
-      const map = (rows: Array<Record<string, unknown>> | undefined, label: string) => (rows ?? []).map((r) => ({ ...r, id: r.id as string | number, label: String(r[label] ?? "—") }));
+      const map = (rows: Array<Record<string, unknown>> | undefined, label: string) => (rows ?? []).map((r) => ({ ...r, id: r["id"] as string | number, label: String(r[label] ?? "—") }));
       return {
-        tipos: map(c.tipos, "label"),
-        status: map(c.status, "label") as Config["status"],
-        centros: map(c.centros_custo, "name"),
+        tipos: map(c["tipos"], "label"),
+        status: map(c["status"], "label") as Config["status"],
+        centros: map(c["centros_custo"], "name"),
         stores: (stores.data ?? []).map((s) => ({ id: s.store_id, label: s.label ? `${s.code} — ${s.label}` : s.code })),
         workshops: (workshops.data ?? []).map((w) => ({ id: w.id, label: w.name })),
         mechanics: (mechanics.data ?? []).map((m) => m.name),
@@ -57,7 +62,7 @@ function Shell({ title, children, back }: { title: string; children: React.React
   </main></div>;
 }
 
-function Badge({ label, color }: { label?: string | null; color?: string | null }) {
+function Badge({ label, color }: { label?: string | null | undefined; color?: string | null | undefined }) {
   const hex = color && /^#[0-9a-f]{6}$/i.test(color) ? color : undefined;
   return <span className="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium">
     <span className="h-2 w-2 rounded-full bg-muted-foreground" style={hex ? { backgroundColor: hex } : undefined} />{label || "—"}
@@ -147,12 +152,12 @@ export function OsNewPage({ appointmentId }: { appointmentId?: string }) {
     const missing = [!f.plate && "Placa", !f.km && "KM", !f.store_id && "Loja", !f.workshop_id && "Oficina", !f.tipo_id && "Tipo", !f.centro_custo_id && "Centro de custo"].filter(Boolean);
     if (missing.length) { toast.error(`Preencha: ${missing.join(", ")}.`); return; }
     setSaving(true);
-    const { data, error } = await supabase.rpc("os_create", {
+    const { data, error } = await supabase.rpc("os_create", clean({
       _plate: f.plate, _km: Number(f.km), _store_id: Number(f.store_id), _workshop_id: f.workshop_id, _tipo_id: Number(f.tipo_id),
       _centro_custo_id: f.centro_custo_id, _tipo_atendimento: f.tipo_atendimento, _appointment_id: appointmentId ?? undefined,
       _previsao_conclusao: f.previsao_conclusao || undefined, _condutor_nome: f.condutor_nome || undefined, _condutor_contato: f.condutor_contato || undefined,
       _solicitante: f.solicitante || undefined, _externa_ref: f.externa_ref || undefined, _obs1: f.obs1 || undefined,
-    });
+    }));
     setSaving(false);
     if (error) { toast.error(`Não foi possível criar a O.S. ${errMsg(error)}`); return; }
     const r = data as { id: string; numero: number };
@@ -243,7 +248,7 @@ export function OsDetailPage({ id }: { id: string }) {
       {!closed && <form className="grid gap-2 sm:grid-cols-6" onSubmit={async (e) => {
         e.preventDefault();
         if (!item.description.trim() || !(Number(item.qty) > 0)) { toast.error("Informe descrição e quantidade."); return; }
-        const ok = await run(supabase.rpc("os_item_add", { _os_id: id, _description: item.description.trim(), _qty: Number(item.qty), _unit_price: Number(item.unit_price.replace(",", ".")) || 0, _item_type: item.item_type, _mechanic_name: item.mechanic_name || undefined }), "Item adicionado.");
+        const ok = await run(supabase.rpc("os_item_add", clean({ _os_id: id, _description: item.description.trim(), _qty: Number(item.qty), _unit_price: Number(item.unit_price.replace(",", ".")) || 0, _item_type: item.item_type, _mechanic_name: item.mechanic_name || undefined })), "Item adicionado.");
         if (ok) setItem({ description: "", qty: "1", unit_price: "", item_type: item.item_type, mechanic_name: item.mechanic_name });
       }}>
         <Input className="sm:col-span-2" placeholder="Descrição" value={item.description} onChange={(e) => setItem({ ...item, description: e.target.value })} />
