@@ -367,9 +367,20 @@ export const pushAppointmentToSgloc = createServerFn({ method: "POST" })
     const core = await import("./core");
     const client = await import("./client.server");
     const settings = await client.loadSettings();
-    if (!settings.enabled || !settings.write_enabled) return { status: "skipped" };
     const isUpdate = Boolean(row.sgloc_reference);
     if (data.origin === "update" && !isUpdate) return { status: "skipped" };
+    // Envio desligado nunca pode ser silencioso: criação/reenvio fica marcado como push_failed (botão "Reenviar") com o motivo.
+    const offReason = !settings.enabled
+      ? "Integração SGLOC desligada. O master pode ativá-la em Configurações > SGLOC."
+      : !settings.write_enabled ? "Envio ao SGLOC desligado. O master precisa ativar a escrita em Configurações > SGLOC." : null;
+    if (offReason) {
+      if (!isUpdate) {
+        const { supabaseAdmin: admin } = await import("@/integrations/supabase/client.server");
+        await admin.from("appointments").update({ sgloc_sync_state: "push_failed", sgloc_last_error: offReason } as never).eq("id", row.id);
+        return { status: "failed", message: offReason };
+      }
+      return { status: "skipped", message: offReason };
+    }
     const changed = data.origin === "update" ? data.changed : [...core.SENDABLE_COLUMNS];
     if (isUpdate && !changed.some((c) => (core.SENDABLE_COLUMNS as readonly string[]).includes(c))) return { status: "no_change" };
 

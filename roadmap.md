@@ -32,3 +32,8 @@
 - [x] Campo Setor no usuário (lista "Setores", semeada com Oficina).
 - [x] Limite de alterações da Previsão de Entrega por perfil/usuário (Atendimento e Oficina, padrão 1).
 - [x] Lote A: auto-sync desligável, Atualizar do SGLOC, filtro Setor, gestão de listas (gerente/master)
+- [x] Fluxo de trabalho com Claude direto no GitHub documentado no AGENTS.md (sem créditos do Lovable).
+- [x] Envio ao SGLOC: motivo visível quando integração/escrita está desligada (aviso na tela + push_failed com "Reenviar" na criação).
+- [ ] Envio ao SGLOC: confirmar no Supabase `sgloc_settings` (enabled e write_enabled = true) e que o operador tem conta SGLOC conectada; criar novo atendimento no painel e ver o resultado (Enviado ao SGLOC / motivo da falha).
+- [ ] Instalar Node/Bun na máquina do Rafael para rodar o painel e os testes localmente.
+

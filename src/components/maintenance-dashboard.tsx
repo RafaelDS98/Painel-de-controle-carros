@@ -612,6 +612,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser, mode = "agenda", 
     try {
       const result = await pushSgloc({ data: { appointmentId: id, origin, changed } });
       if (result.warning) toast.warning(result.warning);
+      if (result.status === "skipped" && result.message) toast.warning(`SGLOC: não enviado. ${result.message}`);
       if (result.status === "synced") toast.success("Enviado ao SGLOC.");
       if (result.status === "failed") toast.error(`SGLOC: falha no envio. ${result.message ?? ""}`);
       if (result.status === "synced" || result.status === "failed") await refreshRow(id);
