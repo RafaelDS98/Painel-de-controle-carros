@@ -1,0 +1,7 @@
+# Regras de src/components
+- A ficha de agendamento compartilha os campos da criação manual e envia somente colunas alteradas no UPDATE — mantém o trigger de permissões e o histórico como fonte das regras.
+- A edição em lote usa o UUID exportado, compara cada campo com a linha atual do banco e usa o mesmo UPDATE da ficha — evita duplicação e preserva as travas e o histórico.
+- Atalhos de período usam datas de São Paulo; a grade mostra só a semana atual do intervalo — evita misturar semanas.
+- A ficha grava Situação, Urgente e demais campos num único UPDATE montado por buildAppointmentUpdate (src/lib/appointment-update.ts) — cada Salvar conta uma só edição no limite.
+- Históricos é módulo próprio (rotas /historicos e /veiculo/$plate, src/components/historicos.tsx, protegidas por ProfileGate com o módulo `historicos`): log geral com filtros e exportação CSV/XLSX pelas funções puras de src/lib/history-log.ts (proteção de fórmula; autor "Sincronização SGLOC" quando changed_by é nulo). Perfil Oficina não tem o módulo.
+- Filtro avançado (src/components/advanced-filter-drawer.tsx + src/lib/advanced-filter.ts): campos vêm de custom_field_definitions visíveis, OU dentro do campo e E entre campos, junto dos demais filtros; visões salvas em saved_views (RLS: só do próprio usuário).
