@@ -168,11 +168,9 @@ function Kpi({
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-sm text-muted-foreground group-hover:text-foreground">
-            {label}
-          </p>
+          <p className="text-sm text-muted-foreground group-hover:text-foreground">{label}</p>
           <p className="text-3xl font-bold text-kpi-number">{value}</p>
-          {sub && <p className="mt-1 truncate text-xs text-muted-foreground">{sub}</p>}
+          {sub && <p className="mt-1 text-xs text-muted-foreground">{sub}</p>}
         </div>
         <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-secondary transition-colors group-hover:bg-primary/20">
           <Icon className="size-5 text-secondary-foreground group-hover:text-primary" />
@@ -188,7 +186,14 @@ function statusBadgeStyle(color: string | null): { style: CSSProperties; classNa
       ? color.replace("#", "")
       : null;
   if (!hex) return { style: {}, className: "bg-secondary text-secondary-foreground" };
-  return { style: { backgroundColor: `#${hex}26`, color: `#${hex}` }, className: "" };
+  return {
+    style: {
+      backgroundColor: `color-mix(in oklab, #${hex} 20%, var(--card))`,
+      color: `color-mix(in oklab, #${hex} 70%, var(--badge-tint))`,
+      border: `1px solid color-mix(in oklab, #${hex} 40%, var(--card))`,
+    },
+    className: "",
+  };
 }
 
 function DashboardHome() {
@@ -492,7 +497,7 @@ function DashboardHome() {
           icon={TriangleAlert}
           label="Prazos vencidos"
           value={fmt(overdueShown)}
-          sub="Previsão de Entrega no passado"
+          sub="Previsão de Entrega vencida"
           onClick={() => open("overdue")}
         />
       </div>

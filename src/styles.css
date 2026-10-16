@@ -97,6 +97,7 @@
 
 :root {
   color-scheme: light;
+  --badge-tint: black;
   --radius: 0.5rem;
   --background: oklch(0.975 0.004 247);
   --foreground: oklch(0.22 0.028 256);
@@ -166,6 +167,7 @@
 
 .dark {
   color-scheme: dark;
+  --badge-tint: white;
   --background: oklch(0.17 0.025 255);
   --foreground: oklch(0.984 0.003 247.858);
   --card: oklch(0.208 0.042 265.755);
