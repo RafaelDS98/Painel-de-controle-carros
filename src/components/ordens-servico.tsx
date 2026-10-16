@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { buildFilters, itemTotal, money, osDate, parseSearch, TIPO_ATENDIMENTO, type OsItem, type OsRow } from "@/lib/os";
+import { OsConsultaPanel } from "@/components/os-consulta";
+import { itemTotal, money, osDate, parseSearch, TIPO_ATENDIMENTO, type OsItem, type OsRow } from "@/lib/os";
 
 type Opt = { id: string | number; label: string };
 type Config = { tipos: Opt[]; status: (Opt & { color?: string; allows_finalize?: boolean })[]; centros: Opt[]; stores: Opt[]; workshops: Opt[]; mechanics: string[] };
@@ -70,60 +71,9 @@ export function Badge({ label, color }: { label?: string | null | undefined; col
 }
 
 export function OsListPage({ canCreate }: { canCreate: boolean }) {
-  const config = useOsConfig();
-  const [draft, setDraft] = useState({ plate: "", numero: "", status_id: "", store_id: "", workshop_id: "", data_inicial: "", data_final: "" });
-  const [filters, setFilters] = useState<Record<string, string>>({});
-  const [page, setPage] = useState(1);
-  const list = useQuery({
-    queryKey: ["os-list", filters, page],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("search_ordens_servico", { _filters: filters, _page: page, _page_size: 20 });
-      if (error) throw error;
-      return parseSearch(data);
-    },
-  });
-  const set = (k: keyof typeof draft) => (e: { target: { value: string } }) => setDraft({ ...draft, [k]: e.target.value });
-  const search = () => { setPage(1); setFilters(buildFilters(draft)); };
-  const pages = Math.max(1, Math.ceil((list.data?.total ?? 0) / 20));
   return <Shell title="Ordens de Serviço">
-    <form className="grid gap-3 rounded-lg border bg-card p-4 sm:grid-cols-2 lg:grid-cols-4" onSubmit={(e) => { e.preventDefault(); search(); }}>
-      <div><Label>Placa</Label><Input value={draft.plate} onChange={set("plate")} placeholder="ABC1D23" /></div>
-      <div><Label>Nº da O.S.</Label><Input value={draft.numero} onChange={set("numero")} inputMode="numeric" /></div>
-      <div><Label>Situação</Label><select className={sel} value={draft.status_id} onChange={set("status_id")}><option value="">Todas</option>{config.data?.status.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}</select></div>
-      <div><Label>Loja</Label><select className={sel} value={draft.store_id} onChange={set("store_id")}><option value="">Todas</option>{config.data?.stores.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}</select></div>
-      <div><Label>Oficina</Label><select className={sel} value={draft.workshop_id} onChange={set("workshop_id")}><option value="">Todas</option>{config.data?.workshops.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}</select></div>
-      <div><Label>Aberta de</Label><Input type="date" value={draft.data_inicial} onChange={set("data_inicial")} /></div>
-      <div><Label>até</Label><Input type="date" value={draft.data_final} onChange={set("data_final")} /></div>
-      <div className="flex items-end gap-2">
-        <Button type="submit">Pesquisar</Button>
-        <Button type="button" variant="outline" onClick={() => { setDraft({ plate: "", numero: "", status_id: "", store_id: "", workshop_id: "", data_inicial: "", data_final: "" }); setFilters({}); setPage(1); }}>Limpar</Button>
-      </div>
-    </form>
-    <div className="flex items-center justify-between">
-      <p className="text-sm text-muted-foreground">{list.data ? `${list.data.total} ordem(ns)` : ""}</p>
-      {canCreate && <Button asChild><Link to="/ordens-servico/nova">Nova O.S.</Link></Button>}
-    </div>
-    {list.isLoading ? <p className="text-sm text-muted-foreground">Carregando…</p>
-      : list.isError ? <p className="text-sm text-destructive">Não foi possível carregar as ordens. {errMsg(list.error)}</p>
-      : !list.data?.rows.length ? <p className="rounded-lg border bg-card p-8 text-center text-sm text-muted-foreground">Nenhuma ordem de serviço encontrada.</p>
-      : <div className="overflow-x-auto rounded-lg border bg-card"><table className="w-full text-sm">
-        <thead className="bg-muted/50 text-left"><tr>{["Nº", "Placa", "Abertura", "Situação", "Tipo", "Loja", "Oficina", "Total"].map((h) => <th key={h} className="px-3 py-2 font-medium">{h}</th>)}</tr></thead>
-        <tbody>{list.data.rows.map((os: OsRow) => <tr key={os.id} className="border-t hover:bg-muted/40">
-          <td className="px-3 py-2"><Link className="font-medium text-primary underline-offset-2 hover:underline" to="/ordens-servico/$id" params={{ id: os.id }}>{os.numero}</Link></td>
-          <td className="px-3 py-2 font-mono">{os.plate || "—"}</td>
-          <td className="px-3 py-2">{osDate(os.opened_at)}</td>
-          <td className="px-3 py-2"><Badge label={os.status_label} color={os.status_color} /></td>
-          <td className="px-3 py-2">{os.tipo_label || "—"}</td>
-          <td className="px-3 py-2">{os.store_code || "—"}</td>
-          <td className="px-3 py-2">{os.workshop_name || "—"}</td>
-          <td className="px-3 py-2">{money(os.total_os)}</td>
-        </tr>)}</tbody>
-      </table></div>}
-    {pages > 1 && <div className="flex items-center justify-end gap-2">
-      <Button variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>Anterior</Button>
-      <span className="text-sm">Página {page} de {pages}</span>
-      <Button variant="outline" disabled={page >= pages} onClick={() => setPage(page + 1)}>Próxima</Button>
-    </div>}
+    {canCreate && <div className="flex justify-end"><Button asChild><Link to="/ordens-servico/nova">Nova O.S.</Link></Button></div>}
+    <OsConsultaPanel />
   </Shell>;
 }
 
