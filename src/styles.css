@@ -96,6 +96,8 @@
 
 
 :root {
+  color-scheme: light;
+  --badge-tint: black;
   --radius: 0.5rem;
   --background: oklch(0.975 0.004 247);
   --foreground: oklch(0.22 0.028 256);
@@ -164,6 +166,8 @@
 }
 
 .dark {
+  color-scheme: dark;
+  --badge-tint: white;
   --background: oklch(0.17 0.025 255);
   --foreground: oklch(0.984 0.003 247.858);
   --card: oklch(0.208 0.042 265.755);
@@ -241,4 +245,13 @@
     font-family: var(--font-sans);
     transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease;
   }
+}
+
+/* Campos de data: ícone do calendário branco no tema escuro (fica escuro no claro). */
+.dark input[type="date"]::-webkit-calendar-picker-indicator,
+.dark input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+.dark input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: 0.9;
+  cursor: pointer;
 }

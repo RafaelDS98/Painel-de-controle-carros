@@ -86,7 +86,6 @@ import {
   batchValidation,
   type BatchRecord,
 } from "@/lib/bulk-appointments";
-import phoenixAsset from "@/assets/logo-anpexc-marca.png.asset.json";
 import { periodRange, weekRange, pendingDeliveries, type PeriodPreset } from "@/lib/agenda-period";
 import { ContactRegister } from "@/components/contact-register";
 import { AgendaSettings } from "@/components/agenda-settings";
@@ -2302,7 +2301,7 @@ export function MaintenanceDashboard({
         )}
 
         <section className="rounded-lg border bg-card p-4 shadow-sm">
-          <div className="flex flex-col gap-3 xl:flex-row">
+          <div className="flex flex-col gap-3 xl:flex-row xl:flex-wrap">
             <label className="relative min-w-0 flex-[1.4] sm:min-w-64">
               <Search className="absolute left-3 top-3 size-4 text-muted-foreground" />
               <Input
@@ -2315,7 +2314,7 @@ export function MaintenanceDashboard({
                 className="pl-9"
               />
             </label>
-            <div className="flex min-w-0 flex-1 flex-wrap gap-2 sm:min-w-64">
+            <div className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-md border border-input bg-background px-2 sm:min-w-64">
               <Input
                 type="date"
                 aria-label="Data inicial"
@@ -2325,8 +2324,11 @@ export function MaintenanceDashboard({
                   setPeriodPreset("custom");
                   setPage(1);
                 }}
-                className="min-w-36 flex-1"
+                className="w-full min-w-0 flex-1 border-0 bg-transparent px-1 shadow-none"
               />
+              <span aria-hidden="true" className="shrink-0 px-1 text-xs text-muted-foreground">
+                até
+              </span>
               <Input
                 type="date"
                 aria-label="Data final"
@@ -2336,7 +2338,7 @@ export function MaintenanceDashboard({
                   setPeriodPreset("custom");
                   setPage(1);
                 }}
-                className="min-w-36 flex-1"
+                className="w-full min-w-0 flex-1 border-0 bg-transparent px-1 shadow-none"
               />
             </div>
             <SearchableSelect
@@ -2352,7 +2354,7 @@ export function MaintenanceDashboard({
               onChange={setWorkshop}
             />
           </div>
-          <div className="mt-3 flex flex-col gap-3 md:flex-row">
+          <div className="mt-3 flex flex-col gap-3 md:flex-row md:flex-wrap">
             <SearchableSelect
               label="Todas as placas"
               value={plateFilter}
