@@ -13,6 +13,9 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedHistoricosRouteImport } from './routes/_authenticated/historicos'
+import { Route as AuthenticatedOsRouteImport } from './routes/_authenticated/os'
+import { Route as AuthenticatedOsIdRouteImport } from './routes/_authenticated/os.$id'
+import { Route as AuthenticatedOsNovaRouteImport } from './routes/_authenticated/os.nova'
 import { Route as AuthenticatedVeiculoPlateRouteImport } from './routes/_authenticated/veiculo.$plate'
 import { Route as ApiPublicHooksSglocSyncRouteImport } from './routes/api/public/hooks/sgloc-sync'
 
@@ -35,6 +38,21 @@ const AuthenticatedHistoricosRoute = AuthenticatedHistoricosRouteImport.update({
   path: '/historicos',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedOsRoute = AuthenticatedOsRouteImport.update({
+  id: '/os',
+  path: '/os',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedOsIdRoute = AuthenticatedOsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AuthenticatedOsRoute,
+} as any)
+const AuthenticatedOsNovaRoute = AuthenticatedOsNovaRouteImport.update({
+  id: '/nova',
+  path: '/nova',
+  getParentRoute: () => AuthenticatedOsRoute,
+} as any)
 const AuthenticatedVeiculoPlateRoute =
   AuthenticatedVeiculoPlateRouteImport.update({
     id: '/veiculo/$plate',
@@ -51,13 +69,19 @@ export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthRoute
   '/historicos': typeof AuthenticatedHistoricosRoute
+  '/os': typeof AuthenticatedOsRouteWithChildren
+  '/os/$id': typeof AuthenticatedOsIdRoute
+  '/os/nova': typeof AuthenticatedOsNovaRoute
   '/veiculo/$plate': typeof AuthenticatedVeiculoPlateRoute
   '/api/public/hooks/sgloc-sync': typeof ApiPublicHooksSglocSyncRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/historicos': typeof AuthenticatedHistoricosRoute
+  '/os': typeof AuthenticatedOsRouteWithChildren
   '/': typeof AuthenticatedIndexRoute
+  '/os/$id': typeof AuthenticatedOsIdRoute
+  '/os/nova': typeof AuthenticatedOsNovaRoute
   '/veiculo/$plate': typeof AuthenticatedVeiculoPlateRoute
   '/api/public/hooks/sgloc-sync': typeof ApiPublicHooksSglocSyncRoute
 }
@@ -66,7 +90,10 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/historicos': typeof AuthenticatedHistoricosRoute
+  '/_authenticated/os': typeof AuthenticatedOsRouteWithChildren
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/os/$id': typeof AuthenticatedOsIdRoute
+  '/_authenticated/os/nova': typeof AuthenticatedOsNovaRoute
   '/_authenticated/veiculo/$plate': typeof AuthenticatedVeiculoPlateRoute
   '/api/public/hooks/sgloc-sync': typeof ApiPublicHooksSglocSyncRoute
 }
@@ -76,13 +103,19 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/historicos'
+    | '/os'
+    | '/os/$id'
+    | '/os/nova'
     | '/veiculo/$plate'
     | '/api/public/hooks/sgloc-sync'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
     | '/historicos'
+    | '/os'
     | '/'
+    | '/os/$id'
+    | '/os/nova'
     | '/veiculo/$plate'
     | '/api/public/hooks/sgloc-sync'
   id:
@@ -90,7 +123,10 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/historicos'
+    | '/_authenticated/os'
     | '/_authenticated/'
+    | '/_authenticated/os/$id'
+    | '/_authenticated/os/nova'
     | '/_authenticated/veiculo/$plate'
     | '/api/public/hooks/sgloc-sync'
   fileRoutesById: FileRoutesById
@@ -131,6 +167,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHistoricosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/os': {
+      id: '/_authenticated/os'
+      path: '/os'
+      fullPath: '/os'
+      preLoaderRoute: typeof AuthenticatedOsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/os/$id': {
+      id: '/_authenticated/os/$id'
+      path: '/$id'
+      fullPath: '/os/$id'
+      preLoaderRoute: typeof AuthenticatedOsIdRouteImport
+      parentRoute: typeof AuthenticatedOsRoute
+    }
+    '/_authenticated/os/nova': {
+      id: '/_authenticated/os/nova'
+      path: '/nova'
+      fullPath: '/os/nova'
+      preLoaderRoute: typeof AuthenticatedOsNovaRouteImport
+      parentRoute: typeof AuthenticatedOsRoute
+    }
     '/_authenticated/veiculo/$plate': {
       id: '/_authenticated/veiculo/$plate'
       path: '/veiculo/$plate'
@@ -148,14 +205,30 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedOsRouteChildren {
+  AuthenticatedOsIdRoute: typeof AuthenticatedOsIdRoute
+  AuthenticatedOsNovaRoute: typeof AuthenticatedOsNovaRoute
+}
+
+const AuthenticatedOsRouteChildren: AuthenticatedOsRouteChildren = {
+  AuthenticatedOsIdRoute: AuthenticatedOsIdRoute,
+  AuthenticatedOsNovaRoute: AuthenticatedOsNovaRoute,
+}
+
+const AuthenticatedOsRouteWithChildren = AuthenticatedOsRoute._addFileChildren(
+  AuthenticatedOsRouteChildren,
+)
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedHistoricosRoute: typeof AuthenticatedHistoricosRoute
+  AuthenticatedOsRoute: typeof AuthenticatedOsRouteWithChildren
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedVeiculoPlateRoute: typeof AuthenticatedVeiculoPlateRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedHistoricosRoute: AuthenticatedHistoricosRoute,
+  AuthenticatedOsRoute: AuthenticatedOsRouteWithChildren,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedVeiculoPlateRoute: AuthenticatedVeiculoPlateRoute,
 }
