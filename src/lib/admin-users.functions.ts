@@ -1,7 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import type { Database } from "@/integrations/supabase/types";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { errorCode, panelError, translateAuthError, type AuthField } from "@/lib/auth-errors";
+
+type Ctx = { supabase: SupabaseClient<Database>; userId: string };
 
 const fieldOf = (path: PropertyKey | undefined): AuthField =>
   path === "email" || path === "password" || path === "role" || path === "fullName" ? path : "";
