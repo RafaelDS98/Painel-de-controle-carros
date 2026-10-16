@@ -25,7 +25,7 @@
 - Perfil Oficina usa o módulo "oficina" (user_modules decide só pelo perfil): MaintenanceDashboard em mode="oficina" esconde criar/importar/lote/excluir/configurar; o banco bloqueia INSERT (trigger) e urgência. Visibilidade TEMPORÁRIA: vê/edita todos os ativos (RLS "Oficina reads/updates active"); forwarded_*, workshop_users, sectors e user_sectors ficam sem uso até existir o fluxo entre setores, quando a visibilidade será restringida.
 - Setor do usuário é só rótulo (profiles.sector, lista catalog_items kind "sector"), sem efeito em módulos, permissões ou RLS.
 - Setor do agendamento = profiles.sector do criador, via appointment_creator_sectors() (só o rótulo) — filtra sem expor dados de usuários.
-- Migrations 0020–0023 em drizzle/migrations são histórico de mudanças já aplicadas direto no banco (sem _journal); a verdade do banco é o que está em produção (ex.: gatilho de edição com limite da Previsão de Entrega vem da 0019). Tabelas sectors, user_sectors e workshop_users existem mas não são usadas pelo painel.
+- Migrations em drizzle/migrations são histórico já aplicado direto no banco (sem _journal); a verdade é o que está em produção. Tabelas sectors, user_sectors e workshop_users existem mas não são usadas pelo painel.
 
 ## Fluxo de trabalho (Claude direto no GitHub, sem gastar créditos do Lovable)
 - Alterações de código são feitas por Claude na pasta local do repositório e enviadas por commit/push ao GitHub; o Lovable só recebe o branch sincronizado — sem créditos. Nunca reescrever histórico (sem force push, rebase ou amend de commits já enviados) e manter o branch sempre funcionando.
@@ -33,6 +33,5 @@
 - Mudanças de banco (tabelas, triggers, RLS, funções) viram arquivo em drizzle/migrations e SQL entregue ao Rafael, que aplica no SQL Editor do Supabase; só depois a tela que depende delas é enviada. A verdade do banco é o que está em produção.
 - Ao terminar cada mudança, atualizar este arquivo (decisão técnica nova) e o roadmap.md (item concluído ou pendente) para a próxima sessão continuar de onde parou.
 - Envio ao SGLOC nunca é silencioso: com integração ou escrita desligada, criação/reenvio fica `push_failed` com o motivo e o botão "Reenviar" (pushAppointmentToSgloc); só atualização sem sgloc_reference é ignorada.
-- Layout autenticado vive no shell `src/components/layout/layout-shell.tsx` (sidebar fixa colapsável + topbar com breadcrumb/busca Ctrl+K), envolvido por `_authenticated/route.tsx`; módulos futuros aparecem desabilitados ("Em breve") na sidebar — novas rotas devem entrar na NAV/SECTION_LABELS do shell.
-- Tema claro/escuro é global (hook `src/hooks/use-theme.ts`, classe `.dark` no `<html>`, persistido em localStorage "theme" com script anti-flash no `__root.tsx`); o painel da Agenda não mantém tema próprio e gráficos leem `--chart-*` via `useChartColors`.
-- Dashboard Home fica em `/dashboard` com KPIs reais (veículos, agendamentos 30d, O.S., prazos vencidos); a Agenda continua sendo a home `/`.
+- Layout autenticado: shell `src/components/layout/layout-shell.tsx` (sidebar colapsável + topbar com breadcrumb e busca Ctrl+K) via `_authenticated/route.tsx`; novas rotas entram na NAV/SECTION_LABELS do shell; módulos futuros ficam desabilitados ("Em breve").
+- Tema global: hook `src/hooks/use-theme.ts` (`.dark` no `<html>`, localStorage "theme", anti-flash em `__root.tsx`); gráficos leem `--chart-*` via `useChartColors`. Dashboard Home em `/dashboard`; Agenda segue como home `/`.
