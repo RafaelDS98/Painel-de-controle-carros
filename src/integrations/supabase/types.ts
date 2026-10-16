@@ -529,6 +529,7 @@ export type Database = {
           condutor_contato: string | null
           condutor_nome: string | null
           contrato_id: number | null
+          contrato_ref: string | null
           created_at: string
           created_by: string | null
           executado: string | null
@@ -583,6 +584,7 @@ export type Database = {
           condutor_contato?: string | null
           condutor_nome?: string | null
           contrato_id?: number | null
+          contrato_ref?: string | null
           created_at?: string
           created_by?: string | null
           executado?: string | null
@@ -637,6 +639,7 @@ export type Database = {
           condutor_contato?: string | null
           condutor_nome?: string | null
           contrato_id?: number | null
+          contrato_ref?: string | null
           created_at?: string
           created_by?: string | null
           executado?: string | null
@@ -1672,6 +1675,13 @@ export type Database = {
       norm_plate: { Args: { _v: string }; Returns: string }
       os_archive: { Args: { _os_id: string }; Returns: undefined }
       os_config_list: { Args: never; Returns: Json }
+      os_contrato_match: {
+        Args: {
+          _os: Database["public"]["Tables"]["ordens_servico"]["Row"]
+          _q: string
+        }
+        Returns: boolean
+      }
       os_create: {
         Args: {
           _appointment_id?: string
