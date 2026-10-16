@@ -247,6 +247,48 @@
   }
 }
 
+/*
+ * Barras de rolagem discretas: trilho transparente, traço fino e arredondado,
+ * sem os botões de seta nas pontas. Só aparecem de verdade ao passar o mouse.
+ */
+@supports selector(::-webkit-scrollbar) {
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  *::-webkit-scrollbar-track,
+  *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: color-mix(in oklab, var(--foreground) 16%, transparent);
+    border: 2px solid transparent;
+    border-radius: 9999px;
+    background-clip: content-box;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in oklab, var(--foreground) 32%, transparent);
+    background-clip: content-box;
+  }
+}
+
+/* Firefox: mesma intenção, pelas propriedades padrão. */
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--foreground) 20%, transparent) transparent;
+  }
+}
+
 /* Campos de data: ícone do calendário branco no tema escuro (fica escuro no claro). */
 .dark input[type="date"]::-webkit-calendar-picker-indicator,
 .dark input[type="datetime-local"]::-webkit-calendar-picker-indicator,
