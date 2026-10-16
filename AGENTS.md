@@ -19,8 +19,8 @@
 - Retrabalhos são novos agendamentos ligados por `rework_of` e `rework_reason`, nunca atualizações do original — preserva seus limites de edição e histórico.
 - Contatos vão para `contact_log` com o usuário autenticado, lidos via RLS — preserva autoria.
 - Situações e campos opcionais vêm das tabelas de configuração; campos originais continuam em colunas e novos campos ficam em `custom_fields` — permite personalizar sem perder dados ou histórico.
-- Urgência só é alterada por gerente/master, filtrada no banco nos triggers BEFORE INSERT e UPDATE (descarta a mudança vinda de atendimento sem bloquear o resto) — tela, importação e chamadas diretas não burlam.
-- Perfis de usuários são listados e alterados só por funções protegidas no banco que exigem master e impedem alterar o próprio perfil — a tela não grava user_roles diretamente.
+- Urgência só gerente/master, filtrada no banco nos triggers BEFORE INSERT/UPDATE (descarta mudança de atendimento sem bloquear o resto) — tela, importação e chamadas diretas não burlam.
+- Perfis são listados/alterados só por funções protegidas no banco (exigem master e impedem alterar o próprio) — a tela não grava user_roles.
 - Excluir agendamento = arquivar (archived_at/archived_by), só master, garantido em trigger e RLS; o painel carrega só ativos (activeOnly, src/lib/agenda-safety.ts) e a dedupe de importação usa existing_sgloc_references (inclui arquivados) — nada é apagado e nada some de uma tela só.
 - Perfil Oficina usa o módulo "oficina" (user_modules decide só pelo perfil): MaintenanceDashboard mode="oficina" esconde criar/importar/lote/excluir/configurar; banco bloqueia INSERT (trigger) e urgência. TEMPORÁRIO: vê/edita todos os ativos (RLS "Oficina reads/updates active"); forwarded_*, workshop_users, sectors e user_sectors sem uso até existir fluxo entre setores.
 - Setor é só rótulo (profiles.sector, lista catalog_items kind "sector"; o do agendamento via appointment_creator_sectors()) — sem efeito em módulos, permissões ou RLS e sem expor dados de usuários.
