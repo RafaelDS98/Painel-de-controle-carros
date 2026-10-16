@@ -2403,29 +2403,29 @@ export function MaintenanceDashboard({
             <Button variant="outline" onClick={resetFilters}>
               <RotateCcw /> Limpar tudo
             </Button>
-          </div>
-          <div className="mt-3 flex flex-wrap gap-1" role="group" aria-label="Período da agenda">
-            {(
-              [
-                ["today", "Hoje"],
-                ["week", "Esta semana"],
-                ["month", "Este mês"],
-                ["custom", "Personalizado"],
-              ] as const
-            ).map(([key, label]) => (
-              <Button
-                key={key}
-                size="sm"
-                variant={periodPreset === key ? "default" : "outline"}
-                aria-pressed={periodPreset === key}
-                onClick={() => {
-                  setPeriodPreset(key);
-                  setPage(1);
-                }}
-              >
-                {label}
-              </Button>
-            ))}
+            <div className="flex flex-wrap items-center gap-1" role="group" aria-label="Período da agenda">
+              {(
+                [
+                  ["today", "Hoje"],
+                  ["week", "Esta semana"],
+                  ["month", "Este mês"],
+                  ["custom", "Personalizado"],
+                ] as const
+              ).map(([key, label]) => (
+                <Button
+                  key={key}
+                  size="sm"
+                  variant={periodPreset === key ? "default" : "outline"}
+                  aria-pressed={periodPreset === key}
+                  onClick={() => {
+                    setPeriodPreset(key);
+                    setPage(1);
+                  }}
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
           </div>
         </section>
         {activeFilters.length > 0 && (
