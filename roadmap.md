@@ -38,5 +38,7 @@
 - [ ] Instalar Node/Bun na máquina do Rafael para rodar o painel e os testes localmente.
 
 - [x] Limpar a main: remover pastas de skills do Claude enviadas por engano; especificação de O.S movida para docs/.
-- [ ] Adaptar o módulo de Ordens de Serviço às tabelas reais do banco e zerar erros de tipo.
-- [ ] Plano de próximos passos para reduzir retrabalho (entregue ao Rafael).
+- [x] Módulo de O.S. ligado ao banco real: lista, nova O.S. (também a partir de agendamento), ficha com itens, situação, finalizar e observações.
+- [ ] Cadastrar centros de custo (sem eles não dá para criar O.S.) — aguardando a lista do Rafael.
+- [ ] O.S.: pagamentos, compras, cotações, anexos e envio ao SGLOC (próximas etapas).
+- [x] Plano de próximos passos para reduzir retrabalho (entregue ao Rafael).

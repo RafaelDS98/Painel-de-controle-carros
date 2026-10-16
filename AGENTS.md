@@ -42,3 +42,4 @@
 - Mudanças de banco (tabelas, triggers, RLS, funções) viram arquivo em drizzle/migrations e SQL entregue ao Rafael, que aplica no SQL Editor do Supabase; só depois a tela que depende delas é enviada. A verdade do banco é o que está em produção.
 - Ao terminar cada mudança, atualizar este arquivo (decisão técnica nova) e o roadmap.md (item concluído ou pendente) para a próxima sessão continuar de onde parou.
 - Envio ao SGLOC nunca é silencioso: com integração ou escrita desligada, criação/reenvio fica `push_failed` com o motivo e o botão "Reenviar" (pushAppointmentToSgloc); só atualização sem sgloc_reference é ignorada.
+- Ordens de Serviço (rotas /ordens-servico, src/components/ordens-servico.tsx, regras puras em src/lib/os.ts) usam só as funções do banco os_* e search_ordens_servico, com lojas de sgloc_stores, oficinas de workshops e mecânicos de catalog_items — nada de tabelas paralelas nem rotas /api próprias.
