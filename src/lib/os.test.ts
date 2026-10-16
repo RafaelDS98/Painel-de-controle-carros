@@ -1,0 +1,18 @@
+import { describe, expect, it } from "vitest";
+import { buildFilters, itemTotal, osDate, parseSearch } from "./os";
+
+describe("ordens de serviço", () => {
+  it("total do item = quantidade × valor unitário, arredondado em centavos", () => {
+    expect(itemTotal(3, 10.335)).toBe(31.01);
+    expect(itemTotal("x", 2)).toBe(0);
+  });
+  it("busca vazia não quebra", () => {
+    expect(parseSearch(null)).toEqual({ rows: [], total: 0 });
+  });
+  it("filtros vazios não são enviados", () => {
+    expect(buildFilters({ plate: " abc ", numero: "" })).toEqual({ plate: "abc" });
+  });
+  it("data inválida vira traço", () => {
+    expect(osDate("x")).toBe("—");
+  });
+});
