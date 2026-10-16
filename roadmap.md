@@ -39,3 +39,4 @@
 
 - [x] Limpar a main: remover pastas de skills do Claude enviadas por engano; especificação de O.S movida para docs/.
 - [ ] Adaptar o módulo de Ordens de Serviço às tabelas reais do banco e zerar erros de tipo.
+- [ ] Plano de próximos passos para reduzir retrabalho (entregue ao Rafael).
