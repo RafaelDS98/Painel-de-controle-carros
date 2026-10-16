@@ -49,4 +49,5 @@
 
 - [x] Frota (vehicles) importada, 3 lojas, Nova O.S. com autocompletar placa e busca em Oficina/Centro de custo, botões Nova O.S./Gerar O.S. na Agenda
 - [ ] Filtro Categoria do Veículo na consulta de O.S.
-- [ ] Confirmar ID SGLOC da loja "11" (usado 11 provisoriamente)
+- [x] Confirmar ID SGLOC da loja "11" (usado 11 provisoriamente)
+- [x] Logo ANPEXC na tela de login (logo completa), no topo do painel (marca da fênix) e ícone do site (favicon)
