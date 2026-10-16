@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { CalendarClock, CarFront, ClipboardList, TriangleAlert } from "lucide-react";
+import type { CSSProperties } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useChartColors } from "@/components/layout/chart-colors";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -91,7 +92,7 @@ function DashboardHome() {
             .lt("current_deadline", today),
           supabase
             .from("appointments")
-            .select("id, plate, current_deadline")
+            .select("id, plate, current_deadline, status")
             .is("archived_at", null)
             .lt("current_deadline", today)
             .limit(6),
@@ -149,7 +150,9 @@ function DashboardHome() {
         osOpen: osOpen.count ?? 0,
         osTotal: osTotal.count ?? 0,
         overdueCount: overdueCount.count ?? 0,
-        overdue: ((overdue.data ?? []) as DashData["overdue"]).filter((row) => !row.status || !completionLabels.includes(row.status ?? "")) as never,
+        overdue: ((overdue.data ?? []) as { id: string; plate: string | null; current_deadline: string | null; status: string | null }[])
+          .filter((row) => !row.status || !completionLabels.includes(row.status))
+          .map(({ id, plate, current_deadline }) => ({ id, plate, current_deadline })),
         recent: (recent.data ?? []) as DashData["recent"],
       };
     },
