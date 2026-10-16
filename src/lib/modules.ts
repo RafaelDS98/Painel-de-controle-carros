@@ -1,7 +1,22 @@
 export type ModuleKey = "agenda" | "historicos" | "oficina";
-export const MODULES: { key: ModuleKey; label: string; path: "/" | "/historicos"; description: string }[] = [
-  { key: "agenda", label: "Agenda", path: "/", description: "Agendamentos, indicadores e configurações permitidas ao perfil." },
-  { key: "historicos", label: "Históricos", path: "/historicos", description: "Log geral de alterações, exportação e histórico por veículo." },
+export const MODULES: {
+  key: ModuleKey;
+  label: string;
+  path: "/" | "/historicos";
+  description: string;
+}[] = [
+  {
+    key: "agenda",
+    label: "Agenda",
+    path: "/",
+    description: "Agendamentos, indicadores e configurações permitidas ao perfil.",
+  },
+  {
+    key: "historicos",
+    label: "Históricos",
+    path: "/historicos",
+    description: "Log geral de alterações, exportação e histórico por veículo.",
+  },
   { key: "oficina", label: "Oficina", path: "/", description: "Aba Oficina dentro da Agenda." },
 ];
 

@@ -6,7 +6,14 @@ export function safeText(value: unknown): string {
   return String(value).trim();
 }
 
-const entities: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
+const entities: Record<string, string> = {
+  amp: "&",
+  lt: "<",
+  gt: ">",
+  quot: '"',
+  apos: "'",
+  nbsp: " ",
+};
 
 export function stripHtml(value: unknown): string {
   if (value === null || value === undefined) return "";
@@ -21,23 +28,35 @@ export function stripHtml(value: unknown): string {
       return entities[lower] ?? match;
     })
     .replace(/\r\n?/g, "\n")
-    .split("\n").map((line) => line.replace(/[ \t\u00a0]+/g, " ").trim()).join("\n")
+    .split("\n")
+    .map((line) => line.replace(/[ \t\u00a0]+/g, " ").trim())
+    .join("\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
 
 export function normalizePlate(value: unknown): string {
-  return safeText(value).toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return safeText(value)
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
 }
 
 function validIso(year: number, month: number, day: number): string | null {
   const date = new Date(Date.UTC(year, month - 1, day));
-  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null;
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  )
+    return null;
   return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
 export function normalizeDate(value: unknown): string | null {
-  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : validIso(value.getFullYear(), value.getMonth() + 1, value.getDate());
+  if (value instanceof Date)
+    return Number.isNaN(value.getTime())
+      ? null
+      : validIso(value.getFullYear(), value.getMonth() + 1, value.getDate());
   if (typeof value === "number") {
     if (!Number.isFinite(value) || value < 1 || value > 2958465) return null;
     const date = new Date(Math.round((Math.floor(value) - 25569) * 86400000));
@@ -52,11 +71,14 @@ export function normalizeDate(value: unknown): string | null {
 }
 
 function hhmm(hours: number, minutes: number): string {
-  return hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60 ? `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}` : "";
+  return hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60
+    ? `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`
+    : "";
 }
 
 export function normalizeTime(value: unknown): string {
-  if (value instanceof Date) return Number.isNaN(value.getTime()) ? "" : hhmm(value.getHours(), value.getMinutes());
+  if (value instanceof Date)
+    return Number.isNaN(value.getTime()) ? "" : hhmm(value.getHours(), value.getMinutes());
   if (typeof value === "number") {
     if (!Number.isFinite(value) || value < 0) return "";
     const total = Math.round((value % 1) * 1440) % 1440;
@@ -83,11 +105,17 @@ export function isEmergency(scheduleType: unknown): boolean {
 }
 
 export const sglocStateLabels: Record<string, string> = {
-  local_only: "Local", synced: "Sincronizado", pending_push: "Aguardando envio ao SGLOC",
-  push_failed: "Falha no envio", not_returned: "Não retornado pelo SGLOC",
+  local_only: "Local",
+  synced: "Sincronizado",
+  pending_push: "Aguardando envio ao SGLOC",
+  push_failed: "Falha no envio",
+  not_returned: "Não retornado pelo SGLOC",
 };
 
-export function authorLabel(changedBy: string | null | undefined, fullName: string | null | undefined): string {
+export function authorLabel(
+  changedBy: string | null | undefined,
+  fullName: string | null | undefined,
+): string {
   if (!changedBy) return "Sincronização SGLOC ou usuário excluído";
   return fullName?.trim() || "Usuário sem nome";
 }

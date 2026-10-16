@@ -1,6 +1,14 @@
 // Regras puras de "dado vazio nunca quebra a tela": exibição, filtros, ordenação, agrupamento e exportação.
 import type { TablesInsert } from "@/integrations/supabase/types";
-import { importRowSkipReason, normalizeDate, normalizePlate, normalizeTime, safeText, sglocExtras, stripHtml } from "./normalize";
+import {
+  importRowSkipReason,
+  normalizeDate,
+  normalizePlate,
+  normalizeTime,
+  safeText,
+  sglocExtras,
+  stripHtml,
+} from "./normalize";
 
 export const DASH = "—";
 export const EMPTY_OPTION = "(sem valor)";
@@ -15,7 +23,11 @@ export function dash(value: unknown): string {
 
 /** Chave para comparar sem diferenciar maiúsculas, acentos e espaços extras. */
 export function foldKey(value: unknown): string {
-  return safeText(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR").replace(/\s+/g, " ");
+  return safeText(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("pt-BR")
+    .replace(/\s+/g, " ");
 }
 
 /** Opções únicas de filtro (exibe o primeiro formato visto) e "(sem valor)" quando existir vazio. */
@@ -24,11 +36,16 @@ export function foldedOptions(values: unknown[]): string[] {
   let hasEmpty = false;
   for (const value of values) {
     const text = safeText(value);
-    if (!text) { hasEmpty = true; continue; }
+    if (!text) {
+      hasEmpty = true;
+      continue;
+    }
     const key = foldKey(text);
     if (!seen.has(key)) seen.set(key, text);
   }
-  const options = [...seen.values()].sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
+  const options = [...seen.values()].sort((a, b) =>
+    a.localeCompare(b, "pt-BR", { sensitivity: "base" }),
+  );
   return hasEmpty ? [...options, EMPTY_OPTION] : options;
 }
 
@@ -51,7 +68,11 @@ export function timeKey(time: unknown): string {
 }
 
 /** Ordena por data e hora; sem data (ou hora inválida) sempre por último, nos dois sentidos. */
-export function compareDateTime(a: { date: unknown; time: unknown }, b: { date: unknown; time: unknown }, asc = true): number {
+export function compareDateTime(
+  a: { date: unknown; time: unknown },
+  b: { date: unknown; time: unknown },
+  asc = true,
+): number {
   const da = normalizeDate(a.date);
   const db = normalizeDate(b.date);
   if (!da || !db) return da === db ? 0 : da ? -1 : 1;
@@ -83,7 +104,10 @@ export function groupWeek<T extends { date: unknown }>(rows: T[], start: string,
   const noDate: T[] = [];
   for (const row of rows) {
     const iso = normalizeDate(row.date);
-    if (!iso) { noDate.push(row); continue; }
+    if (!iso) {
+      noDate.push(row);
+      continue;
+    }
     if (iso < start || iso > end) continue;
     const index = weekdayIndex(iso);
     if (index >= 0) days[index]?.push(row);
@@ -111,7 +135,8 @@ export function countBy<T>(data: T[], getter: (item: T) => unknown) {
     const label = dash(getter(item));
     const key = label === DASH ? DASH : foldKey(label);
     const entry = counts.get(key);
-    if (entry) entry.value++; else counts.set(key, { name: label, value: 1 });
+    if (entry) entry.value++;
+    else counts.set(key, { name: label, value: 1 });
   }
   return [...counts.values()].sort((a, b) => b.value - a.value);
 }
@@ -123,7 +148,11 @@ export function textMatches(query: string, values: unknown[]): boolean {
 }
 
 const dateFormatter = new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" });
-const dateTimeFormatter = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" });
+const dateTimeFormatter = new Intl.DateTimeFormat("pt-BR", {
+  dateStyle: "short",
+  timeStyle: "short",
+  timeZone: "America/Sao_Paulo",
+});
 
 export function formatDateBR(value: unknown): string {
   const iso = normalizeDate(value);
@@ -151,76 +180,156 @@ export function guardFormula(value: unknown): string {
 
 export function csvEscape(value: unknown, separator = ","): string {
   const text = guardFormula(value);
-  return /["\n\r,;]/.test(text) || text.includes(separator) ? `"${text.replace(/"/g, '""')}"` : text;
+  return /["\n\r,;]/.test(text) || text.includes(separator)
+    ? `"${text.replace(/"/g, '""')}"`
+    : text;
 }
 
 export function toCsv(rows: Record<string, unknown>[], headers: string[], separator = ","): string {
   const lines = [headers.map((header) => csvEscape(header, separator)).join(separator)];
-  for (const row of rows) lines.push(headers.map((header) => csvEscape(row[header], separator)).join(separator));
+  for (const row of rows)
+    lines.push(headers.map((header) => csvEscape(row[header], separator)).join(separator));
   return lines.join("\r\n");
 }
 
 export type ExportSource = {
-  id: unknown; date: unknown; time: unknown; plate: unknown; status: unknown; brand?: unknown; model: unknown;
-  contact: unknown; contactNumber?: unknown; workshop: unknown; issue: unknown; note: unknown; operator: unknown;
-  externalOrder?: unknown; kmScheduled?: unknown; osNumber?: unknown; sglocReference?: unknown; sector?: unknown;
+  id: unknown;
+  date: unknown;
+  time: unknown;
+  plate: unknown;
+  status: unknown;
+  brand?: unknown;
+  model: unknown;
+  contact: unknown;
+  contactNumber?: unknown;
+  workshop: unknown;
+  issue: unknown;
+  note: unknown;
+  operator: unknown;
+  externalOrder?: unknown;
+  kmScheduled?: unknown;
+  osNumber?: unknown;
+  sglocReference?: unknown;
+  sector?: unknown;
 };
 
-export const exportHeaders = ["ID", "ID SGLOC", "Data Atendimento", "Hora", "Placa", "Situação", "Marca", "Modelo", "Contato", "Telefone do contato", "Local/Oficina", "Problemas Relatado", "Observação", "Operador", "O.S Externa", "O.S Fornecedor", "KM do agendamento", "Setor"];
+export const exportHeaders = [
+  "ID",
+  "ID SGLOC",
+  "Data Atendimento",
+  "Hora",
+  "Placa",
+  "Situação",
+  "Marca",
+  "Modelo",
+  "Contato",
+  "Telefone do contato",
+  "Local/Oficina",
+  "Problemas Relatado",
+  "Observação",
+  "Operador",
+  "O.S Externa",
+  "O.S Fornecedor",
+  "KM do agendamento",
+  "Setor",
+];
 
 /** Linhas de exportação: só campos de negócio (nunca colunas técnicas sgloc_*), nulos viram vazio, texto protegido. */
 export function exportRows(items: ExportSource[]): Record<string, string>[] {
   const text = (value: unknown) => guardFormula(safeText(value));
   return items.map((item) => ({
-    ID: text(item.id), "ID SGLOC": text(item.sglocReference), "Data Atendimento": normalizeDate(item.date) ?? "", Hora: timeKey(item.time),
-    Placa: text(item.plate), Situação: text(item.status) || "Não atualizada", Marca: text(item.brand), Modelo: text(item.model),
-    Contato: text(item.contact), "Telefone do contato": text(item.contactNumber), "Local/Oficina": text(item.workshop),
-    "Problemas Relatado": text(item.issue), Observação: text(item.note), Operador: text(item.operator),
-    "O.S Externa": text(item.externalOrder), "O.S Fornecedor": text(item.osNumber), "KM do agendamento": text(item.kmScheduled), Setor: text(item.sector),
+    ID: text(item.id),
+    "ID SGLOC": text(item.sglocReference),
+    "Data Atendimento": normalizeDate(item.date) ?? "",
+    Hora: timeKey(item.time),
+    Placa: text(item.plate),
+    Situação: text(item.status) || "Não atualizada",
+    Marca: text(item.brand),
+    Modelo: text(item.model),
+    Contato: text(item.contact),
+    "Telefone do contato": text(item.contactNumber),
+    "Local/Oficina": text(item.workshop),
+    "Problemas Relatado": text(item.issue),
+    Observação: text(item.note),
+    Operador: text(item.operator),
+    "O.S Externa": text(item.externalOrder),
+    "O.S Fornecedor": text(item.osNumber),
+    "KM do agendamento": text(item.kmScheduled),
+    Setor: text(item.sector),
   }));
 }
 
 // ---------- Importação ----------
 
-export function buildImportRecords(rows: Record<string, unknown>[], createdBy: string | null, hasDeadline: boolean) {
+export function buildImportRecords(
+  rows: Record<string, unknown>[],
+  createdBy: string | null,
+  hasDeadline: boolean,
+) {
   const cell = (row: Record<string, unknown>, column: string) => stripHtml(row[column]);
   let skippedEmpty = 0;
   const records: TablesInsert<"appointments">[] = [];
   /** Linha da planilha (cabeçalho = 1) de cada registro, na mesma ordem. */
   const lines: number[] = [];
   rows.forEach((row, index) => {
-    if (importRowSkipReason(row)) { skippedEmpty++; return; }
+    if (importRowSkipReason(row)) {
+      skippedEmpty++;
+      return;
+    }
     const deadline = hasDeadline ? normalizeDate(row["Previsão de Entrega"]) : null;
     const extras = sglocExtras(row);
     lines.push(index + 2);
     records.push({
-      sheet_id: cell(row, "ID"), registered_at: normalizeDate(row["Data Cadastro"]), date: normalizeDate(row["Data Atendimento"]),
-      time: normalizeTime(row["Hora"]), plate: normalizePlate(cell(row, "Placa")), store: cell(row, "Loja"), model: cell(row, "Modelo"),
-      contact: cell(row, "Contato"), workshop: cell(row, "Local/Oficina"), issue: cell(row, "Problemas Relatado"),
-      note: cell(row, "Observação"), operator: cell(row, "Operador"), external_order: cell(row, "O.S Externa"),
-      status: "", created_by: createdBy, original_deadline: deadline, current_deadline: deadline,
-      os_number: extras.os_number, schedule_type: extras.schedule_type, sgloc_reference: extras.sgloc_reference,
+      sheet_id: cell(row, "ID"),
+      registered_at: normalizeDate(row["Data Cadastro"]),
+      date: normalizeDate(row["Data Atendimento"]),
+      time: normalizeTime(row["Hora"]),
+      plate: normalizePlate(cell(row, "Placa")),
+      store: cell(row, "Loja"),
+      model: cell(row, "Modelo"),
+      contact: cell(row, "Contato"),
+      workshop: cell(row, "Local/Oficina"),
+      issue: cell(row, "Problemas Relatado"),
+      note: cell(row, "Observação"),
+      operator: cell(row, "Operador"),
+      external_order: cell(row, "O.S Externa"),
+      status: "",
+      created_by: createdBy,
+      original_deadline: deadline,
+      current_deadline: deadline,
+      os_number: extras.os_number,
+      schedule_type: extras.schedule_type,
+      sgloc_reference: extras.sgloc_reference,
     });
   });
   return { records, skippedEmpty, lines };
 }
 
 /** Motivo legível para uma linha que o banco recusou ao importar. */
-export function importErrorReason(error: { code?: string; message?: string } | null | undefined): string {
+export function importErrorReason(
+  error: { code?: string; message?: string } | null | undefined,
+): string {
   if (!error) return "Erro desconhecido.";
-  if (error.code === "23505") return "ID do SGLOC já cadastrado (possivelmente por outro usuário agora).";
+  if (error.code === "23505")
+    return "ID do SGLOC já cadastrado (possivelmente por outro usuário agora).";
   if (error.code === "42501") return "Sem permissão para criar agendamentos.";
   if (error.code === "22007" || error.code === "22008") return "Data inválida.";
   return safeText(error.message) || "O banco recusou a linha.";
 }
 
 /** Remove registros cujo ID do SGLOC já existe (no banco ou repetido no arquivo). */
-export function dropExistingReferences<T extends { sgloc_reference?: string | null }>(records: T[], existing: Iterable<string>) {
+export function dropExistingReferences<T extends { sgloc_reference?: string | null }>(
+  records: T[],
+  existing: Iterable<string>,
+) {
   const seen = new Set(existing);
   let skippedExisting = 0;
   const kept = records.filter((item) => {
     if (!item.sgloc_reference) return true;
-    if (seen.has(item.sgloc_reference)) { skippedExisting++; return false; }
+    if (seen.has(item.sgloc_reference)) {
+      skippedExisting++;
+      return false;
+    }
     seen.add(item.sgloc_reference);
     return true;
   });
@@ -237,5 +346,7 @@ export function activeOnly<T extends { archived_at?: string | null }>(rows: T[])
 /** Texto da confirmação de exclusão; avisa quando o agendamento veio do SGLOC. */
 export function archiveConfirmText(sglocReference: unknown): string {
   const base = "Excluir este agendamento? Ele vai para a Lixeira e pode ser restaurado.";
-  return safeText(sglocReference) ? `${base}\n\nEste agendamento veio do SGLOC. Excluir aqui NÃO exclui no SGLOC, e uma sincronização futura pode trazê-lo de volta.` : base;
+  return safeText(sglocReference)
+    ? `${base}\n\nEste agendamento veio do SGLOC. Excluir aqui NÃO exclui no SGLOC, e uma sincronização futura pode trazê-lo de volta.`
+    : base;
 }

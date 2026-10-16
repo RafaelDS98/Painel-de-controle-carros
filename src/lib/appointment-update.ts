@@ -2,11 +2,23 @@
 import { normalizePlate, parseKm } from "@/lib/normalize";
 
 export const fieldColumns: Record<string, string> = {
-  date: "date", time: "time", plate: "plate", store: "store", model: "model",
-  contact: "contact", workshop: "workshop", issue: "issue", note: "note",
-  operator: "operator", externalOrder: "external_order", currentDeadline: "current_deadline",
-  brand: "brand", contactNumber: "contact_number", kmScheduled: "km_scheduled",
-  status: "status", priorityUrgent: "priority_urgent",
+  date: "date",
+  time: "time",
+  plate: "plate",
+  store: "store",
+  model: "model",
+  contact: "contact",
+  workshop: "workshop",
+  issue: "issue",
+  note: "note",
+  operator: "operator",
+  externalOrder: "external_order",
+  currentDeadline: "current_deadline",
+  brand: "brand",
+  contactNumber: "contact_number",
+  kmScheduled: "km_scheduled",
+  status: "status",
+  priorityUrgent: "priority_urgent",
 };
 
 export function buildAppointmentUpdate(
@@ -16,8 +28,14 @@ export function buildAppointmentUpdate(
 ): Record<string, unknown> {
   const update: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(changes)) {
-    if (key === "customFields") { update["custom_fields"] = { ...currentCustom, ...(value as Record<string, string>) }; continue; }
-    if (key === "priorityUrgent") { if (opts.canUrgent) update["priority_urgent"] = Boolean(value); continue; }
+    if (key === "customFields") {
+      update["custom_fields"] = { ...currentCustom, ...(value as Record<string, string>) };
+      continue;
+    }
+    if (key === "priorityUrgent") {
+      if (opts.canUrgent) update["priority_urgent"] = Boolean(value);
+      continue;
+    }
     const column = fieldColumns[key];
     if (!column) continue;
     if (key === "currentDeadline") update[column] = String(value || "") || null;

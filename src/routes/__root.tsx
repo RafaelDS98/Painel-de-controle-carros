@@ -80,10 +80,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "ANPEXC | Gestão de Agendamentos" },
-      { name: "description", content: "Gestão operacional da agenda de manutenção da frota ANPEXC." },
+      {
+        name: "description",
+        content: "Gestão operacional da agenda de manutenção da frota ANPEXC.",
+      },
       { name: "author", content: "ANPEXC" },
       { property: "og:title", content: "ANPEXC | Gestão de Agendamentos" },
-      { property: "og:description", content: "Gestão operacional da agenda de manutenção da frota ANPEXC." },
+      {
+        property: "og:description",
+        content: "Gestão operacional da agenda de manutenção da frota ANPEXC.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],

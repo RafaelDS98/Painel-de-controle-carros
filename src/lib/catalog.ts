@@ -2,15 +2,40 @@
 import { EMPTY_OPTION, foldKey } from "./agenda-safety";
 
 export type CatalogKind = "store" | "brand" | "operator" | "mechanic" | "workshop" | "sector";
-export type CatalogItem = { id: string; kind: CatalogKind; name: string; active: boolean; sgloc_id: number | null; source?: string };
+export type CatalogItem = {
+  id: string;
+  kind: CatalogKind;
+  name: string;
+  active: boolean;
+  sgloc_id: number | null;
+  source?: string;
+};
 export type Catalog = Record<CatalogKind, CatalogItem[]>;
 
-export const CATALOG_KINDS: CatalogKind[] = ["workshop", "store", "brand", "mechanic", "operator", "sector"];
-export const emptyCatalog = (): Catalog => ({ store: [], brand: [], operator: [], mechanic: [], workshop: [], sector: [] });
+export const CATALOG_KINDS: CatalogKind[] = [
+  "workshop",
+  "store",
+  "brand",
+  "mechanic",
+  "operator",
+  "sector",
+];
+export const emptyCatalog = (): Catalog => ({
+  store: [],
+  brand: [],
+  operator: [],
+  mechanic: [],
+  workshop: [],
+  sector: [],
+});
 
 /** Campo do formulário (field_key) → lista. */
 export const kindForField: Record<string, CatalogKind> = {
-  workshop: "workshop", store: "store", brand: "brand", operator: "operator", mecanico_responsavel: "mechanic",
+  workshop: "workshop",
+  store: "store",
+  brand: "brand",
+  operator: "operator",
+  mecanico_responsavel: "mechanic",
 };
 export const catalogLabels: Record<CatalogKind, { title: string; add: string; noun: string }> = {
   workshop: { title: "Locais/Oficinas", add: "Adicionar local...", noun: "local" },
@@ -25,7 +50,10 @@ export const hasSglocId = (kind: CatalogKind) => kind === "store" || kind === "o
 
 /** Mesma normalização do banco (norm_name): sem acento, sem caixa, espaços únicos. */
 export const catalogKey = (value: unknown) => foldKey(value).trim();
-export const cleanName = (value: unknown) => String(value ?? "").replace(/\s+/g, " ").trim();
+export const cleanName = (value: unknown) =>
+  String(value ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
 
 export function findItem(items: CatalogItem[], name: unknown): CatalogItem | undefined {
   const key = catalogKey(name);
@@ -34,7 +62,10 @@ export function findItem(items: CatalogItem[], name: unknown): CatalogItem | und
 
 /** Opções do select: ativos em ordem alfabética + valor atual quando inativo ou fora da lista (nunca some do registro). */
 export function selectOptions(items: CatalogItem[], current: unknown): string[] {
-  const names = items.filter((item) => item.active).map((item) => item.name).sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
+  const names = items
+    .filter((item) => item.active)
+    .map((item) => item.name)
+    .sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
   const value = cleanName(current);
   if (value && !names.some((name) => catalogKey(name) === catalogKey(value))) names.push(value);
   return names;
@@ -46,10 +77,16 @@ export function filterOptions(items: CatalogItem[], present: string[]): string[]
   const tail: string[] = [];
   for (const name of [...items.map((item) => item.name), ...present]) {
     const key = catalogKey(name);
-    if (!key || name === EMPTY_OPTION) { if (name && !tail.includes(name)) tail.push(name); continue; }
+    if (!key || name === EMPTY_OPTION) {
+      if (name && !tail.includes(name)) tail.push(name);
+      continue;
+    }
     if (!seen.has(key)) seen.set(key, name);
   }
-  return [...[...seen.values()].sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" })), ...tail];
+  return [
+    ...[...seen.values()].sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" })),
+    ...tail,
+  ];
 }
 
 /** Valores ainda não cadastrados (únicos por nome normalizado), na grafia vista primeiro. */
@@ -69,11 +106,15 @@ export function canonicalName(items: CatalogItem[], value: unknown): string {
 }
 
 /** Bloqueio do envio ao SGLOC por loja sem vínculo; null = pode enviar. */
-export function storeLinkError(store: unknown, stores: { name: string; sgloc_id: number | null }[]): string | null {
+export function storeLinkError(
+  store: unknown,
+  stores: { name: string; sgloc_id: number | null }[],
+): string | null {
   const name = cleanName(store);
   if (!name) return null;
   const item = stores.find((s) => catalogKey(s.name) === catalogKey(name));
-  if (!item || item.sgloc_id === null) return `Loja "${name}" sem vínculo SGLOC. Informe o ID da loja no SGLOC em Configurações > Listas e clique em Reenviar.`;
+  if (!item || item.sgloc_id === null)
+    return `Loja "${name}" sem vínculo SGLOC. Informe o ID da loja no SGLOC em Configurações > Listas e clique em Reenviar.`;
   return null;
 }
 
@@ -83,6 +124,7 @@ export const canManageCatalog = (role: unknown) => role === "master" || role ===
 /** Texto da confirmação de exclusão. */
 export function deleteConfirmText(kind: CatalogKind, name: string, usage: number): string {
   const n = Math.max(0, Number(usage) || 0);
-  if (kind === "sector") return `Excluir o setor "${name}"? ${n} usuário(s) com este setor ficarão sem setor. Esta ação entra no histórico.`;
+  if (kind === "sector")
+    return `Excluir o setor "${name}"? ${n} usuário(s) com este setor ficarão sem setor. Esta ação entra no histórico.`;
   return `Excluir "${name}" da lista de ${catalogLabels[kind].title}? ${n} agendamento(s) usam este nome e mantêm o texto como está. Esta ação entra no histórico.`;
 }

@@ -10,6 +10,16 @@ describe("atalhos de período", () => {
     expect(periodRange("month", "2028-02-14")).toEqual({ start: "2028-02-01", end: "2028-02-29" });
   });
   it("conta apenas agendamentos não finalizados dentro do período", () => {
-    expect(pendingDeliveries([{ date: "2026-09-29", status: "" }, { date: "2026-09-29", status: "Finalizado" }, { date: "2026-10-01", status: "Recebido" }], "2026-09-29", "2026-09-29")).toBe(1);
+    expect(
+      pendingDeliveries(
+        [
+          { date: "2026-09-29", status: "" },
+          { date: "2026-09-29", status: "Finalizado" },
+          { date: "2026-10-01", status: "Recebido" },
+        ],
+        "2026-09-29",
+        "2026-09-29",
+      ),
+    ).toBe(1);
   });
 });

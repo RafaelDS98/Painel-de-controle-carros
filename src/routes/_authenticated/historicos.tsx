@@ -9,5 +9,9 @@ export const Route = createFileRoute("/_authenticated/historicos")({
 
 function Page() {
   const { user } = Route.useRouteContext();
-  return <ProfileGate user={user} module="historicos">{() => <HistoryLogPage />}</ProfileGate>;
+  return (
+    <ProfileGate user={user} module="historicos">
+      {() => <HistoryLogPage />}
+    </ProfileGate>
+  );
 }

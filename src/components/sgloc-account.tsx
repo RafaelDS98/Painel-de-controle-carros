@@ -21,38 +21,104 @@ export function SglocAccountSection() {
   async function load() {
     const { data, error } = await supabase.rpc("get_my_sgloc_status");
     const row = Array.isArray(data) ? data[0] : null;
-    setStatus(error || !row ? { connected: false, sgloc_email: null, token_expires_at: null } : row);
+    setStatus(
+      error || !row ? { connected: false, sgloc_email: null, token_expires_at: null } : row,
+    );
   }
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    void load();
+  }, []);
 
   async function onConnect(e: React.FormEvent) {
-    e.preventDefault(); setBusy(true); setMsg({});
-    try { await connect({ data: { email, password } }); setPassword(""); setMsg({ ok: "Conta SGLOC conectada." }); await load(); }
-    catch (err) { setPassword(""); setMsg({ error: err instanceof Error ? err.message : "Não foi possível conectar." }); }
+    e.preventDefault();
+    setBusy(true);
+    setMsg({});
+    try {
+      await connect({ data: { email, password } });
+      setPassword("");
+      setMsg({ ok: "Conta SGLOC conectada." });
+      await load();
+    } catch (err) {
+      setPassword("");
+      setMsg({ error: err instanceof Error ? err.message : "Não foi possível conectar." });
+    }
     setBusy(false);
   }
   async function onDisconnect() {
-    setBusy(true); setMsg({});
-    try { await disconnect(); setMsg({ ok: "Conta SGLOC desconectada." }); await load(); }
-    catch (err) { setMsg({ error: err instanceof Error ? err.message : "Não foi possível desconectar." }); }
+    setBusy(true);
+    setMsg({});
+    try {
+      await disconnect();
+      setMsg({ ok: "Conta SGLOC desconectada." });
+      await load();
+    } catch (err) {
+      setMsg({ error: err instanceof Error ? err.message : "Não foi possível desconectar." });
+    }
     setBusy(false);
   }
 
   const state = !status?.connected ? "none" : tokenState(status.token_expires_at);
   const label = state === "none" ? "Não conectada" : state === "expired" ? "Expirada" : "Conectada";
-  return <section className="space-y-2 border-t pt-4">
-    <h3 className="font-semibold">Conta SGLOC</h3>
-    {!status ? <p className="text-sm text-muted-foreground">Carregando…</p> : <>
-      <p className="text-sm">Situação: <strong>{label}</strong>{status.sgloc_email ? ` (${status.sgloc_email})` : ""}
-        {state === "connected" && status.token_expires_at ? ` · válida até ${new Date(status.token_expires_at).toLocaleString("pt-BR")}` : ""}</p>
-      {state !== "connected" && <form onSubmit={onConnect} className="space-y-2">
-        <label className="block text-sm">E-mail do SGLOC<Input type="email" autoComplete="off" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={255} /></label>
-        <PasswordInput label="Senha do SGLOC (não é guardada)" value={password} onChange={setPassword} autoComplete="off" />
-        <Button type="submit" size="sm" disabled={busy}>Conectar</Button>
-      </form>}
-      {status.connected && <Button type="button" size="sm" variant="outline" disabled={busy} onClick={onDisconnect}>Desconectar</Button>}
-    </>}
-    {msg.error && <p role="alert" className="text-sm text-destructive">{msg.error}</p>}
-    {msg.ok && <p role="status" className="text-sm text-muted-foreground">{msg.ok}</p>}
-  </section>;
+  return (
+    <section className="space-y-2 border-t pt-4">
+      <h3 className="font-semibold">Conta SGLOC</h3>
+      {!status ? (
+        <p className="text-sm text-muted-foreground">Carregando…</p>
+      ) : (
+        <>
+          <p className="text-sm">
+            Situação: <strong>{label}</strong>
+            {status.sgloc_email ? ` (${status.sgloc_email})` : ""}
+            {state === "connected" && status.token_expires_at
+              ? ` · válida até ${new Date(status.token_expires_at).toLocaleString("pt-BR")}`
+              : ""}
+          </p>
+          {state !== "connected" && (
+            <form onSubmit={onConnect} className="space-y-2">
+              <label className="block text-sm">
+                E-mail do SGLOC
+                <Input
+                  type="email"
+                  autoComplete="off"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  maxLength={255}
+                />
+              </label>
+              <PasswordInput
+                label="Senha do SGLOC (não é guardada)"
+                value={password}
+                onChange={setPassword}
+                autoComplete="off"
+              />
+              <Button type="submit" size="sm" disabled={busy}>
+                Conectar
+              </Button>
+            </form>
+          )}
+          {status.connected && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={busy}
+              onClick={onDisconnect}
+            >
+              Desconectar
+            </Button>
+          )}
+        </>
+      )}
+      {msg.error && (
+        <p role="alert" className="text-sm text-destructive">
+          {msg.error}
+        </p>
+      )}
+      {msg.ok && (
+        <p role="status" className="text-sm text-muted-foreground">
+          {msg.ok}
+        </p>
+      )}
+    </section>
+  );
 }

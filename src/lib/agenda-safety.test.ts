@@ -1,17 +1,48 @@
 import { describe, expect, it } from "vitest";
 import {
-  DASH, EMPTY_OPTION, buildImportRecords, clampPage, compareDateTime, countBy, csvEscape, dash, dropExistingReferences,
-  exportHeaders, exportRows, foldedOptions, formatDateBR, formatDateTimeBR, groupWeek, guardFormula, inPeriod,
-  matchesFilter, safeAverage, serviceCategory, textMatches, toCsv,
+  DASH,
+  EMPTY_OPTION,
+  buildImportRecords,
+  clampPage,
+  compareDateTime,
+  countBy,
+  csvEscape,
+  dash,
+  dropExistingReferences,
+  exportHeaders,
+  exportRows,
+  foldedOptions,
+  formatDateBR,
+  formatDateTimeBR,
+  groupWeek,
+  guardFormula,
+  inPeriod,
+  matchesFilter,
+  safeAverage,
+  serviceCategory,
+  textMatches,
+  toCsv,
 } from "./agenda-safety";
 import { sglocFixtureIssue, sglocFixtureRows } from "./sgloc-fixture";
 
 const imported = buildImportRecords(sglocFixtureRows, null, false);
 const items = imported.records.map((r) => ({
-  id: r.sheet_id, date: r.date ?? "", time: r.time ?? "", plate: r.plate, status: r.status ?? "", model: r.model ?? "",
-  contact: r.contact ?? "", workshop: r.workshop ?? "", issue: r.issue ?? "", note: r.note ?? "", operator: r.operator ?? "",
-  externalOrder: r.external_order ?? "", osNumber: r.os_number, sglocReference: r.sgloc_reference,
-  sgloc_sync_state: "local_only", sgloc_last_error: "boom",
+  id: r.sheet_id,
+  date: r.date ?? "",
+  time: r.time ?? "",
+  plate: r.plate,
+  status: r.status ?? "",
+  model: r.model ?? "",
+  contact: r.contact ?? "",
+  workshop: r.workshop ?? "",
+  issue: r.issue ?? "",
+  note: r.note ?? "",
+  operator: r.operator ?? "",
+  externalOrder: r.external_order ?? "",
+  osNumber: r.os_number,
+  sglocReference: r.sgloc_reference,
+  sgloc_sync_state: "local_only",
+  sgloc_last_error: "boom",
 }));
 
 describe("fixture do SGLOC na importação", () => {
@@ -38,7 +69,9 @@ describe("fixture do SGLOC na importação", () => {
     expect(fifth?.time).toBe("");
   });
   it("mesma placa 3 vezes com IDs diferentes; ID já existente é ignorado", () => {
-    expect(imported.records.filter((r) => r.plate === "ABC1D23").map((r) => r.sgloc_reference)).toEqual(["1001", "1002", "1003"]);
+    expect(
+      imported.records.filter((r) => r.plate === "ABC1D23").map((r) => r.sgloc_reference),
+    ).toEqual(["1001", "1002", "1003"]);
     const { kept, skippedExisting } = dropExistingReferences(imported.records, ["1002"]);
     expect(kept).toHaveLength(4);
     expect(skippedExisting).toBe(1);
@@ -49,11 +82,17 @@ describe("filtros, ordenação e agrupamento", () => {
   it("operador e oficina sem diferenciar caixa/acentos", () => {
     expect(items.filter((i) => matchesFilter(i.operator, "Maria Exemplo"))).toHaveLength(2);
     expect(items.filter((i) => matchesFilter(i.workshop, "OFICINA MODELO SUL"))).toHaveLength(2);
-    expect(foldedOptions(items.map((i) => i.operator))).toEqual(["João Teste", "maria exemplo", EMPTY_OPTION]);
+    expect(foldedOptions(items.map((i) => i.operator))).toEqual([
+      "João Teste",
+      "maria exemplo",
+      EMPTY_OPTION,
+    ]);
     expect(items.filter((i) => matchesFilter(i.workshop, EMPTY_OPTION))).toHaveLength(2);
   });
   it("busca textual com campos vazios", () => {
-    expect(items.filter((i) => textMatches("suspensao", [i.issue, i.contact, i.model, i.note]))).toHaveLength(1);
+    expect(
+      items.filter((i) => textMatches("suspensao", [i.issue, i.contact, i.model, i.note])),
+    ).toHaveLength(1);
     expect(() => textMatches("x", [null, undefined, ""])).not.toThrow();
   });
   it("período exclui sem data, mas sem período inclui tudo", () => {
@@ -66,7 +105,9 @@ describe("filtros, ordenação e agrupamento", () => {
     expect(asc.at(-1)?.plate).toBe("QWE4R56");
     expect(desc.at(-1)?.plate).toBe("QWE4R56");
     expect(asc[0]?.date).toBe("2026-10-05");
-    expect(compareDateTime({ date: "2026-10-07", time: "09:00" }, { date: "2026-10-07", time: "texto" })).toBe(-1);
+    expect(
+      compareDateTime({ date: "2026-10-07", time: "09:00" }, { date: "2026-10-07", time: "texto" }),
+    ).toBe(-1);
   });
   it("grade semanal com grupo Sem data", () => {
     const week = groupWeek(items, "2026-10-05", "2026-10-10");
@@ -87,14 +128,25 @@ describe("KPIs, gráficos e exibição", () => {
   });
   it("KPIs do fixture", () => {
     const withDate = items.filter((i) => i.date);
-    expect(safeAverage(withDate.length, new Set(withDate.map((i) => i.date)).size)).toBeCloseTo(4 / 3);
-    expect(countBy(items, (i) => i.operator).find((r) => r.name === "maria exemplo")?.value).toBe(2);
+    expect(safeAverage(withDate.length, new Set(withDate.map((i) => i.date)).size)).toBeCloseTo(
+      4 / 3,
+    );
+    expect(countBy(items, (i) => i.operator).find((r) => r.name === "maria exemplo")?.value).toBe(
+      2,
+    );
     expect(countBy(items, (i) => i.contact).some((r) => r.name === DASH)).toBe(true);
-    expect(items.map((i) => serviceCategory(i.issue))).toEqual(["Suspensão", "Revisão", "Freios", "Corretiva", "Corretiva"]);
+    expect(items.map((i) => serviceCategory(i.issue))).toEqual([
+      "Suspensão",
+      "Revisão",
+      "Freios",
+      "Corretiva",
+      "Corretiva",
+    ]);
     expect(serviceCategory(null)).toBe("Corretiva");
   });
   it("formatação nunca mostra undefined/null/Invalid Date", () => {
-    for (const v of [null, undefined, "", "null", "undefined", Number.NaN]) expect(dash(v)).toBe(DASH);
+    for (const v of [null, undefined, "", "null", "undefined", Number.NaN])
+      expect(dash(v)).toBe(DASH);
     expect(formatDateBR("2026-10-05")).toBe("05/10/2026");
     expect(formatDateBR(null)).toBe(DASH);
     expect(formatDateBR("lixo")).toBe(DASH);
@@ -131,11 +183,21 @@ describe("exportação", () => {
 import { buildImportRecords as buildRecs, importErrorReason as reason } from "./agenda-safety";
 describe("importação manual: linhas e motivos", () => {
   it("guarda a linha da planilha de cada registro criado", () => {
-    const rows = [{ ID: "1123", Placa: "QEA1B23", "Data Atendimento": "05/10/2026", Hora: "08:00" }, { ID: "", Placa: "" }, { ID: "9", Placa: "abc-1234", "Data Atendimento": "2026-10-06", Hora: "9:30" }];
+    const rows = [
+      { ID: "1123", Placa: "QEA1B23", "Data Atendimento": "05/10/2026", Hora: "08:00" },
+      { ID: "", Placa: "" },
+      { ID: "9", Placa: "abc-1234", "Data Atendimento": "2026-10-06", Hora: "9:30" },
+    ];
     const { records, lines, skippedEmpty } = buildRecs(rows, null, false);
     expect(lines).toEqual([2, 4]);
     expect(skippedEmpty).toBe(1);
-    expect(records[0]).toMatchObject({ plate: "QEA1B23", date: "2026-10-05", time: "08:00", status: "", sgloc_reference: "1123" });
+    expect(records[0]).toMatchObject({
+      plate: "QEA1B23",
+      date: "2026-10-05",
+      time: "08:00",
+      status: "",
+      sgloc_reference: "1123",
+    });
   });
   it("traduz erros do banco", () => {
     expect(reason({ code: "23505" })).toMatch(/já cadastrado/);
