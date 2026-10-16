@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -264,6 +264,63 @@ export type Database = {
         }
         Relationships: []
       }
+      centros_custo: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          id: string
+          name: string
+          name_key: string | null
+          sgloc_id: number | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+          name_key?: string | null
+          sgloc_id?: number | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
+          name_key?: string | null
+          sgloc_id?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      classificacoes_servico: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          name_key: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          name_key?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          name_key?: string | null
+        }
+        Relationships: []
+      }
       contact_log: {
         Row: {
           appointment_id: string
@@ -305,6 +362,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      contas_orcamentarias: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
       }
       custom_field_definitions: {
         Row: {
@@ -434,6 +515,625 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      ordens_servico: {
+        Row: {
+          appointment_id: string | null
+          archived_at: string | null
+          archived_by: string | null
+          autorizacao: string | null
+          autorizado_cliente: string | null
+          centro_custo_id: string | null
+          closed_at: string | null
+          condutor_contato: string | null
+          condutor_nome: string | null
+          contrato_id: number | null
+          created_at: string
+          created_by: string | null
+          executado: string | null
+          externa_ref: string | null
+          gnv_final: string | null
+          gnv_inicial: string | null
+          hora: string | null
+          id: string
+          km: number | null
+          km_final: number | null
+          nf: string | null
+          numero: number
+          obs1: string | null
+          obs2: string | null
+          opened_at: string
+          pagamento_metodo: string | null
+          pendencia: boolean
+          pendencia_desc: string | null
+          plate: string
+          posicao_final: string | null
+          posicao_inicial: string | null
+          previsao_conclusao: string | null
+          recuperado: boolean | null
+          solicitante: string | null
+          status_id: number
+          store_id: number | null
+          tanque_final: string | null
+          tanque_inicial: string | null
+          tipo_atendimento: string
+          tipo_id: number
+          total_compras: number
+          total_estoque: number
+          total_os: number
+          total_servico: number
+          updated_at: string
+          workshop_id: string | null
+        }
+        Insert: {
+          appointment_id?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
+          autorizacao?: string | null
+          autorizado_cliente?: string | null
+          centro_custo_id?: string | null
+          closed_at?: string | null
+          condutor_contato?: string | null
+          condutor_nome?: string | null
+          contrato_id?: number | null
+          created_at?: string
+          created_by?: string | null
+          executado?: string | null
+          externa_ref?: string | null
+          gnv_final?: string | null
+          gnv_inicial?: string | null
+          hora?: string | null
+          id?: string
+          km?: number | null
+          km_final?: number | null
+          nf?: string | null
+          numero: number
+          obs1?: string | null
+          obs2?: string | null
+          opened_at?: string
+          pagamento_metodo?: string | null
+          pendencia?: boolean
+          pendencia_desc?: string | null
+          plate: string
+          posicao_final?: string | null
+          posicao_inicial?: string | null
+          previsao_conclusao?: string | null
+          recuperado?: boolean | null
+          solicitante?: string | null
+          status_id?: number
+          store_id?: number | null
+          tanque_final?: string | null
+          tanque_inicial?: string | null
+          tipo_atendimento?: string
+          tipo_id: number
+          total_compras?: number
+          total_estoque?: number
+          total_os?: number
+          total_servico?: number
+          updated_at?: string
+          workshop_id?: string | null
+        }
+        Update: {
+          appointment_id?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
+          autorizacao?: string | null
+          autorizado_cliente?: string | null
+          centro_custo_id?: string | null
+          closed_at?: string | null
+          condutor_contato?: string | null
+          condutor_nome?: string | null
+          contrato_id?: number | null
+          created_at?: string
+          created_by?: string | null
+          executado?: string | null
+          externa_ref?: string | null
+          gnv_final?: string | null
+          gnv_inicial?: string | null
+          hora?: string | null
+          id?: string
+          km?: number | null
+          km_final?: number | null
+          nf?: string | null
+          numero?: number
+          obs1?: string | null
+          obs2?: string | null
+          opened_at?: string
+          pagamento_metodo?: string | null
+          pendencia?: boolean
+          pendencia_desc?: string | null
+          plate?: string
+          posicao_final?: string | null
+          posicao_inicial?: string | null
+          previsao_conclusao?: string | null
+          recuperado?: boolean | null
+          solicitante?: string | null
+          status_id?: number
+          store_id?: number | null
+          tanque_final?: string | null
+          tanque_inicial?: string | null
+          tipo_atendimento?: string
+          tipo_id?: number
+          total_compras?: number
+          total_estoque?: number
+          total_os?: number
+          total_servico?: number
+          updated_at?: string
+          workshop_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ordens_servico_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordens_servico_centro_custo_id_fkey"
+            columns: ["centro_custo_id"]
+            isOneToOne: false
+            referencedRelation: "centros_custo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordens_servico_status_id_fkey"
+            columns: ["status_id"]
+            isOneToOne: false
+            referencedRelation: "os_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordens_servico_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "sgloc_stores"
+            referencedColumns: ["store_id"]
+          },
+          {
+            foreignKeyName: "ordens_servico_tipo_id_fkey"
+            columns: ["tipo_id"]
+            isOneToOne: false
+            referencedRelation: "os_tipos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordens_servico_workshop_id_fkey"
+            columns: ["workshop_id"]
+            isOneToOne: false
+            referencedRelation: "workshops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      os_anexos: {
+        Row: {
+          filename: string
+          id: string
+          os_id: string
+          uploaded_at: string
+          uploaded_by: string | null
+          url: string
+        }
+        Insert: {
+          filename: string
+          id?: string
+          os_id: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+          url: string
+        }
+        Update: {
+          filename?: string
+          id?: string
+          os_id?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_anexos_os_id_fkey"
+            columns: ["os_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      os_autorizadores: {
+        Row: {
+          created_at: string
+          is_default: boolean
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          is_default?: boolean
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          is_default?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
+      os_compras: {
+        Row: {
+          created_at: string
+          id: string
+          numero_compra: string
+          os_id: string
+          valor: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          numero_compra: string
+          os_id: string
+          valor?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          numero_compra?: string
+          os_id?: string
+          valor?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_compras_os_id_fkey"
+            columns: ["os_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      os_cotacoes: {
+        Row: {
+          created_at: string
+          fornecedor: string
+          id: string
+          os_item_id: string
+          prazo_pagamento: string | null
+          valor_unitario: number
+        }
+        Insert: {
+          created_at?: string
+          fornecedor: string
+          id?: string
+          os_item_id: string
+          prazo_pagamento?: string | null
+          valor_unitario?: number
+        }
+        Update: {
+          created_at?: string
+          fornecedor?: string
+          id?: string
+          os_item_id?: string
+          prazo_pagamento?: string | null
+          valor_unitario?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_cotacoes_os_item_id_fkey"
+            columns: ["os_item_id"]
+            isOneToOne: false
+            referencedRelation: "os_itens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      os_edit_log: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          field_changed: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+          os_id: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          field_changed: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          os_id: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          field_changed?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          os_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_edit_log_os_id_fkey"
+            columns: ["os_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      os_itens: {
+        Row: {
+          approval: string
+          authorizer: string | null
+          budget_account: string | null
+          classification: string | null
+          created_at: string
+          description: string
+          id: string
+          item_type: string
+          mechanic_name: string | null
+          movement_date: string | null
+          observation: string | null
+          os_id: string
+          part_code: string | null
+          qty: number
+          requester: string | null
+          service_code: string | null
+          total: number | null
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          approval?: string
+          authorizer?: string | null
+          budget_account?: string | null
+          classification?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          item_type: string
+          mechanic_name?: string | null
+          movement_date?: string | null
+          observation?: string | null
+          os_id: string
+          part_code?: string | null
+          qty?: number
+          requester?: string | null
+          service_code?: string | null
+          total?: number | null
+          unit_price?: number
+          updated_at?: string
+        }
+        Update: {
+          approval?: string
+          authorizer?: string | null
+          budget_account?: string | null
+          classification?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          item_type?: string
+          mechanic_name?: string | null
+          movement_date?: string | null
+          observation?: string | null
+          os_id?: string
+          part_code?: string | null
+          qty?: number
+          requester?: string | null
+          service_code?: string | null
+          total?: number | null
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_itens_os_id_fkey"
+            columns: ["os_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      os_observacoes_cliente: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string | null
+          id: string
+          os_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          os_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          os_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_observacoes_cliente_os_id_fkey"
+            columns: ["os_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      os_pagamentos: {
+        Row: {
+          aceito: boolean | null
+          aceito_at: string | null
+          aceito_por: string | null
+          conta_orcamentaria_id: string | null
+          created_at: string
+          dia_pagamento: number | null
+          documento: string | null
+          emissao: string | null
+          forma_pagamento: string | null
+          fornecedor: string | null
+          id: string
+          intervalo_dias: number | null
+          os_id: string
+          primeiro_vencimento: string | null
+          qtd_parcelas: number | null
+          status_pagamento: string | null
+          updated_at: string
+          valor_total: number
+        }
+        Insert: {
+          aceito?: boolean | null
+          aceito_at?: string | null
+          aceito_por?: string | null
+          conta_orcamentaria_id?: string | null
+          created_at?: string
+          dia_pagamento?: number | null
+          documento?: string | null
+          emissao?: string | null
+          forma_pagamento?: string | null
+          fornecedor?: string | null
+          id?: string
+          intervalo_dias?: number | null
+          os_id: string
+          primeiro_vencimento?: string | null
+          qtd_parcelas?: number | null
+          status_pagamento?: string | null
+          updated_at?: string
+          valor_total?: number
+        }
+        Update: {
+          aceito?: boolean | null
+          aceito_at?: string | null
+          aceito_por?: string | null
+          conta_orcamentaria_id?: string | null
+          created_at?: string
+          dia_pagamento?: number | null
+          documento?: string | null
+          emissao?: string | null
+          forma_pagamento?: string | null
+          fornecedor?: string | null
+          id?: string
+          intervalo_dias?: number | null
+          os_id?: string
+          primeiro_vencimento?: string | null
+          qtd_parcelas?: number | null
+          status_pagamento?: string | null
+          updated_at?: string
+          valor_total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_pagamentos_conta_orcamentaria_id_fkey"
+            columns: ["conta_orcamentaria_id"]
+            isOneToOne: false
+            referencedRelation: "contas_orcamentarias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_pagamentos_os_id_fkey"
+            columns: ["os_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      os_status: {
+        Row: {
+          allows_finalize: boolean
+          code: string
+          color: string
+          created_at: string
+          id: number
+          label: string
+          sort_order: number
+        }
+        Insert: {
+          allows_finalize?: boolean
+          code: string
+          color?: string
+          created_at?: string
+          id: number
+          label: string
+          sort_order?: number
+        }
+        Update: {
+          allows_finalize?: boolean
+          code?: string
+          color?: string
+          created_at?: string
+          id?: number
+          label?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      os_tipos: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          id: number
+          label: string
+          sort_order: number
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          id: number
+          label: string
+          sort_order?: number
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          id?: number
+          label?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      posicoes_operacionais: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          id: string
+          is_final: boolean
+          is_initial: boolean
+          label: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          id?: string
+          is_final?: boolean
+          is_initial?: boolean
+          label: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          id?: string
+          is_final?: boolean
+          is_initial?: boolean
+          label?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -952,7 +1652,90 @@ export type Database = {
       }
       norm_name: { Args: { _v: string }; Returns: string }
       norm_plate: { Args: { _v: string }; Returns: string }
+      os_archive: { Args: { _os_id: string }; Returns: undefined }
+      os_config_list: { Args: never; Returns: Json }
+      os_create: {
+        Args: {
+          _appointment_id?: string
+          _autorizacao?: string
+          _autorizado_cliente?: string
+          _centro_custo_id: string
+          _condutor_contato?: string
+          _condutor_nome?: string
+          _contrato_id?: number
+          _executado?: string
+          _externa_ref?: string
+          _gnv_inicial?: string
+          _hora?: string
+          _km: number
+          _nf?: string
+          _obs1?: string
+          _obs2?: string
+          _pagamento_metodo?: string
+          _pendencia?: boolean
+          _pendencia_desc?: string
+          _plate: string
+          _posicao_inicial?: string
+          _previsao_conclusao?: string
+          _recuperado?: boolean
+          _solicitante?: string
+          _store_id: number
+          _tanque_inicial?: string
+          _tipo_atendimento?: string
+          _tipo_id: number
+          _workshop_id: string
+        }
+        Returns: Json
+      }
+      os_finalize: {
+        Args: {
+          _gnv_final: string
+          _km_final: number
+          _os_id: string
+          _posicao_final: string
+          _tanque_final: string
+        }
+        Returns: Json
+      }
+      os_get_detail: { Args: { _os_id: string }; Returns: Json }
+      os_item_add: {
+        Args: {
+          _authorizer?: string
+          _budget_account?: string
+          _classification?: string
+          _description: string
+          _item_type: string
+          _mechanic_name?: string
+          _movement_date?: string
+          _observation?: string
+          _os_id: string
+          _part_code?: string
+          _qty: number
+          _requester?: string
+          _service_code?: string
+          _unit_price: number
+        }
+        Returns: Json
+      }
+      os_item_delete: { Args: { _item_id: string }; Returns: undefined }
+      os_item_update: {
+        Args: { _changes: Json; _item_id: string }
+        Returns: Json
+      }
+      os_items_batch_approve: {
+        Args: { _approval: string; _os_id: string }
+        Returns: undefined
+      }
+      os_transition_status: {
+        Args: { _new_status_id: number; _os_id: string }
+        Returns: Json
+      }
+      os_update: { Args: { _changes: Json; _os_id: string }; Returns: Json }
       revoke_user_sessions: { Args: { _user_id: string }; Returns: undefined }
+      search_ordens_servico: {
+        Args: { _filters?: Json; _page?: number; _page_size?: number }
+        Returns: Json
+      }
       search_vehicle_movements: {
         Args: {
           _from?: string
