@@ -1545,6 +1545,78 @@ export type Database = {
           },
         ]
       }
+      vehicles: {
+        Row: {
+          active: boolean
+          ano: number | null
+          ano_modelo: number | null
+          categoria: string | null
+          chassi: string | null
+          cor: string | null
+          created_at: string
+          fabricante: string | null
+          grupo: string | null
+          id: string
+          km_atual: number | null
+          loja_op: string | null
+          modelo: string | null
+          plate: string
+          pos_operacional: string | null
+          prefixo: string | null
+          renavam: string | null
+          sgloc_id: number | null
+          status: string | null
+          tanque: number | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          ano?: number | null
+          ano_modelo?: number | null
+          categoria?: string | null
+          chassi?: string | null
+          cor?: string | null
+          created_at?: string
+          fabricante?: string | null
+          grupo?: string | null
+          id?: string
+          km_atual?: number | null
+          loja_op?: string | null
+          modelo?: string | null
+          plate: string
+          pos_operacional?: string | null
+          prefixo?: string | null
+          renavam?: string | null
+          sgloc_id?: number | null
+          status?: string | null
+          tanque?: number | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          ano?: number | null
+          ano_modelo?: number | null
+          categoria?: string | null
+          chassi?: string | null
+          cor?: string | null
+          created_at?: string
+          fabricante?: string | null
+          grupo?: string | null
+          id?: string
+          km_atual?: number | null
+          loja_op?: string | null
+          modelo?: string | null
+          plate?: string
+          pos_operacional?: string | null
+          prefixo?: string | null
+          renavam?: string | null
+          sgloc_id?: number | null
+          status?: string | null
+          tanque?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       workshop_users: {
         Row: {
           user_id: string
