@@ -42,13 +42,25 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import {
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useTheme } from "@/hooks/use-theme";
 import { cn } from "@/lib/utils";
 import phoenixAsset from "@/assets/logo-anpexc-marca.png.asset.json";
 
-const ROLE_LABELS: Record<string, string> = { master: "Master", gerente: "Gerente", oficina: "Oficina", atendimento: "Atendimento" };
+const ROLE_LABELS: Record<string, string> = {
+  master: "Master",
+  gerente: "Gerente",
+  oficina: "Oficina",
+  atendimento: "Atendimento",
+};
 
 type NavItem = { to: string; label: string; icon: LucideIcon; exact?: boolean; hideFor?: string[] };
 
@@ -107,7 +119,12 @@ function SidebarContent({
   const items = NAV.filter((item) => !item.hideFor?.includes(role ?? ""));
   return (
     <>
-      <div className={cn("flex items-center gap-2 border-b px-4 py-4", collapsed && "justify-center px-0")}>
+      <div
+        className={cn(
+          "flex items-center gap-2 border-b px-4 py-4",
+          collapsed && "justify-center px-0",
+        )}
+      >
         <img src={phoenixAsset.url} alt="ANPEXC" className="size-9 shrink-0 object-contain" />
         {!collapsed && (
           <div className="min-w-0">
@@ -141,7 +158,9 @@ function SidebarContent({
         })}
         <Separator className="my-2" />
         {!collapsed && (
-          <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Em breve</p>
+          <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Em breve
+          </p>
         )}
         {SOON.map((item) => (
           <span
@@ -184,7 +203,13 @@ function SidebarContent({
   );
 }
 
-function SearchCommand({ open, onOpenChange }: { open: boolean; onOpenChange: (value: boolean) => void }) {
+function SearchCommand({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (value: boolean) => void;
+}) {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const plate = useMemo(() => {
@@ -193,7 +218,11 @@ function SearchCommand({ open, onOpenChange }: { open: boolean; onOpenChange: (v
   }, [search]);
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
-      <CommandInput placeholder="Buscar página ou placa do veículo…" value={search} onValueChange={setSearch} />
+      <CommandInput
+        placeholder="Buscar página ou placa do veículo…"
+        value={search}
+        onValueChange={setSearch}
+      />
       <CommandList>
         <CommandEmpty>Nenhum resultado.</CommandEmpty>
         <CommandGroup heading="Páginas">
@@ -232,7 +261,13 @@ function SearchCommand({ open, onOpenChange }: { open: boolean; onOpenChange: (v
   );
 }
 
-export function LayoutShell({ user, children }: { user: { id: string; email?: string | null }; children: ReactNode }) {
+export function LayoutShell({
+  user,
+  children,
+}: {
+  user: { id: string; email?: string | null };
+  children: ReactNode;
+}) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { dark, toggleTheme } = useTheme();
@@ -305,11 +340,22 @@ export function LayoutShell({ user, children }: { user: { id: string; email?: st
           collapsed ? "w-16" : "w-60",
         )}
       >
-        <SidebarContent collapsed={collapsed} role={me?.role ?? null} onNavigate={() => {}} onToggleCollapse={toggleCollapse} />
+        <SidebarContent
+          collapsed={collapsed}
+          role={me?.role ?? null}
+          onNavigate={() => {}}
+          onToggleCollapse={toggleCollapse}
+        />
       </aside>
       <div className={cn("flex min-h-screen flex-col", collapsed ? "lg:pl-16" : "lg:pl-60")}>
         <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b bg-card px-4">
-          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setDrawerOpen(true)} aria-label="Abrir menu">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="lg:hidden"
+            onClick={() => setDrawerOpen(true)}
+            aria-label="Abrir menu"
+          >
             <Menu className="size-5" />
           </Button>
           <Breadcrumb>
@@ -366,7 +412,9 @@ export function LayoutShell({ user, children }: { user: { id: string; email?: st
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <p className="px-2 py-1.5 text-sm text-muted-foreground">Sem notificações no momento.</p>
+                <p className="px-2 py-1.5 text-sm text-muted-foreground">
+                  Sem notificações no momento.
+                </p>
               </DropdownMenuContent>
             </DropdownMenu>
             <DropdownMenu>
@@ -377,10 +425,14 @@ export function LayoutShell({ user, children }: { user: { id: string; email?: st
                   aria-label="Menu do usuário"
                 >
                   <Avatar className="size-7">
-                    <AvatarFallback className="text-xs font-semibold">{initials || "U"}</AvatarFallback>
+                    <AvatarFallback className="text-xs font-semibold">
+                      {initials || "U"}
+                    </AvatarFallback>
                   </Avatar>
                   <span className="hidden text-left sm:block">
-                    <span className="block max-w-36 truncate text-xs font-semibold leading-tight">{name}</span>
+                    <span className="block max-w-36 truncate text-xs font-semibold leading-tight">
+                      {name}
+                    </span>
                     <span className="block text-[11px] text-muted-foreground">{roleLabel}</span>
                   </span>
                 </button>
@@ -403,7 +455,11 @@ export function LayoutShell({ user, children }: { user: { id: string; email?: st
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
         <SheetContent side="left" className="w-64 bg-sidebar p-0 text-sidebar-foreground">
           <SheetTitle className="sr-only">Menu de navegação</SheetTitle>
-          <SidebarContent collapsed={false} role={me?.role ?? null} onNavigate={() => setDrawerOpen(false)} />
+          <SidebarContent
+            collapsed={false}
+            role={me?.role ?? null}
+            onNavigate={() => setDrawerOpen(false)}
+          />
         </SheetContent>
       </Sheet>
       <SearchCommand open={searchOpen} onOpenChange={setSearchOpen} />
