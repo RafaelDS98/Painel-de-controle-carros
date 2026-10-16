@@ -14,5 +14,6 @@ export function knownModules(value: unknown): ModuleKey[] {
 
 /** Primeira tela disponível para quem não tem a Agenda. */
 export function landingPath(modules: ModuleKey[]): "/" | "/historicos" | null {
-  return MODULES.find((module) => modules.includes(module.key))?.path ?? null;
+  const p = MODULES.find((module) => modules.includes(module.key))?.path ?? null;
+  return p === "/os" ? "/" : p as "/" | "/historicos" | null;
 }

@@ -30,8 +30,8 @@ export function OsDashboard() {
 
   // Load config on mount
   useEffect(() => {
-    getOsConfig({ data: {} })
-      .then((cfg) => setConfig(cfg as OsConfig))
+    getOsConfig({ data: undefined as any })
+      .then((cfg) => setConfig(cfg as unknown as OsConfig))
       .catch(() => toast.error("Erro ao carregar configurações."));
   }, []);
 
@@ -43,7 +43,7 @@ export function OsDashboard() {
       const result = await searchOrdensServico({
         data: { filters: rpcFilters, page: p, pageSize: PAGE_SIZE },
       });
-      const r = result as OsSearchResult;
+      const r = result as unknown as OsSearchResult;
       setRows(r.rows ?? []);
       setTotal(r.total ?? 0);
       setPage(p);

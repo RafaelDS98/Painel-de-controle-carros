@@ -1,6 +1,9 @@
 // Badge colorido para status de O.S.
 import { cn } from "@/lib/utils";
-import { statusLabel, statusColor, statusBgColor } from "@/lib/os/os-status";
+import { STATUS_LABELS, STATUS_COLORS, statusBgColor } from "@/lib/os/os-status";
+
+function statusLabel(id: number): string { return STATUS_LABELS[id] ?? `Status ${id}`; }
+function statusColor(id: number): string { return STATUS_COLORS[id] ?? "#6b7280"; }
 
 interface OsStatusBadgeProps {
   statusId: number;

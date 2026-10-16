@@ -989,6 +989,18 @@ export type Database = {
         Returns: undefined
       }
       user_modules: { Args: { _uid: string }; Returns: string[] }
+      os_create: { Args: Record<string, unknown>; Returns: Json }
+      os_update: { Args: { _os_id: string; _changes: Json }; Returns: Json }
+      os_transition_status: { Args: { _os_id: string; _new_status_id: number }; Returns: Json }
+      os_finalize: { Args: Record<string, unknown>; Returns: Json }
+      os_archive: { Args: { _os_id: string }; Returns: undefined }
+      os_item_add: { Args: Record<string, unknown>; Returns: Json }
+      os_item_update: { Args: Record<string, unknown>; Returns: Json }
+      os_item_delete: { Args: { _item_id: string }; Returns: undefined }
+      os_items_batch_approve: { Args: { _os_id: string; _approval: string }; Returns: undefined }
+      search_ordens_servico: { Args: Record<string, unknown>; Returns: Json }
+      os_get_detail: { Args: { _os_id: string }; Returns: Json }
+      os_config_list: { Args: never; Returns: Json }
     }
     Enums: {
       app_role: "atendimento" | "gerente" | "master" | "oficina"

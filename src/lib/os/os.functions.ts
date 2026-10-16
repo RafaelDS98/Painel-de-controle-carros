@@ -178,7 +178,7 @@ export const updateOrdemServico = createServerFn({ method: "POST" })
     try {
       const { data: result, error } = await context.supabase.rpc("os_update", {
         _os_id: data.id,
-        _changes: data.changes,
+        _changes: data.changes as unknown as import("@/integrations/supabase/types").Json,
       });
       if (error) throw error;
       return result;

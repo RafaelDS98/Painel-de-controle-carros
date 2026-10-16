@@ -60,21 +60,22 @@ export function setOsFilter<K extends keyof OsFilters>(filters: OsFilters, key: 
 
 /** Converte filtros frontend para jsonb compatível com RPC search_ordens_servico. */
 export function osFiltersToRpc(filters: OsFilters): Record<string, string> {
+  const f = filters as any;
   const rpc: Record<string, string> = {};
-  if (filters.status_id) rpc.status_id = filters.status_id;
-  if (filters.tipo_id) rpc.tipo_id = filters.tipo_id;
-  if (filters.numero) rpc.numero = filters.numero;
-  if (filters.centro_custo_id) rpc.centro_custo_id = filters.centro_custo_id;
-  if (filters.recuperado) rpc.recuperado = filters.recuperado;
-  if (filters.externa_ref) rpc.externa_ref = filters.externa_ref;
-  if (filters.data_inicial) rpc.data_inicial = filters.data_inicial;
-  if (filters.data_final) rpc.data_final = filters.data_final;
-  if (filters.palavra_chave) rpc.palavra_chave = filters.palavra_chave;
-  if (filters.workshop_id) rpc.workshop_id = filters.workshop_id;
-  if (filters.com_pendencia) rpc.com_pendencia = filters.com_pendencia;
-  if (filters.store_id) rpc.store_id = filters.store_id;
-  if (filters.plate) rpc.plate = filters.plate;
-  if (filters.tipo_atendimento) rpc.tipo_atendimento = filters.tipo_atendimento;
+  if (f.status_id) rpc.status_id = f.status_id;
+  if (f.tipo_id) rpc.tipo_id = f.tipo_id;
+  if (f.numero) rpc.numero = f.numero;
+  if (f.centro_custo_id) rpc.centro_custo_id = f.centro_custo_id;
+  if (f.recuperado) rpc.recuperado = f.recuperado;
+  if (f.externa_ref) rpc.externa_ref = f.externa_ref;
+  if (f.data_inicial) rpc.data_inicial = f.data_inicial;
+  if (f.data_final) rpc.data_final = f.data_final;
+  if (f.palavra_chave) rpc.palavra_chave = f.palavra_chave;
+  if (f.workshop_id) rpc.workshop_id = f.workshop_id;
+  if (f.com_pendencia) rpc.com_pendencia = f.com_pendencia;
+  if (f.store_id) rpc.store_id = f.store_id;
+  if (f.plate) rpc.plate = f.plate;
+  if (f.tipo_atendimento) rpc.tipo_atendimento = f.tipo_atendimento;
   return rpc;
 }
 
@@ -83,28 +84,28 @@ export function osFiltersToRpc(filters: OsFilters): Record<string, string> {
  * Usa mesma lógica de matchesAdvanced do advanced-filter.ts.
  */
 export function matchesOsFilter(item: OsListItem, filters: OsFilters): boolean {
-  if (filters.status_id && String(item.status_id) !== filters.status_id) return false;
-  if (filters.tipo_id && String(item.tipo_id) !== filters.tipo_id) return false;
-  if (filters.numero && !String(item.numero).includes(filters.numero)) return false;
-  if (filters.centro_custo_id && item.centro_custo_id !== filters.centro_custo_id) return false;
-  if (filters.recuperado) {
-    const want = filters.recuperado === "true";
+  if (filters['status_id'] && String(item.status_id) !== filters['status_id']) return false;
+  if (filters['tipo_id'] && String(item.tipo_id) !== filters['tipo_id']) return false;
+  if (filters['numero'] && !String(item.numero).includes(filters['numero'])) return false;
+  if (filters['centro_custo_id'] && item.centro_custo_id !== filters['centro_custo_id']) return false;
+  if (filters['recuperado']) {
+    const want = filters['recuperado'] === "true";
     if ((item.recuperado ?? false) !== want) return false;
   }
-  if (filters.externa_ref && !foldKey(item.externa_ref).includes(foldKey(filters.externa_ref))) return false;
-  if (filters.palavra_chave) {
-    const needle = foldKey(filters.palavra_chave);
+  if (filters['externa_ref'] && !foldKey(item.externa_ref).includes(foldKey(filters['externa_ref']))) return false;
+  if (filters['palavra_chave']) {
+    const needle = foldKey(filters['palavra_chave']);
     const haystack = foldKey(`${item.plate} ${item.obs1 ?? ""} ${item.obs2 ?? ""} ${item.condutor_nome ?? ""}`);
     if (!haystack.includes(needle)) return false;
   }
-  if (filters.workshop_id && item.workshop_id !== filters.workshop_id) return false;
-  if (filters.com_pendencia) {
-    const want = filters.com_pendencia === "true";
+  if (filters['workshop_id'] && item.workshop_id !== filters['workshop_id']) return false;
+  if (filters['com_pendencia']) {
+    const want = filters['com_pendencia'] === "true";
     if (item.pendencia !== want) return false;
   }
-  if (filters.store_id && String(item.store_id) !== filters.store_id) return false;
-  if (filters.plate && !foldKey(item.plate).includes(foldKey(filters.plate))) return false;
-  if (filters.tipo_atendimento && item.tipo_atendimento !== filters.tipo_atendimento) return false;
+  if (filters['store_id'] && String(item.store_id) !== filters['store_id']) return false;
+  if (filters['plate'] && !foldKey(item.plate).includes(foldKey(filters['plate']))) return false;
+  if (filters['tipo_atendimento'] && item.tipo_atendimento !== filters['tipo_atendimento']) return false;
   return true;
 }
 

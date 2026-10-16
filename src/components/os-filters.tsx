@@ -24,10 +24,17 @@ export function OsFiltersPanel({ filters, onChange, config, onSearch, onClear }:
     onChange({ ...filters, [key]: value });
   };
 
-  // Build option lists from config
-  const statusOptions = (config?.status ?? []).map((s) => ({ value: String(s.id), label: s.label }));
-  const tipoOptions = (config?.tipos ?? []).map((t) => ({ value: String(t.id), label: t.label }));
-  const centroOptions = (config?.centros_custo ?? []).map((c) => ({ value: c.id, label: `${c.code} - ${c.name}` }));
+  // Build option lists from config — SearchableSelect expects string[]
+  const statusOptions = (config?.status ?? []).map((s) => s.label);
+  const tipoOptions = (config?.tipos ?? []).map((t) => t.label);
+  const centroOptions = (config?.centros_custo ?? []).map((c) => `${c.code} - ${c.name}`);
+  // Reverse maps: label → id for storing filter values
+  const statusLabelToId = new Map((config?.status ?? []).map((s) => [s.label, String(s.id)]));
+  const tipoLabelToId = new Map((config?.tipos ?? []).map((t) => [t.label, String(t.id)]));
+  const centroLabelToId = new Map((config?.centros_custo ?? []).map((c) => [`${c.code} - ${c.name}`, c.id]));
+  const statusIdToLabel = new Map((config?.status ?? []).map((s) => [String(s.id), s.label]));
+  const tipoIdToLabel = new Map((config?.tipos ?? []).map((t) => [String(t.id), t.label]));
+  const centroIdToLabel = new Map((config?.centros_custo ?? []).map((c) => [c.id, `${c.code} - ${c.name}`]));
 
   return (
     <div className="rounded-lg border bg-card">
@@ -54,10 +61,10 @@ export function OsFiltersPanel({ filters, onChange, config, onSearch, onClear }:
             <div className="space-y-1.5">
               <Label className="text-xs">Status/Legenda</Label>
               <SearchableSelect
+                label="Selecione um Status"
                 options={statusOptions}
-                value={filters.status_id}
-                onChange={(v) => setField("status_id", v)}
-                placeholder="Selecione um Status"
+                value={statusIdToLabel.get(filters.status_id) ?? ""}
+                onChange={(v) => setField("status_id", statusLabelToId.get(v) ?? "")}
               />
             </div>
 
@@ -65,10 +72,10 @@ export function OsFiltersPanel({ filters, onChange, config, onSearch, onClear }:
             <div className="space-y-1.5">
               <Label className="text-xs">Tipo O.S./Legenda</Label>
               <SearchableSelect
+                label="Selecione um Tipo O.S"
                 options={tipoOptions}
-                value={filters.tipo_id}
-                onChange={(v) => setField("tipo_id", v)}
-                placeholder="Selecione um Tipo O.S"
+                value={tipoIdToLabel.get(filters.tipo_id) ?? ""}
+                onChange={(v) => setField("tipo_id", tipoLabelToId.get(v) ?? "")}
               />
             </div>
 
@@ -87,10 +94,10 @@ export function OsFiltersPanel({ filters, onChange, config, onSearch, onClear }:
             <div className="space-y-1.5">
               <Label className="text-xs">C. Custo</Label>
               <SearchableSelect
+                label="Selecione um Centro de Custo"
                 options={centroOptions}
-                value={filters.centro_custo_id}
-                onChange={(v) => setField("centro_custo_id", v)}
-                placeholder="Selecione um Centro de Custo"
+                value={centroIdToLabel.get(filters.centro_custo_id) ?? ""}
+                onChange={(v) => setField("centro_custo_id", centroLabelToId.get(v) ?? "")}
               />
             </div>
 
@@ -98,10 +105,13 @@ export function OsFiltersPanel({ filters, onChange, config, onSearch, onClear }:
             <div className="space-y-1.5">
               <Label className="text-xs">Recuperado</Label>
               <SearchableSelect
-                options={RECUPERADO_OPTIONS}
+                label="Selecione..."
+                options={RECUPERADO_OPTIONS.map((o) => o.label)}
                 value={filters.recuperado}
-                onChange={(v) => setField("recuperado", v)}
-                placeholder="Selecione..."
+                onChange={(v) => {
+                  const match = RECUPERADO_OPTIONS.find((o) => o.label === v);
+                  setField("recuperado", match?.value ?? "");
+                }}
               />
             </div>
 
@@ -279,10 +289,13 @@ export function OsFiltersPanel({ filters, onChange, config, onSearch, onClear }:
             <div className="space-y-1.5">
               <Label className="text-xs">Tipo Atendimento</Label>
               <SearchableSelect
-                options={TIPO_ATENDIMENTO_OPTIONS}
-                value={filters.tipo_atendimento}
-                onChange={(v) => setField("tipo_atendimento", v)}
-                placeholder="Selecione um Tipo Atendimento"
+                label="Selecione um Tipo Atendimento"
+                options={TIPO_ATENDIMENTO_OPTIONS.map((o) => o.label)}
+                value={TIPO_ATENDIMENTO_OPTIONS.find((o) => o.value === filters.tipo_atendimento)?.label ?? ""}
+                onChange={(v) => {
+                  const match = TIPO_ATENDIMENTO_OPTIONS.find((o) => o.label === v);
+                  setField("tipo_atendimento", match?.value ?? "");
+                }}
               />
             </div>
 

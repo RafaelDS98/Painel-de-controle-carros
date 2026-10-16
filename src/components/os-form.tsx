@@ -75,41 +75,41 @@ export function OsForm({ osId, initialAppointmentId, onCreated }: OsFormProps) {
     let cancelled = false;
     async function load() {
       try {
-        const cfg = await getOsConfig({ data: {} });
+        const cfg = await getOsConfig({ data: undefined as any });
         if (cancelled) return;
-        setConfig(cfg as OsConfig);
+        setConfig(cfg as unknown as OsConfig);
 
         if (osId) {
           const det = await getOsDetail({ data: { id: osId } });
           if (cancelled) return;
-          const d = det as OsDetail;
+          const d = det as unknown as OsDetail;
           setDetail(d);
           // Populate form from existing OS
-          const os = d.os;
-          setPlate(os.plate ?? "");
-          setKm(os.km != null ? String(os.km) : "");
-          setTipoId(os.tipo_id != null ? String(os.tipo_id) : "");
-          setCentroCustoId(os.centro_custo_id ?? "");
-          setWorkshopId(os.workshop_id ?? "");
-          setTipoAtendimento(os.tipo_atendimento ?? "N");
-          setHora(os.hora ?? "");
-          setTanqueInicial(os.tanque_inicial ?? "");
-          setGnvInicial(os.gnv_inicial ?? "");
-          setPosicaoInicial(os.posicao_inicial ?? "");
-          setCondutorNome(os.condutor_nome ?? "");
-          setCondutorContato(os.condutor_contato ?? "");
-          setNf(os.nf ?? "");
-          setRecuperado(os.recuperado ?? false);
-          setExternaRef(os.externa_ref ?? "");
-          setObs1(os.obs1 ?? "");
-          setObs2(os.obs2 ?? "");
-          setPrevisaoConclusao(os.previsao_conclusao ?? "");
-          setPagamentoMetodo(os.pagamento_metodo ?? "");
-          setSolicitante(os.solicitante ?? "");
-          setPendencia(os.pendencia ?? false);
-          setPendenciaDesc(os.pendencia_desc ?? "");
-          setExecutado(os.executado ?? "N");
-          setAutorizadoCliente(os.autorizado_cliente ?? "Pendente");
+          const os = d.os as any;
+          setPlate(os['plate'] ?? "");
+          setKm(os['km'] != null ? String(os['km']) : "");
+          setTipoId(os['tipo_id'] != null ? String(os['tipo_id']) : "");
+          setCentroCustoId(os['centro_custo_id'] ?? "");
+          setWorkshopId(os['workshop_id'] ?? "");
+          setTipoAtendimento(os['tipo_atendimento'] ?? "N");
+          setHora(os['hora'] ?? "");
+          setTanqueInicial(os['tanque_inicial'] ?? "");
+          setGnvInicial(os['gnv_inicial'] ?? "");
+          setPosicaoInicial(os['posicao_inicial'] ?? "");
+          setCondutorNome(os['condutor_nome'] ?? "");
+          setCondutorContato(os['condutor_contato'] ?? "");
+          setNf(os['nf'] ?? "");
+          setRecuperado(os['recuperado'] ?? false);
+          setExternaRef(os['externa_ref'] ?? "");
+          setObs1(os['obs1'] ?? "");
+          setObs2(os['obs2'] ?? "");
+          setPrevisaoConclusao(os['previsao_conclusao'] ?? "");
+          setPagamentoMetodo(os['pagamento_metodo'] ?? "");
+          setSolicitante(os['solicitante'] ?? "");
+          setPendencia(os['pendencia'] ?? false);
+          setPendenciaDesc(os['pendencia_desc'] ?? "");
+          setExecutado(os['executado'] ?? "N");
+          setAutorizadoCliente(os['autorizado_cliente'] ?? "Pendente");
         }
       } catch (err) {
         toast.error("Erro ao carregar dados da O.S.");
@@ -161,45 +161,45 @@ export function OsForm({ osId, initialAppointmentId, onCreated }: OsFormProps) {
             autorizadoCliente: autorizadoCliente as "Sim" | "Não" | "Pendente",
           },
         });
-        const r = result as { id: string; numero: number };
+        const r = result as unknown as { id: string; numero: number };
         toast.success(`O.S. #${String(r.numero).padStart(6, "0")} criada com sucesso!`);
         if (onCreated) onCreated(r.id);
         else navigate({ to: "/os/$id", params: { id: r.id } });
       } else {
         // Build changes object
         const changes: Record<string, unknown> = {};
-        const os = detail!.os;
-        if (plate.trim() !== os.plate) changes.plate = plate.trim();
-        if ((km ? parseInt(km) : null) !== os.km) changes.km = km ? parseInt(km) : null;
-        if (parseInt(tipoId) !== os.tipo_id) changes.tipo_id = parseInt(tipoId);
-        if ((centroCustoId || null) !== os.centro_custo_id) changes.centro_custo_id = centroCustoId || null;
-        if ((workshopId || null) !== os.workshop_id) changes.workshop_id = workshopId || null;
-        if (tipoAtendimento !== os.tipo_atendimento) changes.tipo_atendimento = tipoAtendimento;
-        if ((hora || null) !== os.hora) changes.hora = hora || null;
-        if ((tanqueInicial || null) !== os.tanque_inicial) changes.tanque_inicial = tanqueInicial || null;
-        if ((gnvInicial || null) !== os.gnv_inicial) changes.gnv_inicial = gnvInicial || null;
-        if ((posicaoInicial || null) !== os.posicao_inicial) changes.posicao_inicial = posicaoInicial || null;
-        if ((condutorNome || null) !== os.condutor_nome) changes.condutor_nome = condutorNome || null;
-        if ((condutorContato || null) !== os.condutor_contato) changes.condutor_contato = condutorContato || null;
-        if ((nf || null) !== os.nf) changes.nf = nf || null;
-        if (recuperado !== os.recuperado) changes.recuperado = recuperado;
-        if ((externaRef || null) !== os.externa_ref) changes.externa_ref = externaRef || null;
-        if ((obs1 || null) !== os.obs1) changes.obs1 = obs1 || null;
-        if ((obs2 || null) !== os.obs2) changes.obs2 = obs2 || null;
-        if ((previsaoConclusao || null) !== os.previsao_conclusao) changes.previsao_conclusao = previsaoConclusao || null;
-        if ((pagamentoMetodo || null) !== os.pagamento_metodo) changes.pagamento_metodo = pagamentoMetodo || null;
-        if ((solicitante || null) !== os.solicitante) changes.solicitante = solicitante || null;
-        if (pendencia !== os.pendencia) changes.pendencia = pendencia;
-        if ((pendenciaDesc || null) !== os.pendencia_desc) changes.pendencia_desc = pendenciaDesc || null;
-        if (executado !== os.executado) changes.executado = executado;
-        if (autorizadoCliente !== os.autorizado_cliente) changes.autorizado_cliente = autorizadoCliente;
+        const os = detail!.os as any;
+        if (plate.trim() !== os['plate']) changes.plate = plate.trim();
+        if ((km ? parseInt(km) : null) !== os['km']) changes.km = km ? parseInt(km) : null;
+        if (parseInt(tipoId) !== os['tipo_id']) changes.tipo_id = parseInt(tipoId);
+        if ((centroCustoId || null) !== os['centro_custo_id']) changes.centro_custo_id = centroCustoId || null;
+        if ((workshopId || null) !== os['workshop_id']) changes.workshop_id = workshopId || null;
+        if (tipoAtendimento !== os['tipo_atendimento']) changes.tipo_atendimento = tipoAtendimento;
+        if ((hora || null) !== os['hora']) changes.hora = hora || null;
+        if ((tanqueInicial || null) !== os['tanque_inicial']) changes.tanque_inicial = tanqueInicial || null;
+        if ((gnvInicial || null) !== os['gnv_inicial']) changes.gnv_inicial = gnvInicial || null;
+        if ((posicaoInicial || null) !== os['posicao_inicial']) changes.posicao_inicial = posicaoInicial || null;
+        if ((condutorNome || null) !== os['condutor_nome']) changes.condutor_nome = condutorNome || null;
+        if ((condutorContato || null) !== os['condutor_contato']) changes.condutor_contato = condutorContato || null;
+        if ((nf || null) !== os['nf']) changes.nf = nf || null;
+        if (recuperado !== os['recuperado']) changes.recuperado = recuperado;
+        if ((externaRef || null) !== os['externa_ref']) changes.externa_ref = externaRef || null;
+        if ((obs1 || null) !== os['obs1']) changes.obs1 = obs1 || null;
+        if ((obs2 || null) !== os['obs2']) changes.obs2 = obs2 || null;
+        if ((previsaoConclusao || null) !== os['previsao_conclusao']) changes.previsao_conclusao = previsaoConclusao || null;
+        if ((pagamentoMetodo || null) !== os['pagamento_metodo']) changes.pagamento_metodo = pagamentoMetodo || null;
+        if ((solicitante || null) !== os['solicitante']) changes.solicitante = solicitante || null;
+        if (pendencia !== os['pendencia']) changes.pendencia = pendencia;
+        if ((pendenciaDesc || null) !== os['pendencia_desc']) changes.pendencia_desc = pendenciaDesc || null;
+        if (executado !== os['executado']) changes.executado = executado;
+        if (autorizadoCliente !== os['autorizado_cliente']) changes.autorizado_cliente = autorizadoCliente;
 
         if (Object.keys(changes).length > 0) {
           await updateOrdemServico({ data: { id: osId!, changes } });
         }
         // Reload detail
         const det = await getOsDetail({ data: { id: osId! } });
-        setDetail(det as OsDetail);
+        setDetail(det as unknown as OsDetail);
         toast.success("O.S. atualizada com sucesso!");
       }
     } catch (err: any) {
@@ -215,7 +215,7 @@ export function OsForm({ osId, initialAppointmentId, onCreated }: OsFormProps) {
     try {
       await transitionOsStatus({ data: { id: osId, newStatusId } });
       const det = await getOsDetail({ data: { id: osId } });
-      setDetail(det as OsDetail);
+      setDetail(det as unknown as OsDetail);
       toast.success("Status atualizado!");
     } catch (err: any) {
       toast.error(err?.message ?? "Erro ao alterar status.");
@@ -236,7 +236,7 @@ export function OsForm({ osId, initialAppointmentId, onCreated }: OsFormProps) {
         },
       });
       const det = await getOsDetail({ data: { id: osId } });
-      setDetail(det as OsDetail);
+      setDetail(det as unknown as OsDetail);
       toast.success("O.S. finalizada!");
     } catch (err: any) {
       toast.error(err?.message ?? "Erro ao finalizar O.S.");
@@ -249,21 +249,21 @@ export function OsForm({ osId, initialAppointmentId, onCreated }: OsFormProps) {
     try {
       await addOsItem({ data: { osId, ...item } });
       const det = await getOsDetail({ data: { id: osId } });
-      setDetail(det as OsDetail);
+      setDetail(det as unknown as OsDetail);
     } catch (err: any) { toast.error(err?.message ?? "Erro ao adicionar item."); }
   }, [osId]);
 
   const handleUpdateItem = useCallback(async (itemId: string, changes: Record<string, unknown>) => {
     try {
       await updateOsItem({ data: { itemId, changes } });
-      if (osId) { const det = await getOsDetail({ data: { id: osId } }); setDetail(det as OsDetail); }
+      if (osId) { const det = await getOsDetail({ data: { id: osId } }); setDetail(det as unknown as OsDetail); }
     } catch (err: any) { toast.error(err?.message ?? "Erro ao atualizar item."); }
   }, [osId]);
 
   const handleDeleteItem = useCallback(async (itemId: string) => {
     try {
       await deleteOsItem({ data: { itemId } });
-      if (osId) { const det = await getOsDetail({ data: { id: osId } }); setDetail(det as OsDetail); }
+      if (osId) { const det = await getOsDetail({ data: { id: osId } }); setDetail(det as unknown as OsDetail); }
     } catch (err: any) { toast.error(err?.message ?? "Erro ao excluir item."); }
   }, [osId]);
 
@@ -272,7 +272,7 @@ export function OsForm({ osId, initialAppointmentId, onCreated }: OsFormProps) {
     try {
       await batchApproveItems({ data: { osId, approval } });
       const det = await getOsDetail({ data: { id: osId } });
-      setDetail(det as OsDetail);
+      setDetail(det as unknown as OsDetail);
       toast.success(`Itens ${approval.toLowerCase()}s!`);
     } catch (err: any) { toast.error(err?.message ?? "Erro ao aprovar itens."); }
   }, [osId]);
@@ -285,9 +285,15 @@ export function OsForm({ osId, initialAppointmentId, onCreated }: OsFormProps) {
     );
   }
 
-  const tipoOptions = (config?.tipos ?? []).map((t) => ({ value: String(t.id), label: t.label }));
-  const centroOptions = (config?.centros_custo ?? []).map((c) => ({ value: c.id, label: `${c.code} - ${c.name}` }));
-  const posicaoOptions = (config?.posicoes ?? []).filter((p) => p.is_initial).map((p) => ({ value: p.code, label: `${p.code} - ${p.label}` }));
+  const tipoOptions = (config?.tipos ?? []).map((t) => t.label);
+  const centroOptions = (config?.centros_custo ?? []).map((c) => `${c.code} - ${c.name}`);
+  const posicaoOptions = (config?.posicoes ?? []).filter((p) => p.is_initial).map((p) => `${p.code} - ${p.label}`);
+  const tipoLabelToId = new Map((config?.tipos ?? []).map((t) => [t.label, String(t.id)]));
+  const tipoIdToLabel = new Map((config?.tipos ?? []).map((t) => [String(t.id), t.label]));
+  const centroLabelToId = new Map((config?.centros_custo ?? []).map((c) => [`${c.code} - ${c.name}`, c.id]));
+  const centroIdToLabel = new Map((config?.centros_custo ?? []).map((c) => [c.id, `${c.code} - ${c.name}`]));
+  const posicaoLabelToCode = new Map((config?.posicoes ?? []).filter((p) => p.is_initial).map((p) => [`${p.code} - ${p.label}`, p.code]));
+  const posicaoCodeToLabel = new Map((config?.posicoes ?? []).filter((p) => p.is_initial).map((p) => [p.code, `${p.code} - ${p.label}`]));
   const nextStatuses = config ? allowedNextStatuses(currentStatus, false, config.status) : [];
 
   return (
@@ -307,7 +313,7 @@ export function OsForm({ osId, initialAppointmentId, onCreated }: OsFormProps) {
               {!isNew && detail && (
                 <div className="flex items-center gap-2 mt-1">
                   <OsStatusBadge statusId={detail.os.status_id} label={detail.os.status_label} color={detail.os.status_color} />
-                  <span className="text-sm text-muted-foreground">{displayPlate(detail.os.plate)}</span>
+                  <span className="text-sm text-muted-foreground">{displayPlate(detail.os['plate'])}</span>
                 </div>
               )}
             </div>
@@ -371,11 +377,13 @@ export function OsForm({ osId, initialAppointmentId, onCreated }: OsFormProps) {
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs font-semibold">Tipo O.S. *</Label>
-                    <SearchableSelect options={tipoOptions} value={tipoId} onChange={setTipoId} placeholder="Selecione o tipo" disabled={terminal} />
+                    {!terminal && <SearchableSelect label="Selecione o tipo" options={tipoOptions} value={tipoIdToLabel.get(tipoId) ?? ""} onChange={(v) => setTipoId(tipoLabelToId.get(v) ?? "")} />}
+      {terminal && <input type="text" disabled value={tipoIdToLabel.get(tipoId) ?? ""} className="w-full rounded-md border border-input bg-muted px-3 py-2 text-sm opacity-50" />}
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs">Centro de Custo</Label>
-                    <SearchableSelect options={centroOptions} value={centroCustoId} onChange={setCentroCustoId} placeholder="Selecione" disabled={terminal} />
+                    {!terminal && <SearchableSelect label="Selecione" options={centroOptions} value={centroIdToLabel.get(centroCustoId) ?? ""} onChange={(v) => setCentroCustoId(centroLabelToId.get(v) ?? "")} />}
+                    {terminal && <input type="text" disabled value={centroIdToLabel.get(centroCustoId) ?? ""} className="w-full rounded-md border border-input bg-muted px-3 py-2 text-sm opacity-50" />}
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs">Tipo Atendimento</Label>
@@ -406,7 +414,8 @@ export function OsForm({ osId, initialAppointmentId, onCreated }: OsFormProps) {
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs">Posição Inicial</Label>
-                    <SearchableSelect options={posicaoOptions} value={posicaoInicial} onChange={setPosicaoInicial} placeholder="Selecione" disabled={terminal} />
+                    {!terminal && <SearchableSelect label="Selecione" options={posicaoOptions} value={posicaoCodeToLabel.get(posicaoInicial) ?? ""} onChange={(v) => setPosicaoInicial(posicaoLabelToCode.get(v) ?? "")} />}
+                    {terminal && <input type="text" disabled value={posicaoCodeToLabel.get(posicaoInicial) ?? ""} className="w-full rounded-md border border-input bg-muted px-3 py-2 text-sm opacity-50" />}
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs">Condutor / Operador</Label>
