@@ -23,12 +23,10 @@ import {
   ChevronDown,
   Download,
   LogOut,
-  Moon,
   Plus,
   RotateCcw,
   Search,
   Settings,
-  Sun,
   Upload,
   Users,
   Wrench,
@@ -347,7 +345,6 @@ export function MaintenanceDashboard({ onSignOut, currentUser, mode = "agenda", 
   const [syncSnap, setSyncSnap] = useState<SyncSnapshot | null>(null);
   const syncStatus = useServerFn(getSglocSyncStatus);
   const freshness = agendaWarnings({ loadedAt, now: nowTick, loadFailed, sync: syncSnap });
-  const [dark, setDark] = useState(false);
   const [catalog, setCatalog] = useState<Catalog>(emptyCatalog);
   const inputRef = useRef<HTMLInputElement>(null);
   const batchInputRef = useRef<HTMLInputElement>(null);
@@ -893,7 +890,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser, mode = "agenda", 
   const renderCard = (item: Appointment) => (<article key={item.dbId} className="overflow-hidden rounded-md border bg-card shadow-sm transition hover:-translate-y-0.5 hover:border-accent"><div className="p-3"><div className="flex items-center justify-between"><span className="text-xs font-bold text-accent-foreground">{dash(normalizeTime(item.time))}</span><span className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold", serviceCategory(item.issue) === "Revisão" ? "bg-service-review text-service-review-foreground" : "bg-service-repair text-service-repair-foreground")}>{serviceCategory(item.issue)}</span></div><Button variant="link" className="mt-1 min-h-11 h-auto px-0 font-bold text-primary" onClick={() => openVehicle(item.plate)}>{item.plate || "Não informado"}<ChevronRight className="size-4" /></Button><p className="truncate text-xs text-muted-foreground">{dash(item.model)}</p><p className="mt-2 truncate text-xs font-medium">{dash(item.contact)}</p><p className="mt-1 line-clamp-2 whitespace-normal text-[11px] leading-4 text-muted-foreground">{dash(item.issue)}</p><div className="mt-2 flex flex-wrap gap-1">{item.priorityUrgent && item.status !== completion && <UrgentBadge />}{item.reworkOf && <ReworkBadge />}{isEmergency(item.scheduleType) && <EmergencyBadge />}<DeadlineBadge item={item} completedAt={completedAtById[item.dbId]} today={today} completion={completion} /></div><Button variant="ghost" size="sm" className="mt-2 w-full justify-between text-primary" onClick={() => setSelected(item)}>Abrir agendamento<ChevronRight className="size-4" /></Button></div><div className={cn("border-t px-3 py-2 text-xs font-semibold", statusProps(item.status, statuses).className)} style={statusProps(item.status, statuses).style}>{item.status || "Situação não atualizada"}</div></article>);
 
   return (
-    <div className={cn("min-h-screen overflow-x-hidden bg-background text-foreground", dark && "dark")}>
+    <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
       <header className="border-b bg-primary text-primary-foreground">
         <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-4 px-5 py-4 lg:px-8">
           <div className="flex items-center gap-3"><img src={phoenixAsset.url} alt="ANPEXC" className="size-10 object-contain" /><div><p className="text-xl font-bold">ANPEXC</p><p className="text-xs text-primary-foreground/70">Gestão de Agendamentos</p></div></div>
@@ -907,7 +904,6 @@ export function MaintenanceDashboard({ onSignOut, currentUser, mode = "agenda", 
             {currentUser.role === "master" && !workshopMode && <Button variant="secondary" onClick={() => setTrashOpen(true)}><Trash2 /> Lixeira</Button>}
             {canCreate && <Button variant="secondary" onClick={() => inputRef.current?.click()}><Upload /> Importar agenda</Button>}
             <input ref={inputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(event) => importFile(event.target.files?.[0])} />
-            <Button variant="ghost" size="icon" onClick={() => setDark((value) => !value)} className="text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground" aria-label="Alternar tema">{dark ? <Sun /> : <Moon />}</Button>
             {onSignOut && <Button variant="ghost" size="icon" onClick={onSignOut} className="text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground" aria-label="Sair"><LogOut /></Button>}
           </div>
         </div>

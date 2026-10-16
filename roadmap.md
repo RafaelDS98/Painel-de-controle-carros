@@ -51,3 +51,11 @@
 - [ ] Filtro Categoria do Veículo na consulta de O.S.
 - [x] Confirmar ID SGLOC da loja "11" (usado 11 provisoriamente)
 - [x] Logo ANPEXC na tela de login (logo completa), no topo do painel (marca da fênix) e ícone do site (favicon)
+
+## Camada visual (prompt de evolução do painel — escopo: visual + dashboard, sem módulos novos)
+- [x] Shell com sidebar fixa colapsável + topbar (breadcrumb, busca Ctrl+K, tema, usuário) em todas as telas autenticadas; itens futuros (Frota, Motoristas, Contratos, Financeiro, Relatórios) visíveis desabilitados.
+- [x] Dark mode global persistente (localStorage "theme", anti-flash no carregamento) migrado do painel da Agenda para o hook use-theme.
+- [x] Dashboard Home em /dashboard com KPIs reais (veículos ativos, agendamentos 30 dias, O.S. em aberto, prazos vencidos), gráfico de agendamentos por dia, veículos por situação e últimas O.S.
+- [x] Tokens visuais novos (accent-brand, accent-warm, row-hover/selected, kpi-number) em oklch para os dois temas.
+- [x] Link "Não tem conta? Cadastre-se" na tela de login com contraste maior (fonte clara).
+- [ ] Módulos Frota (lista), Motoristas, Contratos, Financeiro, Relatórios — aguardando dados/tabelas (frota: decidir lista própria).

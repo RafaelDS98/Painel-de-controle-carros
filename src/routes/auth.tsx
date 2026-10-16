@@ -67,7 +67,7 @@ function AuthPage() {
         <Input type="password" placeholder="Senha" value={password} onChange={(e) => setPassword(e.target.value)} minLength={6} required />
         {message && <p className="text-sm text-muted-foreground">{message}</p>}
         <Button type="submit" className="w-full" disabled={loading}>{mode === "login" ? "Entrar" : "Cadastrar"}</Button>
-        <Button type="button" variant="link" className="w-full" onClick={() => { setMode(mode === "login" ? "signup" : "login"); setMessage(""); }}>
+        <Button type="button" variant="link" className="w-full font-medium text-foreground hover:text-foreground" onClick={() => { setMode(mode === "login" ? "signup" : "login"); setMessage(""); }}>
           {mode === "login" ? "Não tem conta? Cadastre-se" : "Já tem conta? Entrar"}
         </Button>
       </form>
