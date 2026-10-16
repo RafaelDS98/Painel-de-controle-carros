@@ -46,3 +46,7 @@
 - [x] Consultas → Veículos / O.S.: busca detalhada de O.S. com filtros do SGLOC, total e Excel; 2.082 O.S. importadas (01/08–16/10/2026); montadoras cadastradas.
 - [ ] Lojas das O.S. importadas — aguardando lista completa de lojas (código e nome) e planilha com a coluna Loja.
 - [ ] Filtros sem dados ainda: montadora por O.S., categoria do veículo, cliente/peça cadastrados.
+
+- [x] Frota (vehicles) importada, 3 lojas, Nova O.S. com autocompletar placa e busca em Oficina/Centro de custo, botões Nova O.S./Gerar O.S. na Agenda
+- [ ] Filtro Categoria do Veículo na consulta de O.S.
+- [ ] Confirmar ID SGLOC da loja "11" (usado 11 provisoriamente)
