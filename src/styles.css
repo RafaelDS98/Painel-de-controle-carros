@@ -83,7 +83,6 @@
   --color-status-purple: var(--status-purple);
   --color-status-purple-foreground: var(--status-purple-foreground);
   --color-status-gray: var(--status-gray);
-  --color-status-gray: var(--status-gray);
   --color-status-gray-foreground: var(--status-gray-foreground);
   --color-accent-brand: var(--accent-brand);
   --color-accent-brand-foreground: var(--accent-brand-foreground);
@@ -93,6 +92,8 @@
   --color-row-selected: var(--row-selected);
   --color-row-selected-border: var(--row-selected-border);
   --color-kpi-number: var(--kpi-number);
+}
+
 
 :root {
   --radius: 0.5rem;
