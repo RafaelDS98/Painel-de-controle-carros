@@ -8,9 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { OsConsultaPanel } from "@/components/os-consulta";
+import { SearchableSelect } from "@/components/searchable-select";
 import { itemTotal, money, osDate, parseSearch, TIPO_ATENDIMENTO, type OsItem, type OsRow } from "@/lib/os";
 
 type Opt = { id: string | number; label: string };
+type Vehicle = { plate: string; modelo: string | null; fabricante: string | null; categoria: string | null; km_atual: number | null; loja_op: string | null; ano: number | null };
 type Config = { tipos: Opt[]; status: (Opt & { color?: string; allows_finalize?: boolean })[]; centros: Opt[]; stores: Opt[]; workshops: Opt[]; mechanics: string[] };
 
 /** Remove campos vazios antes de chamar o banco. */
@@ -89,6 +91,15 @@ export function OsNewPage({ appointmentId }: { appointmentId?: string | undefine
       return data;
     },
   });
+  const vehicles = useQuery({
+    queryKey: ["vehicles-lite"],
+    queryFn: async (): Promise<Vehicle[]> => {
+      const { data, error } = await supabase.from("vehicles").select("plate, modelo, fabricante, categoria, km_atual, loja_op, ano").eq("active", true).order("plate").limit(5000);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const normPlate = (v: string) => v.toUpperCase().replace(/[^A-Z0-9]/g, "");
   const [f, setF] = useState({ plate: "", km: "", store_id: "", workshop_id: "", tipo_id: "", centro_custo_id: "", tipo_atendimento: "N", previsao_conclusao: "", condutor_nome: "", condutor_contato: "", solicitante: "", externa_ref: "", obs1: "" });
   const [filled, setFilled] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -98,6 +109,18 @@ export function OsNewPage({ appointmentId }: { appointmentId?: string | undefine
     setFilled(true);
   }
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
+  const vehicle = vehicles.data?.find((v) => normPlate(v.plate) === normPlate(f.plate)) ?? null;
+  function setPlate(value: string) {
+    const v = vehicles.data?.find((x) => normPlate(x.plate) === normPlate(value));
+    if (!v) { setF({ ...f, plate: value }); return; }
+    const store = config.data?.stores.find((s) => s.label.split(" — ")[0] === v.loja_op);
+    setF({ ...f, plate: v.plate, km: f.km || (v.km_atual ? String(v.km_atual) : ""), store_id: f.store_id || (store ? String(store.id) : "") });
+  }
+  const pick = (k: "workshop_id" | "centro_custo_id", list: Opt[] | undefined) => ({
+    value: list?.find((o) => String(o.id) === f[k])?.label ?? "",
+    options: (list ?? []).map((o) => o.label),
+    onChange: (label: string) => setF({ ...f, [k]: String(list?.find((o) => o.label === label)?.id ?? "") }),
+  });
   async function save() {
     const missing = [!f.plate && "Placa", !f.km && "KM", !f.store_id && "Loja", !f.workshop_id && "Oficina", !f.tipo_id && "Tipo", !f.centro_custo_id && "Centro de custo"].filter(Boolean);
     if (missing.length) { toast.error(`Preencha: ${missing.join(", ")}.`); return; }
@@ -118,13 +141,15 @@ export function OsNewPage({ appointmentId }: { appointmentId?: string | undefine
   return <Shell title="Nova Ordem de Serviço" back>
     {appt.data?.os_number && <p className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm">Este agendamento já tem a O.S. {appt.data.os_number}.</p>}
     <div className="grid gap-3 rounded-lg border bg-card p-4 sm:grid-cols-2 lg:grid-cols-3">
-      <div><Label>Placa *</Label><Input value={f.plate} onChange={set("plate")} /></div>
+      <div><Label>Placa *</Label><Input list="os-plates" value={f.plate} onChange={(e) => setPlate(e.target.value)} placeholder="Digite a placa" />
+        <datalist id="os-plates">{vehicles.data?.map((v) => <option key={v.plate} value={v.plate}>{[v.modelo, v.categoria].filter(Boolean).join(" · ")}</option>)}</datalist>
+        {f.plate && <p className="mt-1 text-xs text-muted-foreground">{vehicle ? [vehicle.fabricante, vehicle.modelo, vehicle.ano, vehicle.categoria, vehicle.km_atual != null ? `KM atual ${vehicle.km_atual}` : null, vehicle.loja_op ? `Loja ${vehicle.loja_op}` : null].filter(Boolean).join(" · ") : "Placa não encontrada na frota."}</p>}</div>
       <div><Label>KM *</Label><Input value={f.km} onChange={set("km")} inputMode="numeric" /></div>
       <div><Label>Tipo de atendimento</Label><select className={sel} value={f.tipo_atendimento} onChange={set("tipo_atendimento")}>{Object.entries(TIPO_ATENDIMENTO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
       <div><Label>Loja *</Label><select className={sel} value={f.store_id} onChange={set("store_id")}><option value="">Selecione</option>{c?.stores.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}</select></div>
-      <div><Label>Oficina *</Label><select className={sel} value={f.workshop_id} onChange={set("workshop_id")}><option value="">Selecione</option>{c?.workshops.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}</select></div>
+      <div><Label>Oficina *</Label><div className="flex"><SearchableSelect label="Selecione" {...pick("workshop_id", c?.workshops)} /></div></div>
       <div><Label>Tipo de O.S. *</Label><select className={sel} value={f.tipo_id} onChange={set("tipo_id")}><option value="">Selecione</option>{c?.tipos.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}</select></div>
-      <div><Label>Centro de custo *</Label><select className={sel} value={f.centro_custo_id} onChange={set("centro_custo_id")}><option value="">Selecione</option>{c?.centros.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}</select></div>
+      <div><Label>Centro de custo *</Label><div className="flex"><SearchableSelect label="Selecione" {...pick("centro_custo_id", c?.centros)} /></div></div>
       <div><Label>Previsão de conclusão</Label><Input type="date" value={f.previsao_conclusao} onChange={set("previsao_conclusao")} /></div>
       <div><Label>O.S. externa</Label><Input value={f.externa_ref} onChange={set("externa_ref")} /></div>
       <div><Label>Condutor</Label><Input value={f.condutor_nome} onChange={set("condutor_nome")} /></div>
