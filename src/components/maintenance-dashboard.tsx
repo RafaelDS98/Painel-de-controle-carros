@@ -21,6 +21,7 @@ import {
   CalendarDays,
   CarFront,
   ChevronDown,
+  ChevronUp,
   Download,
   LogOut,
   Plus,
@@ -658,6 +659,7 @@ export function MaintenanceDashboard({
     setGridStart(null);
   }, [startDate, endDate]);
   const [selected, setSelected] = useState<Appointment | null>(null);
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(() => new Set());
   const [trashOpen, setTrashOpen] = useState(false);
   const [chartSel, setChartSel] = useState<ChartSelection>({});
   useEffect(() => {
@@ -1952,14 +1954,23 @@ export function MaintenanceDashboard({
                   }))
               : [];
 
-  const renderCard = (item: Appointment) => (
+  const renderCard = (item: Appointment) => {
+    const isOpen = expandedCards.has(item.dbId);
+    const toggleCard = () =>
+      setExpandedCards((prev) => {
+        const next = new Set(prev);
+        if (next.has(item.dbId)) next.delete(item.dbId);
+        else next.add(item.dbId);
+        return next;
+      });
+    return (
     <article
       key={item.dbId}
-      className="overflow-hidden rounded-md border bg-card shadow-sm transition hover:-translate-y-0.5 hover:border-accent"
+      className="overflow-hidden rounded-md border bg-card shadow-sm transition hover:border-accent"
     >
       <div className="p-3">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-bold text-accent-foreground">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs font-bold text-foreground">
             {dash(normalizeTime(item.time))}
           </span>
           <span
@@ -1973,38 +1984,52 @@ export function MaintenanceDashboard({
             {serviceCategory(item.issue)}
           </span>
         </div>
-        <Button
-          variant="link"
-          className="mt-1 min-h-11 h-auto px-0 font-bold text-primary"
-          onClick={() => openVehicle(item.plate)}
-        >
-          {item.plate || "Não informado"}
-          <ChevronRight className="size-4" />
-        </Button>
-        <p className="truncate text-xs text-muted-foreground">{dash(item.model)}</p>
-        <p className="mt-2 truncate text-xs font-medium">{dash(item.contact)}</p>
-        <p className="mt-1 line-clamp-2 whitespace-normal text-[11px] leading-4 text-muted-foreground">
-          {dash(item.issue)}
-        </p>
-        <div className="mt-2 flex flex-wrap gap-1">
-          {item.priorityUrgent && item.status !== completion && <UrgentBadge />}
-          {item.reworkOf && <ReworkBadge />}
-          {isEmergency(item.scheduleType) && <EmergencyBadge />}
-          <DeadlineBadge
-            item={item}
-            completedAt={completedAtById[item.dbId]}
-            today={today}
-            completion={completion}
-          />
+        <div className="mt-1 flex items-center justify-between gap-1">
+          <button
+            type="button"
+            className="min-w-0 truncate text-left text-sm font-bold text-foreground hover:underline"
+            onClick={() => openVehicle(item.plate)}
+          >
+            {item.plate || "Não informado"}
+          </button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7 shrink-0 text-foreground"
+            aria-label={isOpen ? "Recolher detalhes" : "Expandir detalhes"}
+            aria-expanded={isOpen}
+            onClick={toggleCard}
+          >
+            {isOpen ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+          </Button>
         </div>
+        <p className="truncate text-xs text-muted-foreground">{dash(item.model)}</p>
+        {isOpen && (
+          <>
+            <p className="mt-2 truncate text-xs font-medium">{dash(item.contact)}</p>
+            <p className="mt-1 line-clamp-2 whitespace-normal text-[11px] leading-4 text-muted-foreground">
+              {dash(item.issue)}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-1">
+              {item.priorityUrgent && item.status !== completion && <UrgentBadge />}
+              {item.reworkOf && <ReworkBadge />}
+              {isEmergency(item.scheduleType) && <EmergencyBadge />}
+              <DeadlineBadge
+                item={item}
+                completedAt={completedAtById[item.dbId]}
+                today={today}
+                completion={completion}
+              />
+            </div>
+          </>
+        )}
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
-          className="mt-2 w-full justify-between text-primary"
+          className="mt-2 h-8 w-full justify-center gap-1 px-2 text-xs text-foreground"
           onClick={() => setSelected(item)}
         >
           Abrir agendamento
-          <ChevronRight className="size-4" />
         </Button>
       </div>
       <div
@@ -2017,7 +2042,8 @@ export function MaintenanceDashboard({
         {item.status || "Situação não atualizada"}
       </div>
     </article>
-  );
+    );
+  };
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
@@ -2524,6 +2550,28 @@ export function MaintenanceDashboard({
                 >
                   Hoje
                 </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-foreground"
+                  onClick={() =>
+                    setExpandedCards((prev) =>
+                      prev.size > 0
+                        ? new Set()
+                        : new Set([...week.days.flat(), ...week.noDate].map((row) => row.dbId)),
+                    )
+                  }
+                >
+                  {expandedCards.size > 0 ? (
+                    <>
+                      <ChevronUp className="size-4" /> Recolher todos
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="size-4" /> Expandir todos
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
             <div className="grid min-w-0 gap-3 md:grid-cols-3 xl:grid-cols-6">
@@ -2933,7 +2981,7 @@ export function MaintenanceDashboard({
                       <td className="px-4 py-3 font-bold">
                         <Button
                           variant="link"
-                          className="min-h-11 h-auto px-0 font-bold text-primary"
+                          className="min-h-11 h-auto px-0 font-bold text-foreground"
                           onClick={(event) => {
                             event.stopPropagation();
                             openVehicle(item.plate);
