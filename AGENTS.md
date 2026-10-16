@@ -33,3 +33,6 @@
 - Mudanças de banco (tabelas, triggers, RLS, funções) viram arquivo em drizzle/migrations e SQL entregue ao Rafael, que aplica no SQL Editor do Supabase; só depois a tela que depende delas é enviada. A verdade do banco é o que está em produção.
 - Ao terminar cada mudança, atualizar este arquivo (decisão técnica nova) e o roadmap.md (item concluído ou pendente) para a próxima sessão continuar de onde parou.
 - Envio ao SGLOC nunca é silencioso: com integração ou escrita desligada, criação/reenvio fica `push_failed` com o motivo e o botão "Reenviar" (pushAppointmentToSgloc); só atualização sem sgloc_reference é ignorada.
+- Layout autenticado vive no shell `src/components/layout/layout-shell.tsx` (sidebar fixa colapsável + topbar com breadcrumb/busca Ctrl+K), envolvido por `_authenticated/route.tsx`; módulos futuros aparecem desabilitados ("Em breve") na sidebar — novas rotas devem entrar na NAV/SECTION_LABELS do shell.
+- Tema claro/escuro é global (hook `src/hooks/use-theme.ts`, classe `.dark` no `<html>`, persistido em localStorage "theme" com script anti-flash no `__root.tsx`); o painel da Agenda não mantém tema próprio e gráficos leem `--chart-*` via `useChartColors`.
+- Dashboard Home fica em `/dashboard` com KPIs reais (veículos, agendamentos 30d, O.S., prazos vencidos); a Agenda continua sendo a home `/`.
