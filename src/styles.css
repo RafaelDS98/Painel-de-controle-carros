@@ -83,8 +83,16 @@
   --color-status-purple: var(--status-purple);
   --color-status-purple-foreground: var(--status-purple-foreground);
   --color-status-gray: var(--status-gray);
+  --color-status-gray: var(--status-gray);
   --color-status-gray-foreground: var(--status-gray-foreground);
-}
+  --color-accent-brand: var(--accent-brand);
+  --color-accent-brand-foreground: var(--accent-brand-foreground);
+  --color-accent-warm: var(--accent-warm);
+  --color-accent-warm-foreground: var(--accent-warm-foreground);
+  --color-row-hover: var(--row-hover);
+  --color-row-selected: var(--row-selected);
+  --color-row-selected-border: var(--row-selected-border);
+  --color-kpi-number: var(--kpi-number);
 
 :root {
   --radius: 0.5rem;
@@ -136,6 +144,14 @@
   --status-purple-foreground: oklch(0.36 0.11 310);
   --status-gray: oklch(0.91 0.01 255);
   --status-gray-foreground: oklch(0.36 0.02 255);
+  --accent-brand: oklch(0.65 0.25 350);
+  --accent-brand-foreground: oklch(0.98 0.01 350);
+  --accent-warm: oklch(0.72 0.18 55);
+  --accent-warm-foreground: oklch(0.25 0.05 55);
+  --row-hover: oklch(0.97 0.005 250);
+  --row-selected: oklch(0.96 0.03 350);
+  --row-selected-border: oklch(0.65 0.25 350);
+  --kpi-number: oklch(0.22 0.028 256);
   --sidebar: oklch(0.984 0.003 247.858);
   --sidebar-foreground: oklch(0.129 0.042 264.695);
   --sidebar-primary: oklch(0.208 0.042 265.755);
@@ -195,6 +211,14 @@
   --status-purple-foreground: oklch(0.92 0.06 310);
   --status-gray: oklch(0.32 0.02 255);
   --status-gray-foreground: oklch(0.91 0.01 255);
+  --accent-brand: oklch(0.65 0.25 350);
+  --accent-brand-foreground: oklch(0.98 0.01 350);
+  --accent-warm: oklch(0.72 0.18 55);
+  --accent-warm-foreground: oklch(0.25 0.05 55);
+  --row-hover: oklch(0.25 0.02 255);
+  --row-selected: oklch(0.22 0.06 350);
+  --row-selected-border: oklch(0.65 0.25 350);
+  --kpi-number: oklch(0.984 0.003 247.858);
   --sidebar: oklch(0.208 0.042 265.755);
   --sidebar-foreground: oklch(0.984 0.003 247.858);
   --sidebar-primary: oklch(0.488 0.243 264.376);
@@ -214,5 +238,6 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
+    transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease;
   }
 }
