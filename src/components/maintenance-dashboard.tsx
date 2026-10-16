@@ -2314,7 +2314,7 @@ export function MaintenanceDashboard({
                 className="pl-9"
               />
             </label>
-            <div className="flex h-9 min-w-0 flex-1 items-center gap-1 rounded-md border border-input bg-background px-2 sm:min-w-64">
+            <div className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-md border border-input bg-background px-2 sm:min-w-64">
               <Input
                 type="date"
                 aria-label="Data inicial"
@@ -2326,8 +2326,8 @@ export function MaintenanceDashboard({
                 }}
                 className="w-full min-w-0 flex-1 border-0 bg-transparent px-1 shadow-none"
               />
-              <span aria-hidden="true" className="shrink-0 text-xs text-muted-foreground">
-                a
+              <span aria-hidden="true" className="shrink-0 px-1 text-xs text-muted-foreground">
+                até
               </span>
               <Input
                 type="date"

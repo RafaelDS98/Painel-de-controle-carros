@@ -62,8 +62,9 @@
 - [x] Botão "Nova O.S." legível na barra da Agenda nos dois temas (variante `outline` passou a definir a cor do texto).
 - [ ] Módulos Frota (lista), Motoristas, Contratos, Financeiro, Relatórios — aguardando dados/tabelas (frota: decidir lista própria).
 - [x] Agenda: campos de data inicial/final lado a lado numa única caixa de período; ícone do calendário branco no tema escuro e pop-up nativo escuro.
-- [ ] Dashboard: KPIs e gráficos com retorno ao passar o mouse e seleção estilo Power BI (clicar destaca, clicar de novo limpa, Ctrl soma, faixa de chips).
-- [ ] Dashboard: pop-up de detalhamento ao clicar (veículos, agendamentos do dia, O.S., prazos) com campo de pesquisa por placa/modelo.
-- [ ] Dashboard: no pop-up, marcar por caixinha (um, alguns ou todos os carros) e usar a marcação como filtro/exportação.
-- [ ] Agenda: remover a logo repetida e o texto "Gestão de Agendamentos" da barra de ações (a logo já está na lateral); deixar o bloco discreto.
-- [ ] Agenda: botão "Limpar tudo" está fora da caixa de filtros — corrigir e revisar o painel inteiro em busca de outros estouros.
+- [x] Dashboard: KPIs e gráficos com retorno ao passar o mouse e seleção estilo Power BI (clicar destaca, clicar de novo limpa, Ctrl soma, faixa de chips).
+- [x] Dashboard: pop-up de detalhamento ao clicar (veículos, agendamentos, O.S., prazos) com campo de pesquisa por placa/modelo.
+- [x] Dashboard: no pop-up, marcar por caixinha (um, alguns ou todos os carros) e usar a marcação como filtro/exportação.
+- [x] Agenda: remover a logo repetida e o texto "Gestão de Agendamentos" da barra de ações (a logo já está na lateral); deixar o bloco discreto.
+- [x] Agenda: botão "Limpar tudo" corrigido (dentro da caixa) e demais linhas de filtros com quebra para não estourar.
+- [ ] Frota: linha importada por engano "1146 VEÍCULOS" e montadora "MITISHUBISH" — aguardando decisão do Rafael para limpar.
