@@ -37,3 +37,5 @@
 - [ ] Envio ao SGLOC: confirmar no Supabase `sgloc_settings` (enabled e write_enabled = true) e que o operador tem conta SGLOC conectada; criar novo atendimento no painel e ver o resultado (Enviado ao SGLOC / motivo da falha).
 - [ ] Instalar Node/Bun na máquina do Rafael para rodar o painel e os testes localmente.
 
+- [x] Limpar a main: remover pastas de skills do Claude enviadas por engano; especificação de O.S movida para docs/.
+- [ ] Adaptar o módulo de Ordens de Serviço às tabelas reais do banco e zerar erros de tipo.

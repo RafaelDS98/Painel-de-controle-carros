@@ -13,7 +13,18 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedHistoricosRouteImport } from './routes/_authenticated/historicos'
+import { Route as AuthenticatedOrdensServicoRouteImport } from './routes/_authenticated/ordens-servico'
+import { Route as AuthenticatedOrdensServicoIdRouteImport } from './routes/_authenticated/ordens-servico/$id'
+import { Route as AuthenticatedOrdensServicoNovaRouteImport } from './routes/_authenticated/ordens-servico/nova'
 import { Route as AuthenticatedVeiculoPlateRouteImport } from './routes/_authenticated/veiculo.$plate'
+import { Route as ApiOrdensServicoIndexRouteImport } from './routes/api/ordens-servico/index'
+import { Route as ApiOrdensServicoIdRouteImport } from './routes/api/ordens-servico/$id'
+import { Route as ApiOrdensServicoIdAnexosRouteImport } from './routes/api/ordens-servico/$id/anexos'
+import { Route as ApiOrdensServicoIdComprasRouteImport } from './routes/api/ordens-servico/$id/compras'
+import { Route as ApiOrdensServicoIdCotacoesRouteImport } from './routes/api/ordens-servico/$id/cotacoes'
+import { Route as ApiOrdensServicoIdItensRouteImport } from './routes/api/ordens-servico/$id/itens'
+import { Route as ApiOrdensServicoIdObservacoesRouteImport } from './routes/api/ordens-servico/$id/observacoes'
+import { Route as ApiOrdensServicoIdPagamentosRouteImport } from './routes/api/ordens-servico/$id/pagamentos'
 import { Route as ApiPublicHooksSglocSyncRouteImport } from './routes/api/public/hooks/sgloc-sync'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
@@ -35,11 +46,74 @@ const AuthenticatedHistoricosRoute = AuthenticatedHistoricosRouteImport.update({
   path: '/historicos',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedOrdensServicoRoute =
+  AuthenticatedOrdensServicoRouteImport.update({
+    id: '/ordens-servico',
+    path: '/ordens-servico',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedOrdensServicoIdRoute =
+  AuthenticatedOrdensServicoIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedOrdensServicoRoute,
+  } as any)
+const AuthenticatedOrdensServicoNovaRoute =
+  AuthenticatedOrdensServicoNovaRouteImport.update({
+    id: '/nova',
+    path: '/nova',
+    getParentRoute: () => AuthenticatedOrdensServicoRoute,
+  } as any)
 const AuthenticatedVeiculoPlateRoute =
   AuthenticatedVeiculoPlateRouteImport.update({
     id: '/veiculo/$plate',
     path: '/veiculo/$plate',
     getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const ApiOrdensServicoIndexRoute = ApiOrdensServicoIndexRouteImport.update({
+  id: '/api/ordens-servico/',
+  path: '/api/ordens-servico/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiOrdensServicoIdRoute = ApiOrdensServicoIdRouteImport.update({
+  id: '/api/ordens-servico/$id',
+  path: '/api/ordens-servico/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiOrdensServicoIdAnexosRoute =
+  ApiOrdensServicoIdAnexosRouteImport.update({
+    id: '/anexos',
+    path: '/anexos',
+    getParentRoute: () => ApiOrdensServicoIdRoute,
+  } as any)
+const ApiOrdensServicoIdComprasRoute =
+  ApiOrdensServicoIdComprasRouteImport.update({
+    id: '/compras',
+    path: '/compras',
+    getParentRoute: () => ApiOrdensServicoIdRoute,
+  } as any)
+const ApiOrdensServicoIdCotacoesRoute =
+  ApiOrdensServicoIdCotacoesRouteImport.update({
+    id: '/cotacoes',
+    path: '/cotacoes',
+    getParentRoute: () => ApiOrdensServicoIdRoute,
+  } as any)
+const ApiOrdensServicoIdItensRoute = ApiOrdensServicoIdItensRouteImport.update({
+  id: '/itens',
+  path: '/itens',
+  getParentRoute: () => ApiOrdensServicoIdRoute,
+} as any)
+const ApiOrdensServicoIdObservacoesRoute =
+  ApiOrdensServicoIdObservacoesRouteImport.update({
+    id: '/observacoes',
+    path: '/observacoes',
+    getParentRoute: () => ApiOrdensServicoIdRoute,
+  } as any)
+const ApiOrdensServicoIdPagamentosRoute =
+  ApiOrdensServicoIdPagamentosRouteImport.update({
+    id: '/pagamentos',
+    path: '/pagamentos',
+    getParentRoute: () => ApiOrdensServicoIdRoute,
   } as any)
 const ApiPublicHooksSglocSyncRoute = ApiPublicHooksSglocSyncRouteImport.update({
   id: '/api/public/hooks/sgloc-sync',
@@ -51,14 +125,36 @@ export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthRoute
   '/historicos': typeof AuthenticatedHistoricosRoute
+  '/ordens-servico': typeof AuthenticatedOrdensServicoRouteWithChildren
+  '/ordens-servico/$id': typeof AuthenticatedOrdensServicoIdRoute
+  '/ordens-servico/nova': typeof AuthenticatedOrdensServicoNovaRoute
   '/veiculo/$plate': typeof AuthenticatedVeiculoPlateRoute
+  '/api/ordens-servico/$id': typeof ApiOrdensServicoIdRouteWithChildren
+  '/api/ordens-servico/': typeof ApiOrdensServicoIndexRoute
+  '/api/ordens-servico/$id/anexos': typeof ApiOrdensServicoIdAnexosRoute
+  '/api/ordens-servico/$id/compras': typeof ApiOrdensServicoIdComprasRoute
+  '/api/ordens-servico/$id/cotacoes': typeof ApiOrdensServicoIdCotacoesRoute
+  '/api/ordens-servico/$id/itens': typeof ApiOrdensServicoIdItensRoute
+  '/api/ordens-servico/$id/observacoes': typeof ApiOrdensServicoIdObservacoesRoute
+  '/api/ordens-servico/$id/pagamentos': typeof ApiOrdensServicoIdPagamentosRoute
   '/api/public/hooks/sgloc-sync': typeof ApiPublicHooksSglocSyncRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/historicos': typeof AuthenticatedHistoricosRoute
+  '/ordens-servico': typeof AuthenticatedOrdensServicoRouteWithChildren
   '/': typeof AuthenticatedIndexRoute
+  '/ordens-servico/$id': typeof AuthenticatedOrdensServicoIdRoute
+  '/ordens-servico/nova': typeof AuthenticatedOrdensServicoNovaRoute
   '/veiculo/$plate': typeof AuthenticatedVeiculoPlateRoute
+  '/api/ordens-servico/$id': typeof ApiOrdensServicoIdRouteWithChildren
+  '/api/ordens-servico': typeof ApiOrdensServicoIndexRoute
+  '/api/ordens-servico/$id/anexos': typeof ApiOrdensServicoIdAnexosRoute
+  '/api/ordens-servico/$id/compras': typeof ApiOrdensServicoIdComprasRoute
+  '/api/ordens-servico/$id/cotacoes': typeof ApiOrdensServicoIdCotacoesRoute
+  '/api/ordens-servico/$id/itens': typeof ApiOrdensServicoIdItensRoute
+  '/api/ordens-servico/$id/observacoes': typeof ApiOrdensServicoIdObservacoesRoute
+  '/api/ordens-servico/$id/pagamentos': typeof ApiOrdensServicoIdPagamentosRoute
   '/api/public/hooks/sgloc-sync': typeof ApiPublicHooksSglocSyncRoute
 }
 export interface FileRoutesById {
@@ -66,8 +162,19 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/historicos': typeof AuthenticatedHistoricosRoute
+  '/_authenticated/ordens-servico': typeof AuthenticatedOrdensServicoRouteWithChildren
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/ordens-servico/$id': typeof AuthenticatedOrdensServicoIdRoute
+  '/_authenticated/ordens-servico/nova': typeof AuthenticatedOrdensServicoNovaRoute
   '/_authenticated/veiculo/$plate': typeof AuthenticatedVeiculoPlateRoute
+  '/api/ordens-servico/$id': typeof ApiOrdensServicoIdRouteWithChildren
+  '/api/ordens-servico/': typeof ApiOrdensServicoIndexRoute
+  '/api/ordens-servico/$id/anexos': typeof ApiOrdensServicoIdAnexosRoute
+  '/api/ordens-servico/$id/compras': typeof ApiOrdensServicoIdComprasRoute
+  '/api/ordens-servico/$id/cotacoes': typeof ApiOrdensServicoIdCotacoesRoute
+  '/api/ordens-servico/$id/itens': typeof ApiOrdensServicoIdItensRoute
+  '/api/ordens-servico/$id/observacoes': typeof ApiOrdensServicoIdObservacoesRoute
+  '/api/ordens-servico/$id/pagamentos': typeof ApiOrdensServicoIdPagamentosRoute
   '/api/public/hooks/sgloc-sync': typeof ApiPublicHooksSglocSyncRoute
 }
 export interface FileRouteTypes {
@@ -76,28 +183,63 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/historicos'
+    | '/ordens-servico'
+    | '/ordens-servico/$id'
+    | '/ordens-servico/nova'
     | '/veiculo/$plate'
+    | '/api/ordens-servico/$id'
+    | '/api/ordens-servico/'
+    | '/api/ordens-servico/$id/anexos'
+    | '/api/ordens-servico/$id/compras'
+    | '/api/ordens-servico/$id/cotacoes'
+    | '/api/ordens-servico/$id/itens'
+    | '/api/ordens-servico/$id/observacoes'
+    | '/api/ordens-servico/$id/pagamentos'
     | '/api/public/hooks/sgloc-sync'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
     | '/historicos'
+    | '/ordens-servico'
     | '/'
+    | '/ordens-servico/$id'
+    | '/ordens-servico/nova'
     | '/veiculo/$plate'
+    | '/api/ordens-servico/$id'
+    | '/api/ordens-servico'
+    | '/api/ordens-servico/$id/anexos'
+    | '/api/ordens-servico/$id/compras'
+    | '/api/ordens-servico/$id/cotacoes'
+    | '/api/ordens-servico/$id/itens'
+    | '/api/ordens-servico/$id/observacoes'
+    | '/api/ordens-servico/$id/pagamentos'
     | '/api/public/hooks/sgloc-sync'
   id:
     | '__root__'
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/historicos'
+    | '/_authenticated/ordens-servico'
     | '/_authenticated/'
+    | '/_authenticated/ordens-servico/$id'
+    | '/_authenticated/ordens-servico/nova'
     | '/_authenticated/veiculo/$plate'
+    | '/api/ordens-servico/$id'
+    | '/api/ordens-servico/'
+    | '/api/ordens-servico/$id/anexos'
+    | '/api/ordens-servico/$id/compras'
+    | '/api/ordens-servico/$id/cotacoes'
+    | '/api/ordens-servico/$id/itens'
+    | '/api/ordens-servico/$id/observacoes'
+    | '/api/ordens-servico/$id/pagamentos'
     | '/api/public/hooks/sgloc-sync'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiOrdensServicoIdRoute: typeof ApiOrdensServicoIdRouteWithChildren
+  ApiOrdensServicoIndexRoute: typeof ApiOrdensServicoIndexRoute
   ApiPublicHooksSglocSyncRoute: typeof ApiPublicHooksSglocSyncRoute
 }
 
@@ -131,12 +273,89 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHistoricosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/ordens-servico': {
+      id: '/_authenticated/ordens-servico'
+      path: '/ordens-servico'
+      fullPath: '/ordens-servico'
+      preLoaderRoute: typeof AuthenticatedOrdensServicoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/ordens-servico/$id': {
+      id: '/_authenticated/ordens-servico/$id'
+      path: '/$id'
+      fullPath: '/ordens-servico/$id'
+      preLoaderRoute: typeof AuthenticatedOrdensServicoIdRouteImport
+      parentRoute: typeof AuthenticatedOrdensServicoRoute
+    }
+    '/_authenticated/ordens-servico/nova': {
+      id: '/_authenticated/ordens-servico/nova'
+      path: '/nova'
+      fullPath: '/ordens-servico/nova'
+      preLoaderRoute: typeof AuthenticatedOrdensServicoNovaRouteImport
+      parentRoute: typeof AuthenticatedOrdensServicoRoute
+    }
     '/_authenticated/veiculo/$plate': {
       id: '/_authenticated/veiculo/$plate'
       path: '/veiculo/$plate'
       fullPath: '/veiculo/$plate'
       preLoaderRoute: typeof AuthenticatedVeiculoPlateRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/ordens-servico/': {
+      id: '/api/ordens-servico/'
+      path: '/api/ordens-servico'
+      fullPath: '/api/ordens-servico/'
+      preLoaderRoute: typeof ApiOrdensServicoIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ordens-servico/$id': {
+      id: '/api/ordens-servico/$id'
+      path: '/api/ordens-servico/$id'
+      fullPath: '/api/ordens-servico/$id'
+      preLoaderRoute: typeof ApiOrdensServicoIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ordens-servico/$id/anexos': {
+      id: '/api/ordens-servico/$id/anexos'
+      path: '/anexos'
+      fullPath: '/api/ordens-servico/$id/anexos'
+      preLoaderRoute: typeof ApiOrdensServicoIdAnexosRouteImport
+      parentRoute: typeof ApiOrdensServicoIdRoute
+    }
+    '/api/ordens-servico/$id/compras': {
+      id: '/api/ordens-servico/$id/compras'
+      path: '/compras'
+      fullPath: '/api/ordens-servico/$id/compras'
+      preLoaderRoute: typeof ApiOrdensServicoIdComprasRouteImport
+      parentRoute: typeof ApiOrdensServicoIdRoute
+    }
+    '/api/ordens-servico/$id/cotacoes': {
+      id: '/api/ordens-servico/$id/cotacoes'
+      path: '/cotacoes'
+      fullPath: '/api/ordens-servico/$id/cotacoes'
+      preLoaderRoute: typeof ApiOrdensServicoIdCotacoesRouteImport
+      parentRoute: typeof ApiOrdensServicoIdRoute
+    }
+    '/api/ordens-servico/$id/itens': {
+      id: '/api/ordens-servico/$id/itens'
+      path: '/itens'
+      fullPath: '/api/ordens-servico/$id/itens'
+      preLoaderRoute: typeof ApiOrdensServicoIdItensRouteImport
+      parentRoute: typeof ApiOrdensServicoIdRoute
+    }
+    '/api/ordens-servico/$id/observacoes': {
+      id: '/api/ordens-servico/$id/observacoes'
+      path: '/observacoes'
+      fullPath: '/api/ordens-servico/$id/observacoes'
+      preLoaderRoute: typeof ApiOrdensServicoIdObservacoesRouteImport
+      parentRoute: typeof ApiOrdensServicoIdRoute
+    }
+    '/api/ordens-servico/$id/pagamentos': {
+      id: '/api/ordens-servico/$id/pagamentos'
+      path: '/pagamentos'
+      fullPath: '/api/ordens-servico/$id/pagamentos'
+      preLoaderRoute: typeof ApiOrdensServicoIdPagamentosRouteImport
+      parentRoute: typeof ApiOrdensServicoIdRoute
     }
     '/api/public/hooks/sgloc-sync': {
       id: '/api/public/hooks/sgloc-sync'
@@ -148,14 +367,32 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedOrdensServicoRouteChildren {
+  AuthenticatedOrdensServicoIdRoute: typeof AuthenticatedOrdensServicoIdRoute
+  AuthenticatedOrdensServicoNovaRoute: typeof AuthenticatedOrdensServicoNovaRoute
+}
+
+const AuthenticatedOrdensServicoRouteChildren: AuthenticatedOrdensServicoRouteChildren =
+  {
+    AuthenticatedOrdensServicoIdRoute: AuthenticatedOrdensServicoIdRoute,
+    AuthenticatedOrdensServicoNovaRoute: AuthenticatedOrdensServicoNovaRoute,
+  }
+
+const AuthenticatedOrdensServicoRouteWithChildren =
+  AuthenticatedOrdensServicoRoute._addFileChildren(
+    AuthenticatedOrdensServicoRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedHistoricosRoute: typeof AuthenticatedHistoricosRoute
+  AuthenticatedOrdensServicoRoute: typeof AuthenticatedOrdensServicoRouteWithChildren
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedVeiculoPlateRoute: typeof AuthenticatedVeiculoPlateRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedHistoricosRoute: AuthenticatedHistoricosRoute,
+  AuthenticatedOrdensServicoRoute: AuthenticatedOrdensServicoRouteWithChildren,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedVeiculoPlateRoute: AuthenticatedVeiculoPlateRoute,
 }
@@ -163,9 +400,32 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
+interface ApiOrdensServicoIdRouteChildren {
+  ApiOrdensServicoIdAnexosRoute: typeof ApiOrdensServicoIdAnexosRoute
+  ApiOrdensServicoIdComprasRoute: typeof ApiOrdensServicoIdComprasRoute
+  ApiOrdensServicoIdCotacoesRoute: typeof ApiOrdensServicoIdCotacoesRoute
+  ApiOrdensServicoIdItensRoute: typeof ApiOrdensServicoIdItensRoute
+  ApiOrdensServicoIdObservacoesRoute: typeof ApiOrdensServicoIdObservacoesRoute
+  ApiOrdensServicoIdPagamentosRoute: typeof ApiOrdensServicoIdPagamentosRoute
+}
+
+const ApiOrdensServicoIdRouteChildren: ApiOrdensServicoIdRouteChildren = {
+  ApiOrdensServicoIdAnexosRoute: ApiOrdensServicoIdAnexosRoute,
+  ApiOrdensServicoIdComprasRoute: ApiOrdensServicoIdComprasRoute,
+  ApiOrdensServicoIdCotacoesRoute: ApiOrdensServicoIdCotacoesRoute,
+  ApiOrdensServicoIdItensRoute: ApiOrdensServicoIdItensRoute,
+  ApiOrdensServicoIdObservacoesRoute: ApiOrdensServicoIdObservacoesRoute,
+  ApiOrdensServicoIdPagamentosRoute: ApiOrdensServicoIdPagamentosRoute,
+}
+
+const ApiOrdensServicoIdRouteWithChildren =
+  ApiOrdensServicoIdRoute._addFileChildren(ApiOrdensServicoIdRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiOrdensServicoIdRoute: ApiOrdensServicoIdRouteWithChildren,
+  ApiOrdensServicoIndexRoute: ApiOrdensServicoIndexRoute,
   ApiPublicHooksSglocSyncRoute: ApiPublicHooksSglocSyncRoute,
 }
 export const routeTree = rootRouteImport
