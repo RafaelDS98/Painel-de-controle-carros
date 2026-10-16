@@ -524,10 +524,12 @@ export type Database = {
           autorizacao: string | null
           autorizado_cliente: string | null
           centro_custo_id: string | null
+          cliente: string | null
           closed_at: string | null
           condutor_contato: string | null
           condutor_nome: string | null
           contrato_id: number | null
+          contrato_ref: string | null
           created_at: string
           created_by: string | null
           executado: string | null
@@ -538,12 +540,17 @@ export type Database = {
           id: string
           km: number | null
           km_final: number | null
+          modelo: string | null
+          montadora: string | null
           nf: string | null
           numero: number
           obs1: string | null
           obs2: string | null
           opened_at: string
+          operador: string | null
+          origem: string
           pagamento_metodo: string | null
+          pagamento_status: string | null
           pendencia: boolean
           pendencia_desc: string | null
           plate: string
@@ -572,10 +579,12 @@ export type Database = {
           autorizacao?: string | null
           autorizado_cliente?: string | null
           centro_custo_id?: string | null
+          cliente?: string | null
           closed_at?: string | null
           condutor_contato?: string | null
           condutor_nome?: string | null
           contrato_id?: number | null
+          contrato_ref?: string | null
           created_at?: string
           created_by?: string | null
           executado?: string | null
@@ -586,12 +595,17 @@ export type Database = {
           id?: string
           km?: number | null
           km_final?: number | null
+          modelo?: string | null
+          montadora?: string | null
           nf?: string | null
           numero: number
           obs1?: string | null
           obs2?: string | null
           opened_at?: string
+          operador?: string | null
+          origem?: string
           pagamento_metodo?: string | null
+          pagamento_status?: string | null
           pendencia?: boolean
           pendencia_desc?: string | null
           plate: string
@@ -620,10 +634,12 @@ export type Database = {
           autorizacao?: string | null
           autorizado_cliente?: string | null
           centro_custo_id?: string | null
+          cliente?: string | null
           closed_at?: string | null
           condutor_contato?: string | null
           condutor_nome?: string | null
           contrato_id?: number | null
+          contrato_ref?: string | null
           created_at?: string
           created_by?: string | null
           executado?: string | null
@@ -634,12 +650,17 @@ export type Database = {
           id?: string
           km?: number | null
           km_final?: number | null
+          modelo?: string | null
+          montadora?: string | null
           nf?: string | null
           numero?: number
           obs1?: string | null
           obs2?: string | null
           opened_at?: string
+          operador?: string | null
+          origem?: string
           pagamento_metodo?: string | null
+          pagamento_status?: string | null
           pendencia?: boolean
           pendencia_desc?: string | null
           plate?: string
@@ -1654,6 +1675,13 @@ export type Database = {
       norm_plate: { Args: { _v: string }; Returns: string }
       os_archive: { Args: { _os_id: string }; Returns: undefined }
       os_config_list: { Args: never; Returns: Json }
+      os_contrato_match: {
+        Args: {
+          _os: Database["public"]["Tables"]["ordens_servico"]["Row"]
+          _q: string
+        }
+        Returns: boolean
+      }
       os_create: {
         Args: {
           _appointment_id?: string

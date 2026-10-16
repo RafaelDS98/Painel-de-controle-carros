@@ -42,3 +42,7 @@
 - [ ] Cadastrar centros de custo (sem eles não dá para criar O.S.) — aguardando a lista do Rafael.
 - [ ] O.S.: pagamentos, compras, cotações, anexos e envio ao SGLOC (próximas etapas).
 - [x] Plano de próximos passos para reduzir retrabalho (entregue ao Rafael).
+
+- [x] Consultas → Veículos / O.S.: busca detalhada de O.S. com filtros do SGLOC, total e Excel; 2.082 O.S. importadas (01/08–16/10/2026); montadoras cadastradas.
+- [ ] Lojas das O.S. importadas — aguardando lista completa de lojas (código e nome) e planilha com a coluna Loja.
+- [ ] Filtros sem dados ainda: montadora por O.S., categoria do veículo, cliente/peça cadastrados.

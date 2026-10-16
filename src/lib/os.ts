@@ -35,3 +35,14 @@ export function osDate(value: unknown): string {
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
 }
+
+export const PAGAMENTO_STATUS = ["Em aberto", "Pago", "Cortesia"] as const;
+export const NAO_FINALIZADAS = "nao_finalizadas";
+
+/** Converte o formulário da consulta de O.S. no filtro do banco: vazio sai, "Não finalizadas" vira flag, Sim/Não vira booleano. */
+export function osConsultaFilters(draft: Record<string, string>): Record<string, string> {
+  const out = buildFilters(draft);
+  if (out["status_id"] === NAO_FINALIZADAS) { delete out["status_id"]; out["nao_finalizadas"] = "1"; }
+  for (const k of ["recuperado", "com_pendencia"]) if (k in out) out[k] = out[k] === "Sim" ? "true" : "false";
+  return out;
+}
