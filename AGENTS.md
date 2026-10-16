@@ -15,7 +15,7 @@
 - Acesso e papéis ficam em `user_roles`, consultados por funções protegidas no banco — separa privilégio dos dados pessoais e impede autoatribuição.
 - `appointments.id` é uuid; o ID da planilha fica em `sheet_id` — importações podem repetir IDs.
 - Regras de edição por perfil ficam em trigger BEFORE UPDATE em appointments e o histórico em trigger AFTER UPDATE (edit_log só leitura para usuários) — a tela só espelha, o banco decide.
-- Prazos usam datas de calendário em America/Sao_Paulo e a última mudança para a situação marcada como conclusão no edit_log — evita comparar horários UTC como dias locais e mantém a entrega auditável.
+- Prazos usam datas de calendário America/Sao_Paulo; a última mudança = situação de conclusão no edit_log — evita comparar horários UTC como dias locais e mantém a entrega auditável.
 - Retrabalhos são novos agendamentos ligados por `rework_of` e `rework_reason`, nunca atualizações do original — preserva seus limites de edição e histórico.
 - Contatos vão para `contact_log` com o usuário autenticado, lidos via RLS — preserva autoria.
 - Situações e campos opcionais vêm das tabelas de configuração; campos originais continuam em colunas e novos campos ficam em `custom_fields` — permite personalizar sem perder dados ou histórico.
@@ -23,8 +23,7 @@
 - Perfis de usuários são listados e alterados só por funções protegidas no banco que exigem master e impedem alterar o próprio perfil — a tela não grava user_roles diretamente.
 - Excluir agendamento = arquivar (archived_at/archived_by), só master, garantido em trigger e RLS; o painel carrega só ativos (activeOnly, src/lib/agenda-safety.ts) e a dedupe de importação usa existing_sgloc_references (inclui arquivados) — nada é apagado e nada some de uma tela só.
 - Perfil Oficina usa o módulo "oficina" (user_modules decide só pelo perfil): MaintenanceDashboard mode="oficina" esconde criar/importar/lote/excluir/configurar; banco bloqueia INSERT (trigger) e urgência. TEMPORÁRIO: vê/edita todos os ativos (RLS "Oficina reads/updates active"); forwarded_*, workshop_users, sectors e user_sectors sem uso até existir fluxo entre setores.
-- Setor do usuário é só rótulo (profiles.sector, lista catalog_items kind "sector"), sem efeito em módulos, permissões ou RLS.
-- Setor do agendamento = profiles.sector do criador, via appointment_creator_sectors() (só o rótulo) — filtra sem expor dados de usuários.
+- Setor é só rótulo (profiles.sector, lista catalog_items kind "sector"; o do agendamento via appointment_creator_sectors()) — sem efeito em módulos, permissões ou RLS e sem expor dados de usuários.
 - Migrations em drizzle/migrations são histórico já aplicado direto no banco (sem _journal); a verdade é o que está em produção. Tabelas sectors, user_sectors e workshop_users existem mas não são usadas pelo painel.
 
 ## Fluxo de trabalho (Claude direto no GitHub, sem gastar créditos do Lovable)
