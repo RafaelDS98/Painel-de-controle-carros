@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import logoAsset from "@/assets/logo-anpexc.png.asset.json";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -57,9 +58,9 @@ function AuthPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <form onSubmit={submit} className="w-full max-w-sm space-y-4 rounded-lg border bg-card p-8 shadow-sm">
-        <div>
-          <h1 className="text-2xl font-bold text-card-foreground">ANPEXC</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{mode === "login" ? "Entre para acessar a agenda de manutenção." : "Crie sua conta de acesso."}</p>
+        <div className="flex flex-col items-center">
+          <img src={logoAsset.url} alt="ANPEXC — Administração, Negócios, Produção, Excelência e Multiplicação de Conhecimento" className="w-44 max-w-full" />
+          <p className="mt-2 text-center text-sm text-muted-foreground">{mode === "login" ? "Entre para acessar a agenda de manutenção." : "Crie sua conta de acesso."}</p>
         </div>
         {mode === "signup" && <Input placeholder="Nome completo" value={fullName} onChange={(e) => setFullName(e.target.value)} required />}
         <Input type="email" placeholder="E-mail" value={email} onChange={(e) => setEmail(e.target.value)} required />

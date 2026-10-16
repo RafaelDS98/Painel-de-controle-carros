@@ -57,6 +57,7 @@ import { ReworkForm, type ReworkFields } from "@/components/rework-form";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 import { batchChanges, batchColumns, batchIdHeader, batchValidation, type BatchRecord } from "@/lib/bulk-appointments";
+import phoenixAsset from "@/assets/logo-anpexc-marca.png.asset.json";
 import { periodRange, weekRange, pendingDeliveries, type PeriodPreset } from "@/lib/agenda-period";
 import { ContactRegister } from "@/components/contact-register";
 import { AgendaSettings } from "@/components/agenda-settings";
@@ -895,7 +896,7 @@ export function MaintenanceDashboard({ onSignOut, currentUser, mode = "agenda", 
     <div className={cn("min-h-screen overflow-x-hidden bg-background text-foreground", dark && "dark")}>
       <header className="border-b bg-primary text-primary-foreground">
         <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-4 px-5 py-4 lg:px-8">
-          <div className="flex items-center gap-3"><div className="grid size-10 place-items-center rounded-md bg-primary-foreground text-primary"><Wrench className="size-5" /></div><div><p className="text-xl font-bold">ANPEXC</p><p className="text-xs text-primary-foreground/70">Gestão de Agendamentos</p></div></div>
+          <div className="flex items-center gap-3"><img src={phoenixAsset.url} alt="ANPEXC" className="size-10 object-contain" /><div><p className="text-xl font-bold">ANPEXC</p><p className="text-xs text-primary-foreground/70">Gestão de Agendamentos</p></div></div>
           <div className="flex items-center gap-2">
             <button type="button" onClick={() => setAccountOpen(true)} title="Minha conta" className="mr-2 min-h-11 rounded-md px-2 text-right text-sm hover:bg-primary-foreground/10"><p className="font-semibold"><UserCircle className="mr-1 inline size-4" />{currentUser.name}</p><p className="text-xs text-primary-foreground/70">{roleLabels[currentUser.role]} · Minha conta</p></button>
             <MyAccountDialog open={accountOpen} onOpenChange={setAccountOpen} userId={currentUser.id} email={currentUser.email ?? ""} name={currentUser.name} onSaved={() => void queryClientForAccount.invalidateQueries({ queryKey: ["profile", currentUser.id] })} />
