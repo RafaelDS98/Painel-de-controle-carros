@@ -658,6 +658,7 @@ export function MaintenanceDashboard({
     setGridStart(null);
   }, [startDate, endDate]);
   const [selected, setSelected] = useState<Appointment | null>(null);
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(() => new Set());
   const [trashOpen, setTrashOpen] = useState(false);
   const [chartSel, setChartSel] = useState<ChartSelection>({});
   useEffect(() => {
@@ -2040,7 +2041,8 @@ export function MaintenanceDashboard({
         {item.status || "Situação não atualizada"}
       </div>
     </article>
-  );
+    );
+  };
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
@@ -2956,7 +2958,7 @@ export function MaintenanceDashboard({
                       <td className="px-4 py-3 font-bold">
                         <Button
                           variant="link"
-                          className="min-h-11 h-auto px-0 font-bold text-primary"
+                          className="min-h-11 h-auto px-0 font-bold text-foreground"
                           onClick={(event) => {
                             event.stopPropagation();
                             openVehicle(item.plate);
