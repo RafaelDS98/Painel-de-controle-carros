@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { FirstPasswordScreen } from "@/components/first-password";
 import { useEffect, useRef, useState } from "react";
 import { MovementsPanel } from "@/components/movements-panel";
+import { OsConsultaPanel } from "@/components/os-consulta";
 
 export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
@@ -28,6 +29,7 @@ function Index() {
   const [passwordChanged, setPasswordChanged] = useState(false);
   const [tab, setTab] = useState<"agenda" | "oficina" | null>(null);
   const [movements, setMovements] = useState(false);
+  const [sub, setSub] = useState<"veiculos" | "os">("veiculos");
   const [movReq, setMovReq] = useState<{ plate: string; nonce: number } | null>(null);
   const scrolls = useRef<Record<string, number>>({});
   const view = movements ? "mov" : "dash";
@@ -85,15 +87,21 @@ function Index() {
   const tabBtn = (key: string, label: string, on: boolean, click: () => void) => <Button key={key} role="tab" aria-selected={on} variant={on ? "default" : "outline"} onClick={click}>{label}</Button>;
   const tabs = <div role="tablist" aria-label="Módulos" className="flex flex-wrap gap-2">
     {available.map((m) => tabBtn(m, m === "agenda" ? "Agenda" : "Oficina", !movements && m === active, () => { go(false); setTab(m); }))}
-    {tabBtn("mov", "Movimentações", movements, () => go(true))}
+    {tabBtn("mov", "Consultas", movements, () => go(true))}
     <Button variant="outline" onClick={() => navigate({ to: "/ordens-servico" })}>Ordens de Serviço</Button>
   </div>;
   const currentUser = { id: user.id, name: profile.data.full_name || user.email || "Usuário", role: profile.data.role, email: user.email ?? "" };
   return <>
     <div className={movements ? "hidden" : undefined}>
-      <MaintenanceDashboard key={active} mode={active} tabs={tabs} onSignOut={signOut} currentUser={currentUser} onOpenMovements={(plate) => { setMovReq({ plate, nonce: Date.now() }); go(true); }} />
+      <MaintenanceDashboard key={active} mode={active} tabs={tabs} onSignOut={signOut} currentUser={currentUser} onOpenMovements={(plate) => { setMovReq({ plate, nonce: Date.now() }); setSub("veiculos"); go(true); }} />
     </div>
-    {movements && <div className="bg-background text-foreground"><main className="mx-auto max-w-[1600px] space-y-6 px-5 py-6 lg:px-8">{tabs}</main></div>}
-    <div className={movements ? "mx-auto -mt-2 max-w-[1600px] bg-background px-5 pb-10 text-foreground lg:px-8" : "hidden"}><MovementsPanel isMaster={currentUser.role === "master"} request={movReq} /></div>
+    {movements && <div className="bg-background text-foreground"><main className="mx-auto max-w-[1600px] space-y-4 px-5 py-6 lg:px-8">{tabs}
+      <div role="tablist" aria-label="Consultas" className="flex gap-2 border-b pb-2">
+        {tabBtn("sub-v", "Veículos", sub === "veiculos", () => setSub("veiculos"))}
+        {tabBtn("sub-os", "O.S.", sub === "os", () => setSub("os"))}
+      </div>
+    </main></div>}
+    <div className={movements && sub === "veiculos" ? "mx-auto -mt-2 max-w-[1600px] bg-background px-5 pb-10 text-foreground lg:px-8" : "hidden"}><MovementsPanel isMaster={currentUser.role === "master"} request={movReq} /></div>
+    {movements && sub === "os" && <div className="mx-auto -mt-2 max-w-[1600px] bg-background px-5 pb-10 text-foreground lg:px-8"><OsConsultaPanel onOpenPlate={(plate) => { setMovReq({ plate, nonce: Date.now() }); setSub("veiculos"); }} /></div>}
   </>;
 }
