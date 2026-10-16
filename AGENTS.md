@@ -34,3 +34,5 @@
 - Envio ao SGLOC nunca é silencioso: com integração ou escrita desligada, criação/reenvio fica `push_failed` com o motivo e o botão "Reenviar" (pushAppointmentToSgloc); só atualização sem sgloc_reference é ignorada.
 - Layout autenticado: shell `src/components/layout/layout-shell.tsx` (sidebar colapsável + topbar com breadcrumb e busca Ctrl+K) via `_authenticated/route.tsx`; novas rotas entram na NAV/SECTION_LABELS do shell; módulos futuros ficam desabilitados ("Em breve").
 - Tema global: hook `src/hooks/use-theme.ts` (`.dark` no `<html>`, localStorage "theme", anti-flash em `__root.tsx`); gráficos leem `--chart-*` via `useChartColors`. Dashboard Home em `/dashboard`; Agenda segue como home `/`.
+- Componente de UI define a própria cor de texto pareada ao seu fundo (a variante `outline` do shadcn inclui `text-foreground`) — depender da cor herdada de um contêiner colorido deixa o texto invisível em um dos temas.
+- `src/integrations` é gerado pela plataforma e fica fora do eslint (`eslint.config.js`); o resto do código segue `prettier`, de modo que `bun run lint` termine sem erros — formate antes de commitar.
