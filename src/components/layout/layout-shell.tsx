@@ -383,12 +383,16 @@ export function LayoutShell({
               ))}
             </BreadcrumbList>
           </Breadcrumb>
-          <div className="ml-auto flex items-center gap-1">
+          <div
+            id="topbar-actions"
+            className="mx-2 flex min-w-0 flex-1 items-center justify-center overflow-x-auto"
+          />
+          <div className="ml-auto flex shrink-0 items-center gap-1">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setSearchOpen(true)}
-              className="gap-2 text-muted-foreground"
+              className="gap-2 bg-primary/15 text-foreground hover:bg-primary/25"
               aria-label="Buscar"
             >
               <Search className="size-4" />
@@ -448,6 +452,9 @@ export function LayoutShell({
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            <Button variant="ghost" size="icon" onClick={() => void signOut()} aria-label="Sair">
+              <LogOut className="size-4" />
+            </Button>
           </div>
         </header>
         <main className="flex-1 p-4 lg:p-6">{children}</main>

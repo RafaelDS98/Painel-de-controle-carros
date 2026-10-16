@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import {
   Area,
   AreaChart,
@@ -659,6 +660,8 @@ export function MaintenanceDashboard({
     setGridStart(null);
   }, [startDate, endDate]);
   const [selected, setSelected] = useState<Appointment | null>(null);
+  const [topbarSlot, setTopbarSlot] = useState<HTMLElement | null>(null);
+  useEffect(() => setTopbarSlot(document.getElementById("topbar-actions")), []);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(() => new Set());
   const [trashOpen, setTrashOpen] = useState(false);
   const [chartSel, setChartSel] = useState<ChartSelection>({});
@@ -1964,183 +1967,155 @@ export function MaintenanceDashboard({
         return next;
       });
     return (
-    <article
-      key={item.dbId}
-      className="overflow-hidden rounded-md border bg-card shadow-sm transition hover:border-accent"
-    >
-      <div className="p-3">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-xs font-bold text-foreground">
-            {dash(normalizeTime(item.time))}
-          </span>
-          <span
-            className={cn(
-              "rounded px-1.5 py-0.5 text-[10px] font-semibold",
-              serviceCategory(item.issue) === "Revisão"
-                ? "bg-service-review text-service-review-foreground"
-                : "bg-service-repair text-service-repair-foreground",
-            )}
-          >
-            {serviceCategory(item.issue)}
-          </span>
-        </div>
-        <div className="mt-1 flex items-center justify-between gap-1">
-          <button
-            type="button"
-            className="min-w-0 truncate text-left text-sm font-bold text-foreground hover:underline"
-            onClick={() => openVehicle(item.plate)}
-          >
-            {item.plate || "Não informado"}
-          </button>
+      <article
+        key={item.dbId}
+        className="overflow-hidden rounded-md border bg-card shadow-sm transition hover:border-accent"
+      >
+        <div className="p-3">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-bold text-foreground">
+              {dash(normalizeTime(item.time))}
+            </span>
+            <span
+              className={cn(
+                "rounded px-1.5 py-0.5 text-[10px] font-semibold",
+                serviceCategory(item.issue) === "Revisão"
+                  ? "bg-service-review text-service-review-foreground"
+                  : "bg-service-repair text-service-repair-foreground",
+              )}
+            >
+              {serviceCategory(item.issue)}
+            </span>
+          </div>
+          <div className="mt-1 flex items-center justify-between gap-1">
+            <button
+              type="button"
+              className="min-w-0 truncate text-left text-sm font-bold text-foreground hover:underline"
+              onClick={() => openVehicle(item.plate)}
+            >
+              {item.plate || "Não informado"}
+            </button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-7 shrink-0 text-foreground"
+              aria-label={isOpen ? "Recolher detalhes" : "Expandir detalhes"}
+              aria-expanded={isOpen}
+              onClick={toggleCard}
+            >
+              {isOpen ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+            </Button>
+          </div>
+          <p className="truncate text-xs text-muted-foreground">{dash(item.model)}</p>
+          {isOpen && (
+            <>
+              <p className="mt-2 truncate text-xs font-medium">{dash(item.contact)}</p>
+              <p className="mt-1 line-clamp-2 whitespace-normal text-[11px] leading-4 text-muted-foreground">
+                {dash(item.issue)}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-1">
+                {item.priorityUrgent && item.status !== completion && <UrgentBadge />}
+                {item.reworkOf && <ReworkBadge />}
+                {isEmergency(item.scheduleType) && <EmergencyBadge />}
+                <DeadlineBadge
+                  item={item}
+                  completedAt={completedAtById[item.dbId]}
+                  today={today}
+                  completion={completion}
+                />
+              </div>
+            </>
+          )}
           <Button
-            variant="ghost"
-            size="icon"
-            className="size-7 shrink-0 text-foreground"
-            aria-label={isOpen ? "Recolher detalhes" : "Expandir detalhes"}
-            aria-expanded={isOpen}
-            onClick={toggleCard}
+            variant="outline"
+            size="sm"
+            className="mt-2 h-8 w-full justify-center gap-1 px-2 text-xs text-foreground"
+            onClick={() => setSelected(item)}
           >
-            {isOpen ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+            Abrir agendamento
           </Button>
         </div>
-        <p className="truncate text-xs text-muted-foreground">{dash(item.model)}</p>
-        {isOpen && (
-          <>
-            <p className="mt-2 truncate text-xs font-medium">{dash(item.contact)}</p>
-            <p className="mt-1 line-clamp-2 whitespace-normal text-[11px] leading-4 text-muted-foreground">
-              {dash(item.issue)}
-            </p>
-            <div className="mt-2 flex flex-wrap gap-1">
-              {item.priorityUrgent && item.status !== completion && <UrgentBadge />}
-              {item.reworkOf && <ReworkBadge />}
-              {isEmergency(item.scheduleType) && <EmergencyBadge />}
-              <DeadlineBadge
-                item={item}
-                completedAt={completedAtById[item.dbId]}
-                today={today}
-                completion={completion}
-              />
-            </div>
-          </>
-        )}
-        <Button
-          variant="outline"
-          size="sm"
-          className="mt-2 h-8 w-full justify-center gap-1 px-2 text-xs text-foreground"
-          onClick={() => setSelected(item)}
+        <div
+          className={cn(
+            "border-t px-3 py-2 text-xs font-semibold",
+            statusProps(item.status, statuses).className,
+          )}
+          style={statusProps(item.status, statuses).style}
         >
-          Abrir agendamento
-        </Button>
-      </div>
-      <div
-        className={cn(
-          "border-t px-3 py-2 text-xs font-semibold",
-          statusProps(item.status, statuses).className,
-        )}
-        style={statusProps(item.status, statuses).style}
-      >
-        {item.status || "Situação não atualizada"}
-      </div>
-    </article>
+          {item.status || "Situação não atualizada"}
+        </div>
+      </article>
     );
   };
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
-      <header className="border-b bg-primary text-primary-foreground">
-        <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-4 px-5 py-4 lg:px-8">
-          <div className="flex items-center gap-3">
-            <img src={phoenixAsset.url} alt="ANPEXC" className="size-10 object-contain" />
-            <div>
-              <p className="text-xl font-bold">ANPEXC</p>
-              <p className="text-xs text-primary-foreground/70">Gestão de Agendamentos</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setAccountOpen(true)}
-              title="Minha conta"
-              className="mr-2 min-h-11 rounded-md px-2 text-right text-sm hover:bg-primary-foreground/10"
-            >
-              <p className="font-semibold">
-                <UserCircle className="mr-1 inline size-4" />
-                {currentUser.name}
-              </p>
-              <p className="text-xs text-primary-foreground/70">
-                {roleLabels[currentUser.role]} · Minha conta
-              </p>
-            </button>
-            <MyAccountDialog
-              open={accountOpen}
-              onOpenChange={setAccountOpen}
-              userId={currentUser.id}
-              email={currentUser.email ?? ""}
-              name={currentUser.name}
-              onSaved={() =>
-                void queryClientForAccount.invalidateQueries({
-                  queryKey: ["profile", currentUser.id],
-                })
-              }
-            />
-            {!workshopMode && (
-              <Button asChild variant="secondary">
-                <Link to="/historicos">
-                  <History /> Históricos
-                </Link>
+      {topbarSlot
+        ? createPortal(
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="sm" onClick={() => setAccountOpen(true)}>
+                <UserCircle /> Minha conta
               </Button>
-            )}
-            {currentUser.role === "gerente" && (
-              <Button variant="secondary" onClick={() => setListsOpen(true)}>
-                <ListChecks /> Listas
-              </Button>
-            )}
-            {canCreate && (
-              <Button variant="secondary" onClick={() => setNewOpen(true)}>
-                <Plus /> Novo agendamento
-              </Button>
-            )}
-            {canCreate && (
-              <Button variant="outline" asChild>
-                <Link to="/ordens-servico/nova">Nova O.S.</Link>
-              </Button>
-            )}
-            {currentUser.role === "master" && !workshopMode && (
-              <Button variant="secondary" onClick={() => setSettingsOpen(true)}>
-                <Settings /> Configurações
-              </Button>
-            )}
-            {currentUser.role === "master" && !workshopMode && (
-              <Button variant="secondary" onClick={() => setTrashOpen(true)}>
-                <Trash2 /> Lixeira
-              </Button>
-            )}
-            {canCreate && (
-              <Button variant="secondary" onClick={() => inputRef.current?.click()}>
-                <Upload /> Importar agenda
-              </Button>
-            )}
-            <input
-              ref={inputRef}
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              className="hidden"
-              onChange={(event) => importFile(event.target.files?.[0])}
-            />
-            {onSignOut && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onSignOut}
-                className="text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
-                aria-label="Sair"
-              >
-                <LogOut />
-              </Button>
-            )}
-          </div>
-        </div>
-      </header>
+              <MyAccountDialog
+                open={accountOpen}
+                onOpenChange={setAccountOpen}
+                userId={currentUser.id}
+                email={currentUser.email ?? ""}
+                name={currentUser.name}
+                onSaved={() =>
+                  void queryClientForAccount.invalidateQueries({
+                    queryKey: ["profile", currentUser.id],
+                  })
+                }
+              />
+              {!workshopMode && (
+                <Button asChild variant="ghost" size="sm">
+                  <Link to="/historicos">
+                    <History /> Históricos
+                  </Link>
+                </Button>
+              )}
+              {currentUser.role === "gerente" && (
+                <Button variant="ghost" size="sm" onClick={() => setListsOpen(true)}>
+                  <ListChecks /> Listas
+                </Button>
+              )}
+              {canCreate && (
+                <Button variant="ghost" size="sm" onClick={() => setNewOpen(true)}>
+                  <Plus /> Novo agendamento
+                </Button>
+              )}
+              {canCreate && (
+                <Button variant="outline" size="sm" asChild>
+                  <Link to="/ordens-servico/nova">Nova O.S.</Link>
+                </Button>
+              )}
+              {currentUser.role === "master" && !workshopMode && (
+                <Button variant="ghost" size="sm" onClick={() => setSettingsOpen(true)}>
+                  <Settings /> Configurações
+                </Button>
+              )}
+              {currentUser.role === "master" && !workshopMode && (
+                <Button variant="ghost" size="sm" onClick={() => setTrashOpen(true)}>
+                  <Trash2 /> Lixeira
+                </Button>
+              )}
+              {canCreate && (
+                <Button variant="ghost" size="sm" onClick={() => inputRef.current?.click()}>
+                  <Upload /> Importar agenda
+                </Button>
+              )}
+              <input
+                ref={inputRef}
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                className="hidden"
+                onChange={(event) => importFile(event.target.files?.[0])}
+              />
+            </div>,
+            topbarSlot,
+          )
+        : null}
 
       <main className="mx-auto max-w-[1600px] space-y-6 px-5 py-6 lg:px-8">
         {tabs}
