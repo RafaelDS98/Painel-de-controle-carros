@@ -67,7 +67,7 @@ function Kpi({ icon: Icon, label, value, sub }: { icon: typeof CarFront; label: 
   );
 }
 
-function statusBadgeStyle(color: string | null): { style: React.CSSProperties; className: string } {
+function statusBadgeStyle(color: string | null): { style: CSSProperties; className: string } {
   const hex = typeof color === "string" && /^[0-9a-f]{6}$/i.test(color.replace("#", "")) ? color.replace("#", "") : null;
   if (!hex) return { style: {}, className: "bg-secondary text-secondary-foreground" };
   return { style: { backgroundColor: `#${hex}26`, color: `#${hex}` }, className: "" };
