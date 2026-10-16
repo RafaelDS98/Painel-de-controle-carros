@@ -51,7 +51,7 @@ const input = z.object({
   requireChange: z.boolean().optional().default(false),
 });
 
-async function assertMaster(context: { supabase: any; userId: string }) {
+async function assertMaster(context: Ctx) {
   const { data, error } = await context.supabase
     .from("user_roles")
     .select("role")
