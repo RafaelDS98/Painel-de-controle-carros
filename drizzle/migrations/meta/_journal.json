@@ -169,6 +169,13 @@
       "when": 1792173910014,
       "tag": "0023_os_contrato_ref",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1792173944264,
+      "tag": "0024_os_search_contrato",
+      "breakpoints": true
     }
   ]
 }
