@@ -21,6 +21,7 @@ import {
   CalendarDays,
   CarFront,
   ChevronDown,
+  ChevronUp,
   Download,
   LogOut,
   Plus,
@@ -2546,6 +2547,32 @@ export function MaintenanceDashboard({
                   variant="outline"
                   size="sm"
                   onClick={() => setGridStart(weekRange(today).start)}
+                >
+                  Hoje
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-foreground"
+                  onClick={() =>
+                    setExpandedCards((prev) =>
+                      prev.size > 0
+                        ? new Set()
+                        : new Set([...week.days.flat(), ...week.noDate].map((row) => row.dbId)),
+                    )
+                  }
+                >
+                  {expandedCards.size > 0 ? (
+                    <>
+                      <ChevronUp className="size-4" /> Recolher todos
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="size-4" /> Expandir todos
+                    </>
+                  )}
+                </Button>
+                <Button className="hidden" aria-hidden tabIndex={-1}
                 >
                   Hoje
                 </Button>
