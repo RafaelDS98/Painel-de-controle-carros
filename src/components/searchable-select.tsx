@@ -4,6 +4,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 
+const fold = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+
 /** Filtro pesquisável: digite parte do nome para filtrar a lista. Valor "" = todos. */
 export function SearchableSelect({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) {
   const [open, setOpen] = useState(false);
@@ -16,7 +18,7 @@ export function SearchableSelect({ label, value, options, onChange }: { label: s
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] min-w-56 p-0" align="start">
-        <Command>
+        <Command filter={(value, search) => (fold(value.replace(/__\d+$/, "")).includes(fold(search)) ? 1 : 0)}>
           <CommandInput placeholder="Digite para filtrar…" />
           <CommandList>
             <CommandEmpty>Nada encontrado.</CommandEmpty>
