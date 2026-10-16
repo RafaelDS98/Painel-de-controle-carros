@@ -2572,10 +2572,6 @@ export function MaintenanceDashboard({
                     </>
                   )}
                 </Button>
-                <Button className="hidden" aria-hidden tabIndex={-1}
-                >
-                  Hoje
-                </Button>
               </div>
             </div>
             <div className="grid min-w-0 gap-3 md:grid-cols-3 xl:grid-cols-6">
