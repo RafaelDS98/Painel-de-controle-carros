@@ -86,7 +86,7 @@ function useCrumbs(): { label: string; to?: string }[] {
     for (const part of parts) {
       acc += `/${part}`;
       const known = SECTION_LABELS[acc];
-      out.push({ label: known ?? part.toUpperCase(), to: known ? acc : undefined });
+      out.push(known ? { label: known, to: acc } : { label: part.toUpperCase() });
     }
     return out;
   }, [pathname]);

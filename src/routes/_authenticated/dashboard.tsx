@@ -147,6 +147,8 @@ function DashboardHome() {
         apptsTotal: apptRows.length,
         apptsByDay,
         reworks: apptRows.filter((row) => row.rework_of).length,
+        statusMap,
+        workshopMap,
         osOpen: osOpen.count ?? 0,
         osTotal: osTotal.count ?? 0,
         overdueCount: overdueCount.count ?? 0,
