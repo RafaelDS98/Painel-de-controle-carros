@@ -24,7 +24,7 @@ function errMsg(e: unknown) {
 }
 
 /** Listas usadas pelas telas de O.S.: tudo vem das tabelas reais (configuração de O.S., lojas SGLOC, oficinas e mecânicos). */
-function useOsConfig() {
+export function useOsConfig() {
   return useQuery({
     queryKey: ["os-config"],
     queryFn: async (): Promise<Config> => {
@@ -62,7 +62,7 @@ function Shell({ title, children, back }: { title: string; children: React.React
   </main></div>;
 }
 
-function Badge({ label, color }: { label?: string | null | undefined; color?: string | null | undefined }) {
+export function Badge({ label, color }: { label?: string | null | undefined; color?: string | null | undefined }) {
   const hex = color && /^#[0-9a-f]{6}$/i.test(color) ? color : undefined;
   return <span className="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium">
     <span className="h-2 w-2 rounded-full bg-muted-foreground" style={hex ? { backgroundColor: hex } : undefined} />{label || "—"}

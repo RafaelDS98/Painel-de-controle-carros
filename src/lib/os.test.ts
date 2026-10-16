@@ -16,3 +16,13 @@ describe("ordens de serviço", () => {
     expect(osDate("x")).toBe("—");
   });
 });
+
+import { osConsultaFilters } from "./os";
+describe("consulta de O.S.", () => {
+  it("'Não finalizadas' vira flag e não filtra por situação", () => {
+    expect(osConsultaFilters({ status_id: "nao_finalizadas" })).toEqual({ nao_finalizadas: "1" });
+  });
+  it("Sim/Não vira verdadeiro/falso e vazios saem", () => {
+    expect(osConsultaFilters({ recuperado: "Sim", com_pendencia: "Não", plate: "" })).toEqual({ recuperado: "true", com_pendencia: "false" });
+  });
+});
