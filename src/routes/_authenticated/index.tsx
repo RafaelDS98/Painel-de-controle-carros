@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MaintenanceDashboard } from "@/components/maintenance-dashboard";
+import { WorkshopYard } from "@/components/workshop-yard";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { FirstPasswordScreen } from "@/components/first-password";
@@ -148,18 +149,32 @@ function Index() {
   return (
     <>
       <div className={movements ? "hidden" : undefined}>
-        <MaintenanceDashboard
-          key={active}
-          mode={active}
-          tabs={tabs}
-          onSignOut={signOut}
-          currentUser={currentUser}
-          onOpenMovements={(plate) => {
-            setMovReq({ plate, nonce: Date.now() });
-            setSub("veiculos");
-            go(true);
-          }}
-        />
+        {(active === "oficina" || profile.data.role === "oficina") ? (
+          <WorkshopYard
+            key="yard"
+            currentUser={currentUser}
+            tabs={tabs}
+            onSignOut={signOut}
+            onOpenMovements={(plate) => {
+              setMovReq({ plate, nonce: Date.now() });
+              setSub("veiculos");
+              go(true);
+            }}
+          />
+        ) : (
+          <MaintenanceDashboard
+            key={active}
+            mode={active}
+            tabs={tabs}
+            onSignOut={signOut}
+            currentUser={currentUser}
+            onOpenMovements={(plate) => {
+              setMovReq({ plate, nonce: Date.now() });
+              setSub("veiculos");
+              go(true);
+            }}
+          />
+        )}
       </div>
       {movements && (
         <div className="bg-background text-foreground">

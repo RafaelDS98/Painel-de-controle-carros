@@ -19,8 +19,8 @@ export function FirstPasswordScreen({
   const [busy, setBusy] = useState(false);
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (password.length < 8) {
-      setError("A nova senha precisa ter pelo menos 8 caracteres.");
+    if (password.length < 5) {
+      setError("A nova senha precisa ter pelo menos 5 caracteres.");
       return;
     }
     if (password !== confirm) {

@@ -12,8 +12,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-export function isWeakPassword(value: string) {
-  return value.length > 0 && (value.length < 8 || /^(\d+|[a-z]+)$/i.test(value));
+export function isWeakPassword(_value: string) {
+  return false;
 }
 
 /** Campo de senha com mostrar/ocultar. */
@@ -102,8 +102,8 @@ export function MyAccountDialog({
       setMsg({ error: "Informe a senha atual." });
       return;
     }
-    if (password.length < 6) {
-      setMsg({ error: "A nova senha precisa ter pelo menos 6 caracteres." });
+    if (password.length < 5) {
+      setMsg({ error: "A nova senha precisa ter pelo menos 5 caracteres." });
       return;
     }
     if (password !== confirm) {
