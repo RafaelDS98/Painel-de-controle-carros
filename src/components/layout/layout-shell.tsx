@@ -358,8 +358,8 @@ export function LayoutShell({
           >
             <Menu className="size-5" />
           </Button>
-          <Breadcrumb>
-            <BreadcrumbList>
+          <Breadcrumb className="min-w-0 flex-1">
+            <BreadcrumbList className="flex-wrap">
               <BreadcrumbItem>
                 <BreadcrumbLink asChild>
                   <Link to="/dashboard">ANPEXC</Link>
@@ -368,7 +368,7 @@ export function LayoutShell({
               {crumbs.map((crumb, index) => (
                 <span key={`${crumb.label}-${index}`} className="contents">
                   <BreadcrumbSeparator />
-                  <BreadcrumbItem>
+                  <BreadcrumbItem className="max-w-[200px] truncate">
                     {index === crumbs.length - 1 ? (
                       <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
                     ) : (
