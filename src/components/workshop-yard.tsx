@@ -712,18 +712,14 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
       </main>
 
       {forwardId && (
-        <div className="fixed bottom-4 right-4 z-40 rounded-md border bg-card p-3">
           <ForwardWorkshop
+            initiallyOpen
             appointmentId={forwardId}
+            onClose={()=>setForwardId("")}
             onDone={() => {
-              setForwardId("");
               void loadData();
             }}
           />
-          <Button variant="ghost" size="sm" onClick={() => setForwardId("")}>
-            Fechar
-          </Button>
-        </div>
       )}
       {/* Check-in Sheet */}
       <CheckInSheet

@@ -19,11 +19,15 @@ import { Wrench } from "lucide-react";
 export function ForwardWorkshop({
   appointmentId,
   onDone,
+  initiallyOpen = false,
+  onClose,
 }: {
   appointmentId: string;
   onDone?: () => void;
+  initiallyOpen?: boolean;
+  onClose?: () => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initiallyOpen);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ id: string; numero: number } | null>(null);
   const [f, setF] = useState({ workshop: "", store: "", tipo: "", centro: "", km: "" });
@@ -97,7 +101,7 @@ export function ForwardWorkshop({
   }
   return (
     <>
-      <Button
+      {!initiallyOpen && <Button
         variant="outline"
         onClick={() => {
           setOpen(true);
@@ -105,8 +109,8 @@ export function ForwardWorkshop({
         }}
       >
         <Wrench /> Encaminhar para oficina
-      </Button>
-      <Dialog open={open} onOpenChange={setOpen}>
+      </Button>}
+      <Dialog open={open} onOpenChange={value=>{setOpen(value);if(!value)onClose?.();}}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Encaminhar {appt.data?.plate ?? "veículo"}</DialogTitle>
