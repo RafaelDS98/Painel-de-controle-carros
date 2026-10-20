@@ -218,6 +218,13 @@
       "when": 1792530180522,
       "tag": "0030_yard_groups_and_standalone_checkin",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1792530220687,
+      "tag": "0031_check_in_photos_policies",
+      "breakpoints": true
     }
   ]
 }
