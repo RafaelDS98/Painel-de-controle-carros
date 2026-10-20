@@ -659,7 +659,7 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
                 {filteredPatio.map((item) => (
                   <YardCard
                     key={item.dbId}
-                    item={{ ...item, forwardedAt: stays[item.dbId] ?? item.forwardedAt }}
+                    item={{ ...item, forwardedAt: stays[item.dbId] ?? item.forwardedAt ?? null }}
                     settings={settings}
                     now={now}
                     completionStatus={completionStatus}
@@ -709,7 +709,10 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
                     {items.map((item) => (
                       <YardCard
                         key={item.dbId}
-                        item={{ ...item, forwardedAt: stays[item.dbId] ?? item.forwardedAt }}
+                        item={{
+                          ...item,
+                          forwardedAt: stays[item.dbId] ?? item.forwardedAt ?? null,
+                        }}
                         settings={settings}
                         now={now}
                         completionStatus={completionStatus}

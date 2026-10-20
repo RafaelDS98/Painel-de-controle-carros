@@ -27,6 +27,7 @@ import {
   X,
   Image as ImageIcon,
 } from "lucide-react";
+import type { TablesUpdate } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { ForwardWorkshop } from "@/components/forward-workshop";
@@ -171,7 +172,7 @@ export function YardDetailModal({
 
     const { error } = await supabase
       .from("appointments")
-      .update(changes)
+      .update(changes as TablesUpdate<"appointments">)
       .eq("id", appointment.dbId);
 
     if (error) {
@@ -195,7 +196,9 @@ export function YardDetailModal({
     const colPrefix = record.type === "entrada" ? "check_in" : "check_out";
     await supabase
       .from("appointments")
-      .update({ [`${colPrefix}_photo_url`]: null })
+      .update(
+        record.type === "entrada" ? { check_in_photo_url: null } : { check_out_photo_url: null },
+      )
       .eq("id", record.appointment_id);
     await supabase.from("check_in_records").update({ photo_url: null }).eq("id", record.id);
     toast.success("Foto removida.");
