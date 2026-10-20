@@ -2149,6 +2149,18 @@ export type Database = {
         Returns: undefined
       }
       user_modules: { Args: { _uid: string }; Returns: string[] }
+      vehicle_workflow_lookup: {
+        Args: never
+        Returns: {
+          ano: number
+          categoria: string
+          fabricante: string
+          km_atual: number
+          loja_op: string
+          modelo: string
+          plate: string
+        }[]
+      }
       yard_status_durations: {
         Args: never
         Returns: {
