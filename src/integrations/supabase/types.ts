@@ -2141,6 +2141,7 @@ export type Database = {
         Args: { _max: number; _user_id: string }
         Returns: undefined
       }
+      set_own_yard: { Args: { _workshop_id: string }; Returns: undefined }
       set_user_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
