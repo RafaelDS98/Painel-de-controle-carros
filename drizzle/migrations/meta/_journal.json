@@ -183,6 +183,13 @@
       "when": 1792176195907,
       "tag": "0025_vehicles",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1792526817213,
+      "tag": "0026_yard_fleet_forwarding",
+      "breakpoints": true
     }
   ]
 }

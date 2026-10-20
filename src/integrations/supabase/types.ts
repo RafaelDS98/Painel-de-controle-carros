@@ -19,6 +19,14 @@ export type Database = {
           archived_at: string | null
           archived_by: string | null
           brand: string
+          check_in_at: string | null
+          check_in_by: string | null
+          check_in_note: string | null
+          check_in_photo_url: string | null
+          check_out_at: string | null
+          check_out_by: string | null
+          check_out_note: string | null
+          check_out_photo_url: string | null
           client_id: number | null
           contact: string
           contact_number: string
@@ -71,6 +79,14 @@ export type Database = {
           archived_at?: string | null
           archived_by?: string | null
           brand?: string
+          check_in_at?: string | null
+          check_in_by?: string | null
+          check_in_note?: string | null
+          check_in_photo_url?: string | null
+          check_out_at?: string | null
+          check_out_by?: string | null
+          check_out_note?: string | null
+          check_out_photo_url?: string | null
           client_id?: number | null
           contact?: string
           contact_number?: string
@@ -123,6 +139,14 @@ export type Database = {
           archived_at?: string | null
           archived_by?: string | null
           brand?: string
+          check_in_at?: string | null
+          check_in_by?: string | null
+          check_in_note?: string | null
+          check_in_photo_url?: string | null
+          check_out_at?: string | null
+          check_out_by?: string | null
+          check_out_note?: string | null
+          check_out_photo_url?: string | null
           client_id?: number | null
           contact?: string
           contact_number?: string
@@ -172,6 +196,20 @@ export type Database = {
           workshop?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "appointments_check_in_by_fkey"
+            columns: ["check_in_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_check_out_by_fkey"
+            columns: ["check_out_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "appointments_created_by_fkey"
             columns: ["created_by"]
@@ -296,6 +334,57 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      check_in_records: {
+        Row: {
+          appointment_id: string
+          created_at: string
+          id: string
+          note: string | null
+          occurred_at: string
+          os_number: number | null
+          performed_by: string | null
+          photo_url: string | null
+          type: string
+        }
+        Insert: {
+          appointment_id: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          occurred_at?: string
+          os_number?: number | null
+          performed_by?: string | null
+          photo_url?: string | null
+          type: string
+        }
+        Update: {
+          appointment_id?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          occurred_at?: string
+          os_number?: number | null
+          performed_by?: string | null
+          photo_url?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "check_in_records_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "check_in_records_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       classificacoes_servico: {
         Row: {
@@ -570,6 +659,7 @@ export type Database = {
           total_os: number
           total_servico: number
           updated_at: string
+          vehicle_id: string | null
           workshop_id: string | null
         }
         Insert: {
@@ -625,6 +715,7 @@ export type Database = {
           total_os?: number
           total_servico?: number
           updated_at?: string
+          vehicle_id?: string | null
           workshop_id?: string | null
         }
         Update: {
@@ -680,6 +771,7 @@ export type Database = {
           total_os?: number
           total_servico?: number
           updated_at?: string
+          vehicle_id?: string | null
           workshop_id?: string | null
         }
         Relationships: [
@@ -716,6 +808,13 @@ export type Database = {
             columns: ["tipo_id"]
             isOneToOne: false
             referencedRelation: "os_tipos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordens_servico_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
             referencedColumns: ["id"]
           },
           {
@@ -1445,6 +1544,8 @@ export type Database = {
           id: string
           is_completion: boolean
           label: string
+          show_external: boolean
+          show_in_yard: boolean
           sort_order: number
           updated_at: string
         }
@@ -1454,6 +1555,8 @@ export type Database = {
           id?: string
           is_completion?: boolean
           label: string
+          show_external?: boolean
+          show_in_yard?: boolean
           sort_order?: number
           updated_at?: string
         }
@@ -1463,6 +1566,8 @@ export type Database = {
           id?: string
           is_completion?: boolean
           label?: string
+          show_external?: boolean
+          show_in_yard?: boolean
           sort_order?: number
           updated_at?: string
         }
@@ -1545,6 +1650,35 @@ export type Database = {
           },
         ]
       }
+      vehicle_screen_access: {
+        Row: {
+          allowed: boolean
+          updated_at: string
+          updated_by: string | null
+          user_id: string
+        }
+        Insert: {
+          allowed?: boolean
+          updated_at?: string
+          updated_by?: string | null
+          user_id: string
+        }
+        Update: {
+          allowed?: boolean
+          updated_at?: string
+          updated_by?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_screen_access_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vehicles: {
         Row: {
           active: boolean
@@ -1554,6 +1688,7 @@ export type Database = {
           chassi: string | null
           cor: string | null
           created_at: string
+          extra_data: Json
           fabricante: string | null
           grupo: string | null
           id: string
@@ -1577,6 +1712,7 @@ export type Database = {
           chassi?: string | null
           cor?: string | null
           created_at?: string
+          extra_data?: Json
           fabricante?: string | null
           grupo?: string | null
           id?: string
@@ -1600,6 +1736,7 @@ export type Database = {
           chassi?: string | null
           cor?: string | null
           created_at?: string
+          extra_data?: Json
           fabricante?: string | null
           grupo?: string | null
           id?: string
@@ -1616,6 +1753,65 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      workshop_movements: {
+        Row: {
+          actor_id: string | null
+          appointment_id: string
+          entered_at: string
+          id: string
+          left_at: string | null
+          os_id: string
+          workshop_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          appointment_id: string
+          entered_at?: string
+          id?: string
+          left_at?: string | null
+          os_id: string
+          workshop_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          appointment_id?: string
+          entered_at?: string
+          id?: string
+          left_at?: string | null
+          os_id?: string
+          workshop_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workshop_movements_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workshop_movements_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workshop_movements_os_id_fkey"
+            columns: ["os_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workshop_movements_workshop_id_fkey"
+            columns: ["workshop_id"]
+            isOneToOne: false
+            referencedRelation: "workshops"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       workshop_users: {
         Row: {
@@ -1646,6 +1842,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          is_own_yard: boolean
           name: string
           source: string
         }
@@ -1654,6 +1851,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          is_own_yard?: boolean
           name: string
           source?: string
         }
@@ -1662,10 +1860,73 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          is_own_yard?: boolean
           name?: string
           source?: string
         }
         Relationships: []
+      }
+      yard_settings: {
+        Row: {
+          check_in_required: boolean | null
+          check_out_required: boolean | null
+          editable_fields: Json | null
+          id: number
+          new_highlight_minutes: number | null
+          notification_sound_enabled: boolean | null
+          photo_capture_enabled: boolean | null
+          photo_max_mb: number | null
+          photo_upload_enabled: boolean | null
+          polling_seconds: number | null
+          timer_green_hours: number | null
+          timer_yellow_hours: number | null
+          toast_duration_ms: number | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          check_in_required?: boolean | null
+          check_out_required?: boolean | null
+          editable_fields?: Json | null
+          id?: number
+          new_highlight_minutes?: number | null
+          notification_sound_enabled?: boolean | null
+          photo_capture_enabled?: boolean | null
+          photo_max_mb?: number | null
+          photo_upload_enabled?: boolean | null
+          polling_seconds?: number | null
+          timer_green_hours?: number | null
+          timer_yellow_hours?: number | null
+          toast_duration_ms?: number | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          check_in_required?: boolean | null
+          check_out_required?: boolean | null
+          editable_fields?: Json | null
+          id?: number
+          new_highlight_minutes?: number | null
+          notification_sound_enabled?: boolean | null
+          photo_capture_enabled?: boolean | null
+          photo_max_mb?: number | null
+          photo_upload_enabled?: boolean | null
+          polling_seconds?: number | null
+          timer_green_hours?: number | null
+          timer_yellow_hours?: number | null
+          toast_duration_ms?: number | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "yard_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -1679,6 +1940,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      can_view_vehicles: { Args: { _uid: string }; Returns: boolean }
       catalog_add: {
         Args: {
           _kind: string
@@ -1797,6 +2059,17 @@ export type Database = {
         }
         Returns: Json
       }
+      os_forward_appointment: {
+        Args: {
+          _appointment_id: string
+          _centro_custo_id: string
+          _km: number
+          _store_id: number
+          _tipo_id: number
+          _workshop_id: string
+        }
+        Returns: Json
+      }
       os_get_detail: { Args: { _os_id: string }; Returns: Json }
       os_item_add: {
         Args: {
@@ -1831,6 +2104,10 @@ export type Database = {
         Returns: Json
       }
       os_update: { Args: { _changes: Json; _os_id: string }; Returns: Json }
+      record_workshop_movement: {
+        Args: { _appointment: string; _os: string; _workshop: string }
+        Returns: undefined
+      }
       revoke_user_sessions: { Args: { _user_id: string }; Returns: undefined }
       search_ordens_servico: {
         Args: { _filters?: Json; _page?: number; _page_size?: number }
@@ -1872,6 +2149,13 @@ export type Database = {
         Returns: undefined
       }
       user_modules: { Args: { _uid: string }; Returns: string[] }
+      yard_status_durations: {
+        Args: never
+        Returns: {
+          appointment_id: string
+          last_status_change_at: string
+        }[]
+      }
     }
     Enums: {
       app_role: "atendimento" | "gerente" | "master" | "oficina"
