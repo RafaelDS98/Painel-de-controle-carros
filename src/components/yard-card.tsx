@@ -22,9 +22,10 @@ interface YardCardProps {
   onCheckOut: (item: YardAppointment) => void;
   onDetails: (item: YardAppointment) => void;
   onPlateClick: (plate: string) => void;
+  onForward?: ((item:YardAppointment)=>void) | undefined;
 }
 
-export function YardCard({ item, settings, now, completionStatus, onCheckIn, onCheckOut, onDetails, onPlateClick }: YardCardProps) {
+export function YardCard({ item, settings, now, completionStatus, onCheckIn, onCheckOut, onDetails, onPlateClick, onForward }: YardCardProps) {
   const refTime = item.lastStatusChangeAt ?? item.registeredAt;
   const elapsed = elapsedSince(refTime, now);
   const level = timerLevel(elapsed, settings);
@@ -74,6 +75,7 @@ export function YardCard({ item, settings, now, completionStatus, onCheckIn, onC
           <span className="text-[11px] text-muted-foreground">no status atual</span>
         </div>
 
+        <p className="text-xs text-muted-foreground">{item.forwardedAt ? `${formatDuration(elapsedSince(item.forwardedAt,now))} neste local` : "Sem registro de entrada no local"}</p>
         {/* Prazo */}
         {item.currentDeadline && (
           <div className="flex items-center gap-1.5">
@@ -119,6 +121,7 @@ export function YardCard({ item, settings, now, completionStatus, onCheckIn, onC
 
       {/* Ações */}
       <div className="border-t px-3 py-2 flex flex-wrap gap-1.5">
+        {onForward && <Button size="sm" variant="outline" onClick={()=>onForward(item)}>Encaminhar</Button>}
         {!hasCheckIn && (
           <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => onCheckIn(item)}>
             <LogIn className="size-3" /> Entrada
@@ -131,7 +134,7 @@ export function YardCard({ item, settings, now, completionStatus, onCheckIn, onC
         )}
         {hasCheckIn && (
           <span className="inline-flex items-center self-center text-[10px] text-green-600 dark:text-green-400">
-            ✓ Entrada {new Date(item.checkInAt!).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+            ✓ Entrada {new Date(item.checkInAt ?? "").toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
           </span>
         )}
         <Button size="sm" variant="ghost" className="ml-auto gap-1 text-xs text-primary" onClick={() => onDetails(item)}>

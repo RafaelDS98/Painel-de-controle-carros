@@ -45,6 +45,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { ForwardWorkshop } from "@/components/forward-workshop";
 import { AppointmentHistory } from "@/components/edit-history";
 import { Link } from "@tanstack/react-router";
 import { AdvancedFilterDrawer, type SavedView } from "@/components/advanced-filter-drawer";
@@ -3427,6 +3428,7 @@ export function MaintenanceDashboard({
                     <History /> Ver movimentações desta placa
                   </Button>
                 )}
+                {canCreate && !workshopMode && <ForwardWorkshop appointmentId={selected.dbId} onDone={() => { setSelected(null); void loadAppointments(); }} />}
                 {canCreate && !workshopMode && (
                   <Button asChild>
                     <Link to="/ordens-servico/nova" search={{ agendamento: selected.dbId }}>

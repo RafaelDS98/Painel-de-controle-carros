@@ -17,6 +17,8 @@ import { customValues } from "@/lib/agenda-config";
 import { safeText, normalizePlate } from "@/lib/normalize";
 import { formatDateBR } from "@/lib/agenda-safety";
 import { YardCard } from "@/components/yard-card";
+import { ForwardWorkshop } from "@/components/forward-workshop";
+import { AGENDA_CHANGED_EVENT } from "@/lib/agenda-freshness";
 import { YardKpis } from "@/components/yard-kpis";
 import { CheckInSheet } from "@/components/check-in-sheet";
 import { YardDetailModal } from "@/components/yard-detail-modal";
@@ -101,6 +103,9 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
   const [accountOpen, setAccountOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [completionStatus, setCompletionStatus] = useState("");
+  const [locationTab,setLocationTab] = useState<"patio"|"externos">("patio");
+  const [forwardId,setForwardId] = useState("");
+  const [loadedAt,setLoadedAt] = useState<number|null>(null);
 
   // Notification hook
   const notificationItems = useMemo(
@@ -135,13 +140,13 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
   async function loadData() {
     try {
       const [apptResult, statusResult, workshopResult, durationResult] = await Promise.all([
-        (supabase as any).from("appointments").select(rowColumns).is("archived_at", null).order("registered_at", { ascending: false }),
+        (async () => { const data: any[] = []; for(let start=0;;start+=1000){ const r=await supabase.from("appointments").select("*").is("archived_at",null).order("id").range(start,start+999); if(r.error) return r; data.push(...(r.data??[])); if((r.data??[]).length<1000) break; } return {data,error:null}; })(),
         (supabase as any).from("status_options").select("*").order("sort_order"),
         (supabase as any).from("workshops").select("name, is_own_yard").order("name"),
         (supabase as any).rpc("yard_status_durations"),
       ]);
 
-      if (apptResult.error) throw apptResult.error;
+      for(const r of [apptResult,statusResult,workshopResult,durationResult]) if(r.error) throw r.error;
 
       const durationMap = new Map<string, string>();
       for (const d of (durationResult.data ?? []) as { appointment_id: string; last_status_change_at: string }[]) {
@@ -157,6 +162,7 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
       if (completion) setCompletionStatus(completion.label);
 
       setLoadError("");
+      setLoadedAt(Date.now());
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : "Não foi possível carregar os dados.");
     } finally {
@@ -164,7 +170,7 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
     }
   }
 
-  useEffect(() => { void loadData(); }, []);
+  useEffect(() => { void loadData(); const reload=()=>void loadData(); window.addEventListener(AGENDA_CHANGED_EVENT,reload); return()=>window.removeEventListener(AGENDA_CHANGED_EVENT,reload); }, []);
 
   // Toast for new items
   const prevCountRef = useRef(0);
@@ -201,7 +207,7 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
     return result;
   }, [externalByWorkshop, search, statusFilter, workshopFilter, brandFilter, now]);
 
-  const yardStatuses = statuses.filter((s) => (s as any).show_in_yard);
+  const yardStatuses = statuses;
   const uniqueBrands = useMemo(() => [...new Set(appointments.map((a) => a.brand).filter(Boolean))].sort(), [appointments]);
   const uniqueWorkshops = useMemo(() => [...new Set(appointments.map((a) => a.workshop).filter(Boolean))].sort(), [appointments]);
 
@@ -340,7 +346,7 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
             <div className="rounded-md border bg-card px-3 py-2 text-right">
               <p className="text-xs text-muted-foreground">Última atualização</p>
               <p className="text-sm font-semibold">
-                {new Date(now).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                {new Date(loadedAt ?? now).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
               </p>
             </div>
             <Button variant="outline" onClick={handleReload} aria-label="Recarregar">
@@ -458,15 +464,19 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
         </div>
 
         {/* KPIs */}
-        <YardKpis
+        <div className="flex flex-wrap gap-2" role="tablist" aria-label="Local de atendimento">
+          <Button role="tab" aria-selected={locationTab==="patio"} variant={locationTab==="patio"?"default":"outline"} onClick={()=>setLocationTab("patio")}>Pátio próprio · {loadError?"Indisponível":filteredPatio.length}</Button>
+          <Button role="tab" aria-selected={locationTab==="externos"} variant={locationTab==="externos"?"default":"outline"} onClick={()=>setLocationTab("externos")}>Serviço externo · {loadError?"Indisponível":[...filteredExternal.values()].reduce((n,a)=>n+a.length,0)}</Button>
+        </div>
+        {!loadError && locationTab==="patio" && <YardKpis
           patioItems={filteredPatio}
           yardStatuses={yardStatuses}
           activeStatusFilter={statusFilter}
           onStatusFilter={setStatusFilter}
-        />
+        />}
 
         {/* NOSSO PÁTIO */}
-        <section>
+        {!loadError && locationTab==="patio" && <section>
           <div className="mb-3 flex items-center gap-2">
             <MapPin className="size-5 text-accent-foreground" />
             <h2 className="text-lg font-bold">Nosso Pátio</h2>
@@ -491,15 +501,16 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
                   onCheckIn={(i) => setCheckInTarget({ item: i, type: "entrada" })}
                   onCheckOut={(i) => setCheckInTarget({ item: i, type: "saida" })}
                   onDetails={setDetailTarget}
+                  onForward={currentUser.role!=="oficina" ? i=>setForwardId(i.dbId) : undefined}
                   onPlateClick={openPlateHistory}
                 />
               ))}
             </div>
           )}
-        </section>
+        </section>}
 
         {/* EXTERNOS */}
-        {filteredExternal.size > 0 && (
+        {!loadError && locationTab==="externos" && (
           <section>
             <div className="mb-3 flex items-center gap-2">
               <MapPin className="size-5 text-muted-foreground" />
@@ -508,6 +519,7 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
                 {[...filteredExternal.values()].reduce((sum, arr) => sum + arr.length, 0)} veículo{[...filteredExternal.values()].reduce((sum, arr) => sum + arr.length, 0) !== 1 ? "s" : ""}
               </span>
             </div>
+            {filteredExternal.size===0 && <p className="text-sm text-muted-foreground">Nenhum carro em serviço externo com os filtros atuais.</p>}
             <div className="space-y-4">
               {[...filteredExternal.entries()].map(([wsName, items]) => (
                 <div key={wsName} className="rounded-lg border bg-card">
@@ -529,6 +541,7 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
                         onCheckIn={(i) => setCheckInTarget({ item: i, type: "entrada" })}
                         onCheckOut={(i) => setCheckInTarget({ item: i, type: "saida" })}
                         onDetails={setDetailTarget}
+                  onForward={currentUser.role!=="oficina" ? i=>setForwardId(i.dbId) : undefined}
                         onPlateClick={openPlateHistory}
                       />
                     ))}
@@ -540,6 +553,7 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
         )}
       </main>
 
+      {forwardId && <div className="fixed bottom-4 right-4 z-40 rounded-md border bg-card p-3"><ForwardWorkshop appointmentId={forwardId} onDone={()=>{setForwardId("");void loadData();}}/><Button variant="ghost" size="sm" onClick={()=>setForwardId("")}>Fechar</Button></div>}
       {/* Check-in Sheet */}
       <CheckInSheet
         open={!!checkInTarget}

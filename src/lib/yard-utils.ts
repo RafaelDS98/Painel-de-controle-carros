@@ -1,3 +1,4 @@
+import { safeText } from "@/lib/normalize";
 import type { StatusOption } from "@/lib/agenda-config";
 
 export interface YardSettings {
@@ -20,8 +21,8 @@ export const DEFAULT_YARD_SETTINGS: YardSettings = {
   timer_yellow_hours: 24,
   check_in_required: true,
   check_out_required: true,
-  photo_capture_enabled: true,
-  photo_upload_enabled: true,
+  photo_capture_enabled: false,
+  photo_upload_enabled: false,
   photo_max_mb: 10,
   notification_sound_enabled: true,
   polling_seconds: 30,
@@ -56,6 +57,7 @@ export interface YardAppointment {
   osNumber: number | null;
   priorityUrgent: boolean;
   lastStatusChangeAt: string | null;
+  forwardedAt?: string | null;
 }
 
 export type TimerLevel = "ok" | "warn" | "danger";
@@ -103,25 +105,16 @@ export function splitYardAndExternal(
   workshops: WorkshopInfo[],
   statuses: StatusOption[],
 ): { patio: YardAppointment[]; externalByWorkshop: Map<string, YardAppointment[]> } {
-  const ownYardNames = new Set(workshops.filter((w) => w.isOwnYard).map((w) => w.name));
-  const yardStatuses = new Set(statuses.filter((s) => (s as any).show_in_yard).map((s) => s.label));
-  const externalStatuses = new Set(statuses.filter((s) => (s as any).show_external).map((s) => s.label));
-
-  const patio: YardAppointment[] = [];
-  const externalByWorkshop = new Map<string, YardAppointment[]>();
-
-  for (const apt of appointments) {
-    const isOwnYard = ownYardNames.has(apt.workshop);
-    if (isOwnYard && yardStatuses.has(apt.status)) {
-      patio.push(apt);
-    } else if (!isOwnYard && externalStatuses.has(apt.status)) {
-      const key = apt.workshop || "Sem oficina";
-      const list = externalByWorkshop.get(key) ?? [];
-      list.push(apt);
-      externalByWorkshop.set(key, list);
-    }
+  const norm=(v:string)=>safeText(v).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
+  const ownYardNames = new Set(workshops.filter(w=>w.isOwnYard).map(w=>norm(w.name)));
+  const patio: YardAppointment[]=[];
+  const externalByWorkshop=new Map<string,YardAppointment[]>();
+  const latest=new Map<string,YardAppointment>();
+  for(const apt of appointments){if(apt.checkOutAt || statuses.some(s=>s.label===apt.status&&s.is_completion))continue;const key=apt.plate||apt.dbId;const previous=latest.get(key);if(!previous || String(apt.registeredAt)>String(previous.registeredAt))latest.set(key,apt);}
+  for(const apt of latest.values()){
+    if(ownYardNames.has(norm(apt.workshop))) patio.push(apt);
+    else if(apt.workshop.trim()){const list=externalByWorkshop.get(apt.workshop)??[];list.push(apt);externalByWorkshop.set(apt.workshop,list);}
   }
-
   return { patio, externalByWorkshop };
 }
 
