@@ -70,7 +70,7 @@ export function YardDetailModal({
   onSaved,
   onPlateClick,
 }: YardDetailModalProps) {
-  const [draft, setDraft] = useState<Record<string, string>>({} as any);
+  const [draft, setDraft] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [checkInRecords, setCheckInRecords] = useState<CheckInRecord[]>([]);
   const [loadingRecords, setLoadingRecords] = useState(false);
@@ -111,7 +111,7 @@ export function YardDetailModal({
 
   async function loadCheckInRecords(appointmentId: string) {
     setLoadingRecords(true);
-    const { data } = await (supabase as any)
+    const { data } = await supabase
       .from("check_in_records")
       .select("*")
       .eq("appointment_id", appointmentId)
@@ -169,7 +169,7 @@ export function YardDetailModal({
       return;
     }
 
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from("appointments")
       .update(changes)
       .eq("id", appointment.dbId);
@@ -193,14 +193,11 @@ export function YardDetailModal({
       await supabase.storage.from("check-in-photos").remove([storagePath]);
     }
     const colPrefix = record.type === "entrada" ? "check_in" : "check_out";
-    await (supabase as any)
+    await supabase
       .from("appointments")
       .update({ [`${colPrefix}_photo_url`]: null })
       .eq("id", record.appointment_id);
-    await (supabase as any)
-      .from("check_in_records")
-      .update({ photo_url: null })
-      .eq("id", record.id);
+    await supabase.from("check_in_records").update({ photo_url: null }).eq("id", record.id);
     toast.success("Foto removida.");
     if (appointment) void loadCheckInRecords(appointment.dbId);
     onSaved();

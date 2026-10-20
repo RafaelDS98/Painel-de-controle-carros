@@ -49,7 +49,7 @@ import {
 } from "@/lib/yard-utils";
 import type { Tables } from "@/integrations/supabase/types";
 
-type AppointmentRow = Tables<"appointments"> & Record<string, any>;
+type AppointmentRow = Tables<"appointments">;
 
 const rowColumns =
   "id, sheet_id, registered_at, date, time, plate, store, model, contact, workshop, issue, note, operator, external_order, status, original_deadline, current_deadline, priority_urgent, rework_of, rework_reason, custom_fields, brand, contact_number, km_scheduled, os_number, schedule_type, check_in_at, check_in_note, check_in_photo_url, check_in_by, check_out_at, check_out_note, check_out_photo_url, check_out_by, archived_at, created_by";
@@ -70,14 +70,14 @@ function fromRow(row: AppointmentRow, lastStatusChangeAt: string | null): YardAp
     operator: safeText(row.operator),
     currentDeadline: row.current_deadline,
     registeredAt: row.registered_at ?? "",
-    checkInAt: (row as any).check_in_at ?? null,
-    checkInNote: (row as any).check_in_note ?? null,
-    checkInPhotoUrl: (row as any).check_in_photo_url ?? null,
-    checkInBy: (row as any).check_in_by ?? null,
-    checkOutAt: (row as any).check_out_at ?? null,
-    checkOutNote: (row as any).check_out_note ?? null,
-    checkOutPhotoUrl: (row as any).check_out_photo_url ?? null,
-    checkOutBy: (row as any).check_out_by ?? null,
+    checkInAt: row.check_in_at ?? null,
+    checkInNote: row.check_in_note ?? null,
+    checkInPhotoUrl: row.check_in_photo_url ?? null,
+    checkInBy: row.check_in_by ?? null,
+    checkOutAt: row.check_out_at ?? null,
+    checkOutNote: row.check_out_note ?? null,
+    checkOutPhotoUrl: row.check_out_photo_url ?? null,
+    checkOutBy: row.check_out_by ?? null,
     osNumber: row.os_number ?? null,
     priorityUrgent: row.priority_urgent ?? false,
     lastStatusChangeAt,
@@ -182,7 +182,7 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
       const [apptResult, statusResult, workshopResult, durationResult, stayResult] =
         await Promise.all([
           (async () => {
-            const data: any[] = [];
+            const data: Tables<"appointments">[] = [];
             for (let start = 0; ; start += 1000) {
               const r = await supabase
                 .from("appointments")
@@ -196,9 +196,9 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
             }
             return { data, error: null };
           })(),
-          (supabase as any).from("status_options").select("*").order("sort_order"),
-          (supabase as any).from("workshops").select("name, is_own_yard").order("name"),
-          (supabase as any).rpc("yard_status_durations"),
+          supabase.from("status_options").select("*").order("sort_order"),
+          supabase.from("workshops").select("name, is_own_yard").order("name"),
+          supabase.rpc("yard_status_durations"),
           supabase
             .from("workshop_movements")
             .select("appointment_id,entered_at")
@@ -216,7 +216,7 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
         durationMap.set(d.appointment_id, d.last_status_change_at);
       }
 
-      const rows = (apptResult.data ?? []).map((row: any) =>
+      const rows = (apptResult.data ?? []).map((row: Tables<"appointments">) =>
         fromRow(row, durationMap.get(row.id) ?? null),
       );
       setStays(
@@ -225,7 +225,7 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
       setAppointments(rows);
       setStatuses((statusResult.data ?? []) as StatusOption[]);
       setWorkshops(
-        (workshopResult.data ?? []).map((w: any) => ({
+        (workshopResult.data ?? []).map((w) => ({
           name: w.name,
           isOwnYard: w.is_own_yard ?? false,
         })),

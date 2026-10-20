@@ -53,7 +53,7 @@ export function YardSettingsPanel({
     Object.fromEntries(
       statuses.map((s) => [
         s.label,
-        { show_in_yard: !!(s as any).show_in_yard, show_external: !!(s as any).show_external },
+        { show_in_yard: !!s.show_in_yard, show_external: !!s.show_external },
       ]),
     ),
   );
@@ -83,11 +83,8 @@ export function YardSettingsPanel({
     for (const status of statuses) {
       const d = statusDrafts[status.label];
       if (!d) continue;
-      if (
-        d.show_in_yard !== !!(status as any).show_in_yard ||
-        d.show_external !== !!(status as any).show_external
-      ) {
-        const { error } = await (supabase as any)
+      if (d.show_in_yard !== !!status.show_in_yard || d.show_external !== !!status.show_external) {
+        const { error } = await supabase
           .from("status_options")
           .update({ show_in_yard: d.show_in_yard, show_external: d.show_external })
           .eq("id", status.id);
