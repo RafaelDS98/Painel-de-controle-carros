@@ -106,7 +106,12 @@ export function CheckInLog() {
             setPage(1);
           }}
         />
-        <Input className="w-40" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+        <Input
+          className="w-40"
+          type="date"
+          value={from}
+          onChange={(e) => setFrom(e.target.value)}
+        />
         <Input className="w-40" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
         <select className={sel} value={type} onChange={(e) => setType(e.target.value)}>
           <option value="">Entrada e saída</option>
@@ -127,13 +132,21 @@ export function CheckInLog() {
         <table className="w-full text-sm">
           <thead className="bg-muted text-left">
             <tr>
-              {["Data/hora", "Tipo", "Placa", "Local", "Origem", "O.S.", "Usuário", "Observação", "Foto"].map(
-                (h) => (
-                  <th key={h} className="p-2">
-                    {h}
-                  </th>
-                ),
-              )}
+              {[
+                "Data/hora",
+                "Tipo",
+                "Placa",
+                "Local",
+                "Origem",
+                "O.S.",
+                "Usuário",
+                "Observação",
+                "Foto",
+              ].map((h) => (
+                <th key={h} className="p-2">
+                  {h}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -149,7 +162,11 @@ export function CheckInLog() {
                 <td className="p-2">{r.note ?? "—"}</td>
                 <td className="p-2">
                   {r.photo_url ? (
-                    <Button variant="link" className="h-auto p-0" onClick={() => void openPhoto(r.photo_url!)}>
+                    <Button
+                      variant="link"
+                      className="h-auto p-0"
+                      onClick={() => void openPhoto(r.photo_url!)}
+                    >
                       Ver
                     </Button>
                   ) : (

@@ -779,7 +779,10 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
                       {list.map((item) => (
                         <YardCard
                           key={item.dbId}
-                          item={{ ...item, forwardedAt: stays[item.dbId] ?? item.forwardedAt ?? null }}
+                          item={{
+                            ...item,
+                            forwardedAt: stays[item.dbId] ?? item.forwardedAt ?? null,
+                          }}
                           settings={settings}
                           now={now}
                           completionStatus={completionStatus}

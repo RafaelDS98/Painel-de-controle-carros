@@ -49,20 +49,29 @@ export function YardGroupsSettings() {
   const [busy, setBusy] = useState(false);
 
   async function addPlace() {
-    if (!validGroupName(newPlace)) return toast.error("Informe o nome do local.");
+    if (!validGroupName(newPlace)) {
+      toast.error("Informe o nome do local.");
+      return;
+    }
     const { error } = await supabase.rpc("catalog_add", {
       _kind: "workshop",
       _name: newPlace.trim(),
       _source: "manual",
     });
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     toast.success("Local cadastrado.");
     setNewPlace("");
     await qc.invalidateQueries({ queryKey: ["groups-workshops"] });
   }
 
   async function saveGroup() {
-    if (!editing || !validGroupName(editing.name)) return toast.error("Informe o nome do grupo.");
+    if (!editing || !validGroupName(editing.name)) {
+      toast.error("Informe o nome do grupo.");
+      return;
+    }
     setBusy(true);
     try {
       let id = editing.id;
