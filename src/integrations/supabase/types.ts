@@ -337,7 +337,7 @@ export type Database = {
       }
       check_in_records: {
         Row: {
-          appointment_id: string
+          appointment_id: string | null
           created_at: string
           id: string
           note: string | null
@@ -345,10 +345,12 @@ export type Database = {
           os_number: number | null
           performed_by: string | null
           photo_url: string | null
+          plate: string | null
           type: string
+          workshop_id: string | null
         }
         Insert: {
-          appointment_id: string
+          appointment_id?: string | null
           created_at?: string
           id?: string
           note?: string | null
@@ -356,10 +358,12 @@ export type Database = {
           os_number?: number | null
           performed_by?: string | null
           photo_url?: string | null
+          plate?: string | null
           type: string
+          workshop_id?: string | null
         }
         Update: {
-          appointment_id?: string
+          appointment_id?: string | null
           created_at?: string
           id?: string
           note?: string | null
@@ -367,7 +371,9 @@ export type Database = {
           os_number?: number | null
           performed_by?: string | null
           photo_url?: string | null
+          plate?: string | null
           type?: string
+          workshop_id?: string | null
         }
         Relationships: [
           {
@@ -382,6 +388,13 @@ export type Database = {
             columns: ["performed_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "check_in_records_workshop_id_fkey"
+            columns: ["workshop_id"]
+            isOneToOne: false
+            referencedRelation: "workshops"
             referencedColumns: ["id"]
           },
         ]
@@ -1863,6 +1876,60 @@ export type Database = {
           is_own_yard?: boolean
           name?: string
           source?: string
+        }
+        Relationships: []
+      }
+      yard_group_members: {
+        Row: {
+          group_id: string
+          workshop_id: string
+        }
+        Insert: {
+          group_id: string
+          workshop_id: string
+        }
+        Update: {
+          group_id?: string
+          workshop_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "yard_group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "yard_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "yard_group_members_workshop_id_fkey"
+            columns: ["workshop_id"]
+            isOneToOne: false
+            referencedRelation: "workshops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      yard_groups: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
         }
         Relationships: []
       }
