@@ -17,9 +17,10 @@ import { guardFormula } from "@/lib/agenda-safety";
 import { normalizePlate } from "@/lib/normalize";
 import { Plus, Search, RotateCcw, Upload, Download } from "lucide-react";
 import { toast } from "sonner";
+import {Link} from '@tanstack/react-router';
 import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 type Vehicle = Tables<"vehicles">;
-export async function fetchFleet() {
+async function fetchFleet() {
   const all: Vehicle[] = [];
   for (let start = 0; ; start += 1000) {
     const { data, error } = await supabase
@@ -394,7 +395,7 @@ export function FleetPanel({ role }: { role: string }) {
               ) : orders.data?.length ? (
                 orders.data.map((o) => (
                   <p key={String(o["id"])}>
-                    O.S. {String(o["numero"])} · {String(o["status_label"] ?? "—")} ·{" "}
+                    <Button asChild variant="link" className="p-0"><Link to="/ordens-servico/$id" params={{id:String(o['id'])}}>O.S. {String(o["numero"])}</Link></Button> · {String(o["status_label"] ?? "—")} ·{" "}
                     {String(o["workshop_name"] ?? "—")}
                   </p>
                 ))
