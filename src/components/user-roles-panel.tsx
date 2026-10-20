@@ -572,14 +572,12 @@ export function UserRolesPanel({ currentUserId }: { currentUserId: string }) {
                     disabled={row.role === "master" || busy}
                     onCheckedChange={async (v) => {
                       setBusy(true);
-                      const { error } = await supabase
-                        .from("vehicle_screen_access")
-                        .upsert({
-                          user_id: row.user_id,
-                          allowed: v === true,
-                          updated_by: currentUserId,
-                          updated_at: new Date().toISOString(),
-                        });
+                      const { error } = await supabase.from("vehicle_screen_access").upsert({
+                        user_id: row.user_id,
+                        allowed: v === true,
+                        updated_by: currentUserId,
+                        updated_at: new Date().toISOString(),
+                      });
                       setBusy(false);
                       if (error) setError(error.message);
                       else {
