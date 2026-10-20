@@ -17,6 +17,7 @@ import { guardFormula } from "@/lib/agenda-safety";
 import { normalizePlate } from "@/lib/normalize";
 import { Plus, Search, RotateCcw, Upload, Download } from "lucide-react";
 import { toast } from "sonner";
+import { VehicleCheckIn } from "@/components/vehicle-check-in";
 import { Link } from "@tanstack/react-router";
 import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 type Vehicle = Tables<"vehicles">;
@@ -387,6 +388,7 @@ export function FleetPanel({ role }: { role: string }) {
                   </div>
                 ))}
               </dl>
+              <VehicleCheckIn plate={String(detail.plate)} />
               <h2 className="font-semibold">Ordens de Serviço</h2>
               {orders.isError ? (
                 <p>Consulta de O.S. indisponível para este acesso.</p>

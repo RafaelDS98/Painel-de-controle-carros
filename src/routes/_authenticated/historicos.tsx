@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { HistoryLogPage } from "@/components/historicos";
+import { CheckInLog } from "@/components/check-in-log";
 import { ProfileGate } from "@/components/profile-gate";
 
 export const Route = createFileRoute("/_authenticated/historicos")({
@@ -26,7 +27,12 @@ function Page() {
   const { user } = Route.useRouteContext();
   return (
     <ProfileGate user={user} module="historicos">
-      {() => <HistoryLogPage />}
+      {() => (
+        <>
+          <HistoryLogPage />
+          <CheckInLog />
+        </>
+      )}
     </ProfileGate>
   );
 }

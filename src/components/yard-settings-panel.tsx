@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Save, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { YardGroupsSettings } from "@/components/yard-groups-settings";
 import { supabase } from "@/integrations/supabase/client";
 import type { YardSettings, WorkshopInfo } from "@/lib/yard-utils";
 import { YARD_EDITABLE_FIELD_LABELS } from "@/lib/yard-utils";
@@ -251,7 +252,7 @@ export function YardSettingsPanel({
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Duração do toast (ms)</Label>
+                <Label className="text-xs" title="Tempo que o aviso pequeno no canto da tela fica visível (4000 = 4 segundos)">Duração do aviso na tela (ms)</Label>
                 <Input
                   type="number"
                   min={1000}
@@ -298,6 +299,8 @@ export function YardSettingsPanel({
               ))}
             </div>
           </section>
+
+          <YardGroupsSettings />
 
           {/* Pátio próprio */}
           <section className="space-y-3">
