@@ -2404,7 +2404,11 @@ export function MaintenanceDashboard({
             <Button variant="outline" onClick={resetFilters}>
               <RotateCcw /> Limpar tudo
             </Button>
-            <div className="flex flex-wrap items-center gap-1" role="group" aria-label="Período da agenda">
+            <div
+              className="flex flex-wrap items-center gap-1"
+              role="group"
+              aria-label="Período da agenda"
+            >
               {(
                 [
                   ["today", "Hoje"],
@@ -3428,7 +3432,15 @@ export function MaintenanceDashboard({
                     <History /> Ver movimentações desta placa
                   </Button>
                 )}
-                {canCreate && !workshopMode && <ForwardWorkshop appointmentId={selected.dbId} onDone={() => { setSelected(null); void loadAppointments(); }} />}
+                {canCreate && !workshopMode && (
+                  <ForwardWorkshop
+                    appointmentId={selected.dbId}
+                    onDone={() => {
+                      setSelected(null);
+                      void loadAppointments();
+                    }}
+                  />
+                )}
                 {canCreate && !workshopMode && (
                   <Button asChild>
                     <Link to="/ordens-servico/nova" search={{ agendamento: selected.dbId }}>

@@ -28,7 +28,15 @@ export const DEFAULT_YARD_SETTINGS: YardSettings = {
   polling_seconds: 30,
   toast_duration_ms: 4000,
   new_highlight_minutes: 5,
-  editable_fields: ["status", "note", "operator", "current_deadline", "contact", "contact_number", "issue"],
+  editable_fields: [
+    "status",
+    "note",
+    "operator",
+    "current_deadline",
+    "contact",
+    "contact_number",
+    "issue",
+  ],
 };
 
 export interface YardAppointment {
@@ -71,9 +79,12 @@ export function timerLevel(elapsedMs: number, settings: YardSettings): TimerLeve
 
 export function timerColorClass(level: TimerLevel): string {
   switch (level) {
-    case "ok": return "text-green-600 dark:text-green-400";
-    case "warn": return "text-amber-600 dark:text-amber-400";
-    case "danger": return "text-red-600 dark:text-red-400";
+    case "ok":
+      return "text-green-600 dark:text-green-400";
+    case "warn":
+      return "text-amber-600 dark:text-amber-400";
+    case "danger":
+      return "text-red-600 dark:text-red-400";
   }
 }
 
@@ -105,15 +116,29 @@ export function splitYardAndExternal(
   workshops: WorkshopInfo[],
   statuses: StatusOption[],
 ): { patio: YardAppointment[]; externalByWorkshop: Map<string, YardAppointment[]> } {
-  const norm=(v:string)=>safeText(v).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
-  const ownYardNames = new Set(workshops.filter(w=>w.isOwnYard).map(w=>norm(w.name)));
-  const patio: YardAppointment[]=[];
-  const externalByWorkshop=new Map<string,YardAppointment[]>();
-  const latest=new Map<string,YardAppointment>();
-  for(const apt of appointments){if(apt.checkOutAt || statuses.some(s=>s.label===apt.status&&s.is_completion))continue;const key=apt.plate||apt.dbId;const previous=latest.get(key);if(!previous || String(apt.registeredAt)>String(previous.registeredAt))latest.set(key,apt);}
-  for(const apt of latest.values()){
-    if(ownYardNames.has(norm(apt.workshop))) patio.push(apt);
-    else if(apt.workshop.trim()){const list=externalByWorkshop.get(apt.workshop)??[];list.push(apt);externalByWorkshop.set(apt.workshop,list);}
+  const norm = (v: string) =>
+    safeText(v)
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+  const ownYardNames = new Set(workshops.filter((w) => w.isOwnYard).map((w) => norm(w.name)));
+  const patio: YardAppointment[] = [];
+  const externalByWorkshop = new Map<string, YardAppointment[]>();
+  const latest = new Map<string, YardAppointment>();
+  for (const apt of appointments) {
+    if (apt.checkOutAt || statuses.some((s) => s.label === apt.status && s.is_completion)) continue;
+    const key = apt.plate || apt.dbId;
+    const previous = latest.get(key);
+    if (!previous || String(apt.registeredAt) > String(previous.registeredAt)) latest.set(key, apt);
+  }
+  for (const apt of latest.values()) {
+    if (ownYardNames.has(norm(apt.workshop))) patio.push(apt);
+    else if (apt.workshop.trim()) {
+      const list = externalByWorkshop.get(apt.workshop) ?? [];
+      list.push(apt);
+      externalByWorkshop.set(apt.workshop, list);
+    }
   }
   return { patio, externalByWorkshop };
 }
@@ -122,12 +147,25 @@ export function matchesYardSearch(apt: YardAppointment, query: string): boolean 
   if (!query.trim()) return true;
   const q = query.toLowerCase().trim();
   return [
-    apt.plate, apt.model, apt.brand, apt.contact, apt.contactNumber,
-    apt.issue, apt.note, apt.workshop, apt.store, apt.operator,
+    apt.plate,
+    apt.model,
+    apt.brand,
+    apt.contact,
+    apt.contactNumber,
+    apt.issue,
+    apt.note,
+    apt.workshop,
+    apt.store,
+    apt.operator,
   ].some((field) => field?.toLowerCase().includes(q));
 }
 
-export function isNewHighlight(registeredAt: string, lastStatusChangeAt: string | null, highlightMinutes: number, now: number): boolean {
+export function isNewHighlight(
+  registeredAt: string,
+  lastStatusChangeAt: string | null,
+  highlightMinutes: number,
+  now: number,
+): boolean {
   const reference = lastStatusChangeAt ?? registeredAt;
   if (!reference) return false;
   const elapsed = now - new Date(reference).getTime();
