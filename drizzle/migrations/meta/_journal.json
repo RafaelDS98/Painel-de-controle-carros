@@ -204,6 +204,13 @@
       "when": 1792527452397,
       "tag": "0028_yard_vehicle_links_and_local_history",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1792527672409,
+      "tag": "0029_fleet_role_modules",
+      "breakpoints": true
     }
   ]
 }
