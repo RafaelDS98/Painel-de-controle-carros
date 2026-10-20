@@ -1,8 +1,8 @@
-export type ModuleKey = "agenda" | "historicos" | "oficina";
+export type ModuleKey = "agenda" | "historicos" | "oficina" | "veiculos";
 export const MODULES: {
   key: ModuleKey;
   label: string;
-  path: "/" | "/historicos";
+  path: "/" | "/historicos" | "/veiculos";
   description: string;
 }[] = [
   {
@@ -18,6 +18,7 @@ export const MODULES: {
     description: "Log geral de alterações, exportação e histórico por veículo.",
   },
   { key: "oficina", label: "Oficina", path: "/", description: "Aba Oficina dentro da Agenda." },
+  { key: "veiculos", label: "Veículos", path: "/veiculos", description: "Frota da empresa." },
 ];
 
 /** Mantém só módulos conhecidos (o banco guarda texto livre para módulos futuros). */
@@ -27,6 +28,6 @@ export function knownModules(value: unknown): ModuleKey[] {
 }
 
 /** Primeira tela disponível para quem não tem a Agenda. */
-export function landingPath(modules: ModuleKey[]): "/" | "/historicos" | null {
+export function landingPath(modules: ModuleKey[]): "/" | "/historicos" | "/veiculos" | null {
   return MODULES.find((module) => modules.includes(module.key))?.path ?? null;
 }

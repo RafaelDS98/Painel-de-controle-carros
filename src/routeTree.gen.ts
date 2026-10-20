@@ -14,6 +14,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedHistoricosRouteImport } from './routes/_authenticated/historicos'
+import { Route as AuthenticatedVeiculosRouteImport } from './routes/_authenticated/veiculos'
 import { Route as AuthenticatedOrdensServicoIndexRouteImport } from './routes/_authenticated/ordens-servico.index'
 import { Route as AuthenticatedOrdensServicoIdRouteImport } from './routes/_authenticated/ordens-servico.$id'
 import { Route as AuthenticatedOrdensServicoNovaRouteImport } from './routes/_authenticated/ordens-servico.nova'
@@ -42,6 +43,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
 const AuthenticatedHistoricosRoute = AuthenticatedHistoricosRouteImport.update({
   id: '/historicos',
   path: '/historicos',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedVeiculosRoute = AuthenticatedVeiculosRouteImport.update({
+  id: '/veiculos',
+  path: '/veiculos',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedOrdensServicoIndexRoute =
@@ -79,6 +85,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/historicos': typeof AuthenticatedHistoricosRoute
+  '/veiculos': typeof AuthenticatedVeiculosRoute
   '/ordens-servico/$id': typeof AuthenticatedOrdensServicoIdRoute
   '/ordens-servico/nova': typeof AuthenticatedOrdensServicoNovaRoute
   '/veiculo/$plate': typeof AuthenticatedVeiculoPlateRoute
@@ -89,6 +96,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/historicos': typeof AuthenticatedHistoricosRoute
+  '/veiculos': typeof AuthenticatedVeiculosRoute
   '/': typeof AuthenticatedIndexRoute
   '/ordens-servico/$id': typeof AuthenticatedOrdensServicoIdRoute
   '/ordens-servico/nova': typeof AuthenticatedOrdensServicoNovaRoute
@@ -102,6 +110,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/historicos': typeof AuthenticatedHistoricosRoute
+  '/_authenticated/veiculos': typeof AuthenticatedVeiculosRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/ordens-servico/$id': typeof AuthenticatedOrdensServicoIdRoute
   '/_authenticated/ordens-servico/nova': typeof AuthenticatedOrdensServicoNovaRoute
@@ -116,6 +125,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/dashboard'
     | '/historicos'
+    | '/veiculos'
     | '/ordens-servico/$id'
     | '/ordens-servico/nova'
     | '/veiculo/$plate'
@@ -126,6 +136,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/dashboard'
     | '/historicos'
+    | '/veiculos'
     | '/'
     | '/ordens-servico/$id'
     | '/ordens-servico/nova'
@@ -138,6 +149,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/dashboard'
     | '/_authenticated/historicos'
+    | '/_authenticated/veiculos'
     | '/_authenticated/'
     | '/_authenticated/ordens-servico/$id'
     | '/_authenticated/ordens-servico/nova'
@@ -189,6 +201,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHistoricosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/veiculos': {
+      id: '/_authenticated/veiculos'
+      path: '/veiculos'
+      fullPath: '/veiculos'
+      preLoaderRoute: typeof AuthenticatedVeiculosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/ordens-servico/': {
       id: '/_authenticated/ordens-servico/'
       path: '/ordens-servico'
@@ -230,6 +249,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedHistoricosRoute: typeof AuthenticatedHistoricosRoute
+  AuthenticatedVeiculosRoute: typeof AuthenticatedVeiculosRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedOrdensServicoIdRoute: typeof AuthenticatedOrdensServicoIdRoute
   AuthenticatedOrdensServicoNovaRoute: typeof AuthenticatedOrdensServicoNovaRoute
@@ -240,6 +260,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedHistoricosRoute: AuthenticatedHistoricosRoute,
+  AuthenticatedVeiculosRoute: AuthenticatedVeiculosRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedOrdensServicoIdRoute: AuthenticatedOrdensServicoIdRoute,
   AuthenticatedOrdensServicoNovaRoute: AuthenticatedOrdensServicoNovaRoute,

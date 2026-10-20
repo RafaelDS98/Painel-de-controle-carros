@@ -45,6 +45,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { ForwardWorkshop } from "@/components/forward-workshop";
 import { AppointmentHistory } from "@/components/edit-history";
 import { Link } from "@tanstack/react-router";
 import { AdvancedFilterDrawer, type SavedView } from "@/components/advanced-filter-drawer";
@@ -2403,7 +2404,11 @@ export function MaintenanceDashboard({
             <Button variant="outline" onClick={resetFilters}>
               <RotateCcw /> Limpar tudo
             </Button>
-            <div className="flex flex-wrap items-center gap-1" role="group" aria-label="Período da agenda">
+            <div
+              className="flex flex-wrap items-center gap-1"
+              role="group"
+              aria-label="Período da agenda"
+            >
               {(
                 [
                   ["today", "Hoje"],
@@ -3426,6 +3431,15 @@ export function MaintenanceDashboard({
                   >
                     <History /> Ver movimentações desta placa
                   </Button>
+                )}
+                {canCreate && !workshopMode && (
+                  <ForwardWorkshop
+                    appointmentId={selected.dbId}
+                    onDone={() => {
+                      setSelected(null);
+                      void loadAppointments();
+                    }}
+                  />
                 )}
                 {canCreate && !workshopMode && (
                   <Button asChild>

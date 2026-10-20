@@ -39,7 +39,7 @@
 
 - [x] Limpar a main: remover pastas de skills do Claude enviadas por engano; especificação de O.S movida para docs/.
 - [x] Módulo de O.S. ligado ao banco real: lista, nova O.S. (também a partir de agendamento), ficha com itens, situação, finalizar e observações.
-- [ ] Cadastrar centros de custo (sem eles não dá para criar O.S.) — aguardando a lista do Rafael.
+- [x] Centros de custo cadastrados a partir da lista enviada.
 - [ ] O.S.: pagamentos, compras, cotações, anexos e envio ao SGLOC (próximas etapas).
 - [x] Plano de próximos passos para reduzir retrabalho (entregue ao Rafael).
 
@@ -60,7 +60,7 @@
 - [x] Link "Não tem conta? Cadastre-se" na tela de login com contraste maior (fonte clara).
 - [x] Compilação confirmada após o ajuste do styles.css; código formatado e `bun run lint` sem erros (arquivos gerados de `src/integrations` fora da verificação).
 - [x] Botão "Nova O.S." legível na barra da Agenda nos dois temas (variante `outline` passou a definir a cor do texto).
-- [ ] Módulos Frota (lista), Motoristas, Contratos, Financeiro, Relatórios — aguardando dados/tabelas (frota: decidir lista própria).
+- [ ] Módulos Motoristas, Contratos, Financeiro, Relatórios — aguardando dados e definições.
 - [x] Agenda: campos de data inicial/final lado a lado numa única caixa de período; ícone do calendário branco no tema escuro e pop-up nativo escuro.
 - [x] Dashboard: KPIs e gráficos com retorno ao passar o mouse e seleção estilo Power BI (clicar destaca, clicar de novo limpa, Ctrl soma, faixa de chips).
 - [x] Dashboard: pop-up de detalhamento ao clicar (veículos, agendamentos, O.S., prazos) com campo de pesquisa por placa/modelo.
@@ -68,8 +68,11 @@
 - [x] Agenda: remover a logo repetida e o texto "Gestão de Agendamentos" da barra de ações (a logo já está na lateral); deixar o bloco discreto.
 - [x] Agenda: botão "Limpar tudo" corrigido (dentro da caixa) e demais linhas de filtros com quebra para não estourar.
 - [ ] Frota: linha importada por engano "1146 VEÍCULOS" e montadora "MITISHUBISH" — aguardando decisão do Rafael para limpar.
-- [ ] Pátio: aplicar atualização compatível com as permissões atuais e corrigir carregamento e contagens.
-- [ ] Oficina: encaminhar com criação atômica de O.S. vinculada ao veículo/agendamento, sem duplicação.
-- [ ] Externos: separar do pátio, organizar por oficina, mostrar total inclusive vazio e tempo no local.
-- [ ] Veículos: importar a base enviada sem duplicar placas nem impor limite de frota.
-- [ ] Veículos: ativar tela com filtros do SGLOC para todos os perfis, cadastro por Master/Gerente e acesso por usuário configurável pelo Master.
+- [x] Pátio: atualização aplicada; carregamento verificado como Master sem erros, total externo 151 veículos distintos.
+- [x] Oficina: encaminhamento via RPC atômica, criação/reuso de O.S. e vínculo por veículo; janela e busca verificadas sem mudar destinos reais.
+- [x] Externos: abas por local, total sempre visível, permanência registrada nos novos encaminhamentos e histórico por local.
+- [x] Veículos: planilha conciliada (1 novo, 1.136 atualizados, 1 resumo ignorado, 0 erros); preservados veículos ausentes e sem limite de frota.
+- [x] Veículos: tela ativa com filtros, cadastro Master/Gerente e permissão individual Master protegida por RLS; ficha com O.S. por placa verificada.
+- [ ] Pátio próprio: selecionar qual local da lista pertence à empresa — aguardando identificação do Rafael (botão Definir pátio próprio).
+- [ ] Encaminhamento: confirmar com um agendamento real escolhido pelo Rafael — não foi alterado destino de carros nem criada O.S. fictícia nesta validação.
+- [ ] Filtros de frota sem dados (reserva, tipo, ano emplacamento e status operacional): aguardando base complementar; controles indisponíveis quando faltam dados.

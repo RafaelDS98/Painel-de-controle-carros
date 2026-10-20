@@ -45,6 +45,7 @@ const selectClass =
 
 export function UserRolesPanel({ currentUserId }: { currentUserId: string }) {
   const [users, setUsers] = useState<UserRow[]>([]);
+  const [vehicleAccess, setVehicleAccess] = useState<Record<string, boolean>>({});
   const [log, setLog] = useState<LogRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -120,6 +121,8 @@ export function UserRolesPanel({ currentUserId }: { currentUserId: string }) {
 
   async function load() {
     setLoading(true);
+    const access = await supabase.from("vehicle_screen_access").select("user_id,allowed");
+    setVehicleAccess(Object.fromEntries((access.data ?? []).map((a) => [a.user_id, a.allowed])));
     const [{ data, error }, logResult] = await Promise.all([
       supabase.rpc("list_users_with_roles"),
       supabase
@@ -562,6 +565,31 @@ export function UserRolesPanel({ currentUserId }: { currentUserId: string }) {
                 >
                   <Pencil /> Editar
                 </Button>
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    aria-label={`Acesso a Veículos de ${row.full_name || row.email || "usuário"}`}
+                    checked={row.role === "master" || vehicleAccess[row.user_id] !== false}
+                    disabled={row.role === "master" || busy}
+                    onCheckedChange={async (v) => {
+                      setBusy(true);
+                      const { error } = await supabase
+                        .from("vehicle_screen_access")
+                        .upsert({
+                          user_id: row.user_id,
+                          allowed: v === true,
+                          updated_by: currentUserId,
+                          updated_at: new Date().toISOString(),
+                        });
+                      setBusy(false);
+                      if (error) setError(error.message);
+                      else {
+                        setVehicleAccess((c) => ({ ...c, [row.user_id]: v === true }));
+                        setNotice("Acesso a Veículos atualizado.");
+                      }
+                    }}
+                  />
+                  Veículos
+                </label>
               </div>
               {open && (
                 <div className="mt-3 space-y-4 rounded-md border bg-muted/30 p-3">
