@@ -71,3 +71,5 @@
 - [ ] Pátio: aplicar atualização compatível com as permissões atuais e corrigir carregamento e contagens.
 - [ ] Oficina: encaminhar com criação atômica de O.S. vinculada ao veículo/agendamento, sem duplicação.
 - [ ] Externos: separar do pátio, organizar por oficina, mostrar total inclusive vazio e tempo no local.
+- [ ] Veículos: importar a base enviada sem duplicar placas nem impor limite de frota.
+- [ ] Veículos: ativar tela com filtros do SGLOC para todos os perfis, cadastro por Master/Gerente e acesso por usuário configurável pelo Master.
