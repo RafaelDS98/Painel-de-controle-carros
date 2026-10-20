@@ -68,3 +68,6 @@
 - [x] Agenda: remover a logo repetida e o texto "Gestão de Agendamentos" da barra de ações (a logo já está na lateral); deixar o bloco discreto.
 - [x] Agenda: botão "Limpar tudo" corrigido (dentro da caixa) e demais linhas de filtros com quebra para não estourar.
 - [ ] Frota: linha importada por engano "1146 VEÍCULOS" e montadora "MITISHUBISH" — aguardando decisão do Rafael para limpar.
+- [ ] Pátio: aplicar atualização compatível com as permissões atuais e corrigir carregamento e contagens.
+- [ ] Oficina: encaminhar com criação atômica de O.S. vinculada ao veículo/agendamento, sem duplicação.
+- [ ] Externos: separar do pátio, organizar por oficina, mostrar total inclusive vazio e tempo no local.
