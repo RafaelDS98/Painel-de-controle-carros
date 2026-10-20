@@ -48,6 +48,8 @@ import {
   type WorkshopInfo,
 } from "@/lib/yard-utils";
 import type { Tables } from "@/integrations/supabase/types";
+import { useYardGroups } from "@/components/yard-groups-settings";
+import { itemsInGroup } from "@/lib/yard-groups";
 
 type AppointmentRow = Tables<"appointments">;
 
@@ -123,7 +125,8 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
   const [accountOpen, setAccountOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [completionStatus, setCompletionStatus] = useState("");
-  const [locationTab, setLocationTab] = useState<"patio" | "externos">("patio");
+  const [locationTab, setLocationTab] = useState<string>("patio");
+  const yardGroups = useYardGroups();
   const [forwardId, setForwardId] = useState("");
   const [stays, setStays] = useState<Record<string, string>>({});
   const [loadedAt, setLoadedAt] = useState<number | null>(null);
@@ -629,6 +632,23 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
               ? "Indisponível"
               : [...filteredExternal.values()].reduce((n, a) => n + a.length, 0)}
           </Button>
+          {yardGroups.data
+            ?.filter((g) => g.active)
+            .map((g) => (
+              <Button
+                key={g.id}
+                role="tab"
+                aria-selected={locationTab === `g:${g.id}`}
+                variant={locationTab === `g:${g.id}` ? "default" : "outline"}
+                onClick={() => setLocationTab(`g:${g.id}`)}
+              >
+                {g.name} ·{" "}
+                {loadError
+                  ? "Indisponível"
+                  : itemsInGroup([...filteredPatio, ...[...filteredExternal.values()].flat()], g)
+                      .length}
+              </Button>
+            ))}
         </div>
         {!loadError && locationTab === "patio" && (
           <YardKpis
@@ -731,6 +751,56 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
             </div>
           </section>
         )}
+        {!loadError &&
+          locationTab.startsWith("g:") &&
+          (() => {
+            const g = yardGroups.data?.find((x) => `g:${x.id}` === locationTab);
+            if (!g) return null;
+            const items = itemsInGroup(
+              [...filteredPatio, ...[...filteredExternal.values()].flat()],
+              g,
+            );
+            const byPlace = new Map<string, YardAppointment[]>();
+            for (const i of items) byPlace.set(i.workshop, [...(byPlace.get(i.workshop) ?? []), i]);
+            return (
+              <section className="space-y-4">
+                <h2 className="text-lg font-bold">
+                  {g.name} · {items.length} veículo{items.length !== 1 ? "s" : ""}
+                </h2>
+                {!items.length && (
+                  <p className="text-sm text-muted-foreground">Nenhum carro neste grupo.</p>
+                )}
+                {[...byPlace.entries()].map(([place, list]) => (
+                  <div key={place} className="rounded-lg border bg-card">
+                    <h3 className="border-b px-4 py-2.5 font-semibold">
+                      {place} · {list.length}
+                    </h3>
+                    <div className="grid gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                      {list.map((item) => (
+                        <YardCard
+                          key={item.dbId}
+                          item={{
+                            ...item,
+                            forwardedAt: stays[item.dbId] ?? item.forwardedAt ?? null,
+                          }}
+                          settings={settings}
+                          now={now}
+                          completionStatus={completionStatus}
+                          onCheckIn={(i) => setCheckInTarget({ item: i, type: "entrada" })}
+                          onCheckOut={(i) => setCheckInTarget({ item: i, type: "saida" })}
+                          onDetails={setDetailTarget}
+                          onForward={
+                            currentUser.role !== "oficina" ? (i) => setForwardId(i.dbId) : undefined
+                          }
+                          onPlateClick={openPlateHistory}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </section>
+            );
+          })()}
       </main>
 
       {forwardId && (
