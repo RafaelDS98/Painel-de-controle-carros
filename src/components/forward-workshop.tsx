@@ -158,7 +158,7 @@ export function ForwardWorkshop({
                 </label>
               </div>
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                <Button type="button" variant="outline" onClick={() => {setOpen(false);onClose?.();}}>
                   Cancelar
                 </Button>
                 <Button

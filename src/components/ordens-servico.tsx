@@ -69,7 +69,7 @@ export function useOsConfig() {
           .eq("active", true)
           .order("name"),
       ]);
-      if (cfg.error) throw cfg.error;
+      for(const r of [cfg,stores,workshops,mechanics]) if(r.error) throw r.error;
       const c = (cfg.data ?? {}) as Record<string, Array<Record<string, unknown>>>;
       const map = (rows: Array<Record<string, unknown>> | undefined, label: string) =>
         (rows ?? []).map((r) => ({
@@ -176,12 +176,7 @@ export function OsNewPage({ appointmentId }: { appointmentId?: string | undefine
   const vehicles = useQuery({
     queryKey: ["vehicles-lite"],
     queryFn: async (): Promise<Vehicle[]> => {
-      const { data, error } = await supabase
-        .from("vehicles")
-        .select("plate, modelo, fabricante, categoria, km_atual, loja_op, ano")
-        .eq("active", true)
-        .order("plate")
-        .limit(5000);
+      const { data, error } = await supabase.rpc("vehicle_workflow_lookup");
       if (error) throw error;
       return data ?? [];
     },

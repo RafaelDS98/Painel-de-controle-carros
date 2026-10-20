@@ -125,6 +125,7 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
   const [completionStatus, setCompletionStatus] = useState("");
   const [locationTab, setLocationTab] = useState<"patio" | "externos">("patio");
   const [forwardId, setForwardId] = useState("");
+  const [stays,setStays]=useState<Record<string,string>>({});
   const [loadedAt, setLoadedAt] = useState<number | null>(null);
 
   // Notification hook
@@ -178,7 +179,7 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
 
   async function loadData() {
     try {
-      const [apptResult, statusResult, workshopResult, durationResult] = await Promise.all([
+      const [apptResult, statusResult, workshopResult, durationResult, stayResult] = await Promise.all([
         (async () => {
           const data: any[] = [];
           for (let start = 0; ; start += 1000) {
@@ -197,9 +198,10 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
         (supabase as any).from("status_options").select("*").order("sort_order"),
         (supabase as any).from("workshops").select("name, is_own_yard").order("name"),
         (supabase as any).rpc("yard_status_durations"),
+        supabase.from("workshop_movements").select("appointment_id,entered_at").is("left_at",null),
       ]);
 
-      for (const r of [apptResult, statusResult, workshopResult, durationResult])
+      for (const r of [apptResult, statusResult, workshopResult, durationResult,stayResult])
         if (r.error) throw r.error;
 
       const durationMap = new Map<string, string>();
@@ -213,6 +215,7 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
       const rows = (apptResult.data ?? []).map((row: any) =>
         fromRow(row, durationMap.get(row.id) ?? null),
       );
+      setStays(Object.fromEntries((stayResult.data??[]).map(s=>[s.appointment_id,s.entered_at])));
       setAppointments(rows);
       setStatuses((statusResult.data ?? []) as StatusOption[]);
       setWorkshops(
@@ -589,6 +592,7 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
           )}
         </div>
 
+        {!workshops.some(w=>w.isOwnYard) && <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"><span>Pátio próprio ainda não definido.</span>{currentUser.role==="master" && <Button variant="outline" size="sm" onClick={()=>setSettingsOpen(true)}>Definir pátio próprio</Button>}</div>}
         {/* KPIs */}
         <div className="flex flex-wrap gap-2" role="tablist" aria-label="Local de atendimento">
           <Button
@@ -640,7 +644,7 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
                 {filteredPatio.map((item) => (
                   <YardCard
                     key={item.dbId}
-                    item={item}
+                    item={{...item,forwardedAt:stays[item.dbId]??item.forwardedAt}}
                     settings={settings}
                     now={now}
                     completionStatus={completionStatus}
@@ -690,7 +694,7 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
                     {items.map((item) => (
                       <YardCard
                         key={item.dbId}
-                        item={item}
+                        item={{...item,forwardedAt:stays[item.dbId]??item.forwardedAt}}
                         settings={settings}
                         now={now}
                         completionStatus={completionStatus}

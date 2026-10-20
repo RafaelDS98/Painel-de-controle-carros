@@ -13,6 +13,7 @@ import {
   canCreateVehicle,
 } from "@/lib/fleet";
 import { fixSheetRange } from "@/lib/sheet-range";
+import { guardFormula } from "@/lib/agenda-safety";
 import { normalizePlate } from "@/lib/normalize";
 import { Plus, Search, RotateCcw, Upload, Download } from "lucide-react";
 import { toast } from "sonner";
@@ -160,7 +161,7 @@ export function FleetPanel({ role }: { role: string }) {
     const XLSX = await import("xlsx");
     const sheet = XLSX.utils.json_to_sheet(
       rows.map((v) =>
-        Object.fromEntries(Object.entries(fleetFields).map(([k, l]) => [l, fleetValue(v, k)])),
+        Object.fromEntries(Object.entries(fleetFields).map(([k, l]) => [l, guardFormula(fleetValue(v, k))])),
       ),
     );
     const book = XLSX.utils.book_new();

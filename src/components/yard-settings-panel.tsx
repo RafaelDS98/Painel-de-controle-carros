@@ -93,27 +93,11 @@ export function YardSettingsPanel({
 
   async function handleSaveOwnYard() {
     setSaving(true);
-    // Reset all to false first, then set selected to true
-    const { error: resetError } = await (supabase as any)
-      .from("workshops")
-      .update({ is_own_yard: false })
-      .neq("name", "__impossible__");
-    if (resetError) {
-      toast.error(`Falha: ${resetError.message}`);
-      setSaving(false);
-      return;
-    }
-    if (ownYardWorkshop) {
-      const { error } = await (supabase as any)
-        .from("workshops")
-        .update({ is_own_yard: true })
-        .eq("name", ownYardWorkshop);
-      if (error) {
-        toast.error(`Falha: ${error.message}`);
-        setSaving(false);
-        return;
-      }
-    }
+    const chosen=workshops.find(w=>w.name===ownYardWorkshop);
+    const {data,error:lookupError}=chosen?await supabase.from("workshops").select("id").eq("name",chosen.name).single():{data:null,error:null};
+    if(lookupError){toast.error("Não foi possível localizar o pátio.");setSaving(false);return;}
+    const {error}=await supabase.rpc("set_own_yard",{_workshop_id:data?.id??null as unknown as string});
+    if(error){toast.error(error.message);setSaving(false);return;}
     toast.success("Pátio próprio atualizado.");
     onStatusesUpdated();
     setSaving(false);
@@ -228,7 +212,7 @@ export function YardSettingsPanel({
                 <Label className="text-xs">Intervalo de atualização (segundos)</Label>
                 <Input
                   type="number"
-                  min={10}
+                  min={15}
                   max={300}
                   value={draft.polling_seconds}
                   onChange={(e) => setDraft((d) => ({ ...d, polling_seconds: Number(e.target.value) || 30 }))}

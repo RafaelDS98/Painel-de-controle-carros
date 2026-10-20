@@ -1,4 +1,4 @@
-import { safeText } from "@/lib/normalize";
+import { safeText,normalizePlate } from "@/lib/normalize";
 import type { StatusOption } from "@/lib/agenda-config";
 
 export interface YardSettings {
@@ -89,7 +89,7 @@ export function timerColorClass(level: TimerLevel): string {
 }
 
 export function formatDuration(ms: number): string {
-  if (ms < 0) ms = 0;
+  if (!Number.isFinite(ms) || ms < 0) ms = 0;
   const totalMinutes = Math.floor(ms / 60_000);
   const h = Math.floor(totalMinutes / 60);
   const d = Math.floor(h / 24);
@@ -103,7 +103,7 @@ export function formatDuration(ms: number): string {
 
 export function elapsedSince(isoDate: string | null, now: number): number {
   if (!isoDate) return 0;
-  return now - new Date(isoDate).getTime();
+  const value=Date.parse(isoDate);return Number.isFinite(value)?Math.max(0,now-value):0;
 }
 
 export interface WorkshopInfo {
@@ -128,13 +128,15 @@ export function splitYardAndExternal(
   const latest = new Map<string, YardAppointment>();
   for (const apt of appointments) {
     if (apt.checkOutAt || statuses.some((s) => s.label === apt.status && s.is_completion)) continue;
-    const key = apt.plate || apt.dbId;
+    const key = normalizePlate(apt.plate) || apt.dbId;
     const previous = latest.get(key);
     if (!previous || String(apt.registeredAt) > String(previous.registeredAt)) latest.set(key, apt);
   }
   for (const apt of latest.values()) {
-    if (ownYardNames.has(norm(apt.workshop))) patio.push(apt);
-    else if (apt.workshop.trim()) {
+    const yardSelected=statuses.filter(s=>s.show_in_yard).map(s=>s.label);
+    const externalSelected=statuses.filter(s=>s.show_external).map(s=>s.label);
+    if (ownYardNames.has(norm(apt.workshop))) {if(!yardSelected.length||yardSelected.includes(apt.status))patio.push(apt);}
+    else if (apt.workshop.trim() && (!externalSelected.length||externalSelected.includes(apt.status))) {
       const list = externalByWorkshop.get(apt.workshop) ?? [];
       list.push(apt);
       externalByWorkshop.set(apt.workshop, list);
