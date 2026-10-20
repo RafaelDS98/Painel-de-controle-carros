@@ -214,7 +214,7 @@ export function YardDetailModal({
                   <label className="text-xs font-medium text-muted-foreground">Situação</label>
                   {canEditField("status", settings) ? (
                     <Select
-                      value={draft["status"]}
+                      value={draft["status"] ?? ""}
                       onValueChange={(v) => setDraft((d) => ({ ...d, status: v }))}
                     >
                       <SelectTrigger className={cn(fieldChanged("status") && "border-accent ring-1 ring-accent")}>
