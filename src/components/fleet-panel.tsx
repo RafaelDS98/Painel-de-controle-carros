@@ -85,13 +85,11 @@ export function FleetPanel({ role }: { role: string }) {
       return;
     }
     setBusy(true);
-    const { error } = await supabase
-      .from("vehicles")
-      .insert({
-        ...newRow,
-        plate,
-        km_atual: newRow.km_atual === "" ? null : Number(newRow.km_atual),
-      });
+    const { error } = await supabase.from("vehicles").insert({
+      ...newRow,
+      plate,
+      km_atual: newRow.km_atual === "" ? null : Number(newRow.km_atual),
+    });
     setBusy(false);
     if (error) {
       toast.error(error.message);
@@ -161,7 +159,9 @@ export function FleetPanel({ role }: { role: string }) {
     const XLSX = await import("xlsx");
     const sheet = XLSX.utils.json_to_sheet(
       rows.map((v) =>
-        Object.fromEntries(Object.entries(fleetFields).map(([k, l]) => [l, guardFormula(fleetValue(v, k))])),
+        Object.fromEntries(
+          Object.entries(fleetFields).map(([k, l]) => [l, guardFormula(fleetValue(v, k))]),
+        ),
       ),
     );
     const book = XLSX.utils.book_new();

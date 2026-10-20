@@ -101,16 +101,24 @@ export function ForwardWorkshop({
   }
   return (
     <>
-      {!initiallyOpen && <Button
-        variant="outline"
-        onClick={() => {
-          setOpen(true);
-          setResult(null);
+      {!initiallyOpen && (
+        <Button
+          variant="outline"
+          onClick={() => {
+            setOpen(true);
+            setResult(null);
+          }}
+        >
+          <Wrench /> Encaminhar para oficina
+        </Button>
+      )}
+      <Dialog
+        open={open}
+        onOpenChange={(value) => {
+          setOpen(value);
+          if (!value) onClose?.();
         }}
       >
-        <Wrench /> Encaminhar para oficina
-      </Button>}
-      <Dialog open={open} onOpenChange={value=>{setOpen(value);if(!value)onClose?.();}}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Encaminhar {appt.data?.plate ?? "veículo"}</DialogTitle>
@@ -158,7 +166,14 @@ export function ForwardWorkshop({
                 </label>
               </div>
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => {setOpen(false);onClose?.();}}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setOpen(false);
+                    onClose?.();
+                  }}
+                >
                   Cancelar
                 </Button>
                 <Button

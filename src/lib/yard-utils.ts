@@ -1,4 +1,4 @@
-import { safeText,normalizePlate } from "@/lib/normalize";
+import { safeText, normalizePlate } from "@/lib/normalize";
 import type { StatusOption } from "@/lib/agenda-config";
 
 export interface YardSettings {
@@ -103,7 +103,8 @@ export function formatDuration(ms: number): string {
 
 export function elapsedSince(isoDate: string | null, now: number): number {
   if (!isoDate) return 0;
-  const value=Date.parse(isoDate);return Number.isFinite(value)?Math.max(0,now-value):0;
+  const value = Date.parse(isoDate);
+  return Number.isFinite(value) ? Math.max(0, now - value) : 0;
 }
 
 export interface WorkshopInfo {
@@ -133,10 +134,14 @@ export function splitYardAndExternal(
     if (!previous || String(apt.registeredAt) > String(previous.registeredAt)) latest.set(key, apt);
   }
   for (const apt of latest.values()) {
-    const yardSelected=statuses.filter(s=>s.show_in_yard).map(s=>s.label);
-    const externalSelected=statuses.filter(s=>s.show_external).map(s=>s.label);
-    if (ownYardNames.has(norm(apt.workshop))) {if(!yardSelected.length||yardSelected.includes(apt.status))patio.push(apt);}
-    else if (apt.workshop.trim() && (!externalSelected.length||externalSelected.includes(apt.status))) {
+    const yardSelected = statuses.filter((s) => s.show_in_yard).map((s) => s.label);
+    const externalSelected = statuses.filter((s) => s.show_external).map((s) => s.label);
+    if (ownYardNames.has(norm(apt.workshop))) {
+      if (!yardSelected.length || yardSelected.includes(apt.status)) patio.push(apt);
+    } else if (
+      apt.workshop.trim() &&
+      (!externalSelected.length || externalSelected.includes(apt.status))
+    ) {
       const list = externalByWorkshop.get(apt.workshop) ?? [];
       list.push(apt);
       externalByWorkshop.set(apt.workshop, list);

@@ -16,11 +16,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Save, Loader2, LogIn, LogOut, Trash2, Clock, History, X, Image as ImageIcon } from "lucide-react";
+import {
+  Save,
+  Loader2,
+  LogIn,
+  LogOut,
+  Trash2,
+  Clock,
+  History,
+  X,
+  Image as ImageIcon,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import {useQuery} from '@tanstack/react-query';
-import {ForwardWorkshop} from '@/components/forward-workshop';
-import {formatDuration,elapsedSince} from '@/lib/yard-utils';
+import { useQuery } from "@tanstack/react-query";
+import { ForwardWorkshop } from "@/components/forward-workshop";
+import { formatDuration, elapsedSince } from "@/lib/yard-utils";
 import { toast } from "sonner";
 import { statusColorProps, type StatusOption } from "@/lib/agenda-config";
 import { cn } from "@/lib/utils";
@@ -65,7 +75,20 @@ export function YardDetailModal({
   const [checkInRecords, setCheckInRecords] = useState<CheckInRecord[]>([]);
   const [loadingRecords, setLoadingRecords] = useState(false);
   const [photoExpanded, setPhotoExpanded] = useState<string | null>(null);
-  const localHistory=useQuery({queryKey:['local-history',appointment?.dbId],enabled:open&&!!appointment,queryFn:async()=>{if(!appointment)return [];const {data,error}=await supabase.from('workshop_movements').select('id,entered_at,left_at,workshops(name),ordens_servico(numero)').eq('appointment_id',appointment.dbId).order('entered_at');if(error)throw error;return data??[];}});
+  const localHistory = useQuery({
+    queryKey: ["local-history", appointment?.dbId],
+    enabled: open && !!appointment,
+    queryFn: async () => {
+      if (!appointment) return [];
+      const { data, error } = await supabase
+        .from("workshop_movements")
+        .select("id,entered_at,left_at,workshops(name),ordens_servico(numero)")
+        .eq("appointment_id", appointment.dbId)
+        .order("entered_at");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
 
   useEffect(() => {
     if (appointment && open) {
@@ -183,7 +206,9 @@ export function YardDetailModal({
     onSaved();
   }
 
-  const hasChanges = Object.keys(draft).some((key) => fieldChanged(key) && canEditField(key, settings));
+  const hasChanges = Object.keys(draft).some(
+    (key) => fieldChanged(key) && canEditField(key, settings),
+  );
   const deadlineUsed = appointment?.osNumber ? 0 : 0; // simplified — real logic uses deadline_changes_used from full appointment
 
   return (
@@ -221,7 +246,9 @@ export function YardDetailModal({
                       value={draft["status"] ?? ""}
                       onValueChange={(v) => setDraft((d) => ({ ...d, status: v }))}
                     >
-                      <SelectTrigger className={cn(fieldChanged("status") && "border-accent ring-1 ring-accent")}>
+                      <SelectTrigger
+                        className={cn(fieldChanged("status") && "border-accent ring-1 ring-accent")}
+                      >
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -229,7 +256,10 @@ export function YardDetailModal({
                           <SelectItem key={s.label} value={s.label}>
                             <span className="flex items-center gap-2">
                               <span
-                                className={cn("size-2 rounded-full", statusColorProps(s.color_token).className)}
+                                className={cn(
+                                  "size-2 rounded-full",
+                                  statusColorProps(s.color_token).className,
+                                )}
                                 style={statusColorProps(s.color_token).style}
                               />
                               {s.label}
@@ -239,7 +269,9 @@ export function YardDetailModal({
                       </SelectContent>
                     </Select>
                   ) : (
-                    <p className="rounded border bg-muted/30 px-3 py-2 text-sm">{draft["status"] || "—"}</p>
+                    <p className="rounded border bg-muted/30 px-3 py-2 text-sm">
+                      {draft["status"] || "—"}
+                    </p>
                   )}
                 </div>
 
@@ -257,8 +289,12 @@ export function YardDetailModal({
                     <Input
                       type="date"
                       value={draft["current_deadline"]}
-                      onChange={(e) => setDraft((d) => ({ ...d, current_deadline: e.target.value }))}
-                      className={cn(fieldChanged("current_deadline") && "border-accent ring-1 ring-accent")}
+                      onChange={(e) =>
+                        setDraft((d) => ({ ...d, current_deadline: e.target.value }))
+                      }
+                      className={cn(
+                        fieldChanged("current_deadline") && "border-accent ring-1 ring-accent",
+                      )}
                     />
                   ) : (
                     <p className="rounded border bg-muted/30 px-3 py-2 text-sm">
@@ -269,7 +305,9 @@ export function YardDetailModal({
 
                 {/* Operador */}
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">Operador/Mecânico</label>
+                  <label className="text-xs font-medium text-muted-foreground">
+                    Operador/Mecânico
+                  </label>
                   {canEditField("operator", settings) ? (
                     <Input
                       value={draft["operator"]}
@@ -277,7 +315,9 @@ export function YardDetailModal({
                       className={cn(fieldChanged("operator") && "border-accent ring-1 ring-accent")}
                     />
                   ) : (
-                    <p className="rounded border bg-muted/30 px-3 py-2 text-sm">{draft["operator"] || "—"}</p>
+                    <p className="rounded border bg-muted/30 px-3 py-2 text-sm">
+                      {draft["operator"] || "—"}
+                    </p>
                   )}
                 </div>
 
@@ -291,7 +331,9 @@ export function YardDetailModal({
                       className={cn(fieldChanged("contact") && "border-accent ring-1 ring-accent")}
                     />
                   ) : (
-                    <p className="rounded border bg-muted/30 px-3 py-2 text-sm">{draft["contact"] || "—"}</p>
+                    <p className="rounded border bg-muted/30 px-3 py-2 text-sm">
+                      {draft["contact"] || "—"}
+                    </p>
                   )}
                 </div>
 
@@ -302,10 +344,14 @@ export function YardDetailModal({
                     <Input
                       value={draft["contact_number"]}
                       onChange={(e) => setDraft((d) => ({ ...d, contact_number: e.target.value }))}
-                      className={cn(fieldChanged("contact_number") && "border-accent ring-1 ring-accent")}
+                      className={cn(
+                        fieldChanged("contact_number") && "border-accent ring-1 ring-accent",
+                      )}
                     />
                   ) : (
-                    <p className="rounded border bg-muted/30 px-3 py-2 text-sm">{draft["contact_number"] || "—"}</p>
+                    <p className="rounded border bg-muted/30 px-3 py-2 text-sm">
+                      {draft["contact_number"] || "—"}
+                    </p>
                   )}
                 </div>
 
@@ -319,7 +365,9 @@ export function YardDetailModal({
                       className={cn(fieldChanged("store") && "border-accent ring-1 ring-accent")}
                     />
                   ) : (
-                    <p className="rounded border bg-muted/30 px-3 py-2 text-sm">{draft["store"] || "—"}</p>
+                    <p className="rounded border bg-muted/30 px-3 py-2 text-sm">
+                      {draft["store"] || "—"}
+                    </p>
                   )}
                 </div>
 
@@ -333,7 +381,9 @@ export function YardDetailModal({
                       className={cn(fieldChanged("model") && "border-accent ring-1 ring-accent")}
                     />
                   ) : (
-                    <p className="rounded border bg-muted/30 px-3 py-2 text-sm">{draft["model"] || "—"}</p>
+                    <p className="rounded border bg-muted/30 px-3 py-2 text-sm">
+                      {draft["model"] || "—"}
+                    </p>
                   )}
                 </div>
 
@@ -347,14 +397,18 @@ export function YardDetailModal({
                       className={cn(fieldChanged("brand") && "border-accent ring-1 ring-accent")}
                     />
                   ) : (
-                    <p className="rounded border bg-muted/30 px-3 py-2 text-sm">{draft["brand"] || "—"}</p>
+                    <p className="rounded border bg-muted/30 px-3 py-2 text-sm">
+                      {draft["brand"] || "—"}
+                    </p>
                   )}
                 </div>
               </div>
 
               {/* Problema relatado */}
               <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Problema relatado</label>
+                <label className="text-xs font-medium text-muted-foreground">
+                  Problema relatado
+                </label>
                 {canEditField("issue", settings) ? (
                   <Textarea
                     value={draft["issue"]}
@@ -363,7 +417,9 @@ export function YardDetailModal({
                     className={cn(fieldChanged("issue") && "border-accent ring-1 ring-accent")}
                   />
                 ) : (
-                  <p className="rounded border bg-muted/30 px-3 py-2 text-sm">{draft["issue"] || "—"}</p>
+                  <p className="rounded border bg-muted/30 px-3 py-2 text-sm">
+                    {draft["issue"] || "—"}
+                  </p>
                 )}
               </div>
 
@@ -378,36 +434,102 @@ export function YardDetailModal({
                     className={cn(fieldChanged("note") && "border-accent ring-1 ring-accent")}
                   />
                 ) : (
-                  <p className="rounded border bg-muted/30 px-3 py-2 text-sm">{draft["note"] || "—"}</p>
+                  <p className="rounded border bg-muted/30 px-3 py-2 text-sm">
+                    {draft["note"] || "—"}
+                  </p>
                 )}
               </div>
 
               {/* Check-in / Check-out actions */}
               <div className="flex flex-wrap gap-2 border-t pt-3">
-                {currentUserRole!=='oficina'&&<ForwardWorkshop appointmentId={appointment.dbId} onDone={()=>{onSaved();void localHistory.refetch();}}/>}
+                {currentUserRole !== "oficina" && (
+                  <ForwardWorkshop
+                    appointmentId={appointment.dbId}
+                    onDone={() => {
+                      onSaved();
+                      void localHistory.refetch();
+                    }}
+                  />
+                )}
                 {!appointment.checkInAt && (
-                  <Button variant="outline" className="gap-1.5" onClick={() => { onOpenChange(false); onCheckIn(appointment); }}>
+                  <Button
+                    variant="outline"
+                    className="gap-1.5"
+                    onClick={() => {
+                      onOpenChange(false);
+                      onCheckIn(appointment);
+                    }}
+                  >
                     <LogIn className="size-4" /> Registrar entrada
                   </Button>
                 )}
                 {appointment.checkInAt && !appointment.checkOutAt && (
-                  <Button variant="outline" className="gap-1.5" onClick={() => { onOpenChange(false); onCheckOut(appointment); }}>
+                  <Button
+                    variant="outline"
+                    className="gap-1.5"
+                    onClick={() => {
+                      onOpenChange(false);
+                      onCheckOut(appointment);
+                    }}
+                  >
                     <LogOut className="size-4" /> Registrar saída
                   </Button>
                 )}
                 {appointment.checkInAt && (
                   <div className="flex items-center gap-1 self-center text-xs text-green-600 dark:text-green-400">
-                    ✓ Entrada {new Date(appointment.checkInAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                    ✓ Entrada{" "}
+                    {new Date(appointment.checkInAt).toLocaleString("pt-BR", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </div>
                 )}
                 {appointment.checkOutAt && (
                   <div className="flex items-center gap-1 self-center text-xs text-blue-600 dark:text-blue-400">
-                    ✓ Saída {new Date(appointment.checkOutAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                    ✓ Saída{" "}
+                    {new Date(appointment.checkOutAt).toLocaleString("pt-BR", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </div>
                 )}
               </div>
 
-              <section className="border-t pt-3"><h3 className="font-semibold text-sm">Tempo por local</h3>{localHistory.isLoading?<p>Carregando…</p>:localHistory.isError?<p className="text-destructive">Não foi possível carregar o histórico por local.</p>:localHistory.data?.length?localHistory.data.map(m=><p key={m.id} className="py-2 text-sm">{m.workshops?.name??'—'} · O.S. {m.ordens_servico?.numero??'—'} · {formatDuration(elapsedSince(m.entered_at,m.left_at?Date.parse(m.left_at):Date.now()))}{m.left_at?' (encerrado)':' (neste local)'}<span className="block text-xs text-muted-foreground">Entrada: {new Date(m.entered_at).toLocaleString('pt-BR')}{m.left_at?` · Saída: ${new Date(m.left_at).toLocaleString('pt-BR')}`:''}</span></p>):<p className="text-sm text-muted-foreground">Sem encaminhamentos registrados. O tempo passa a ser registrado a partir do encaminhamento.</p>}</section>
+              <section className="border-t pt-3">
+                <h3 className="font-semibold text-sm">Tempo por local</h3>
+                {localHistory.isLoading ? (
+                  <p>Carregando…</p>
+                ) : localHistory.isError ? (
+                  <p className="text-destructive">
+                    Não foi possível carregar o histórico por local.
+                  </p>
+                ) : localHistory.data?.length ? (
+                  localHistory.data.map((m) => (
+                    <p key={m.id} className="py-2 text-sm">
+                      {m.workshops?.name ?? "—"} · O.S. {m.ordens_servico?.numero ?? "—"} ·{" "}
+                      {formatDuration(
+                        elapsedSince(m.entered_at, m.left_at ? Date.parse(m.left_at) : Date.now()),
+                      )}
+                      {m.left_at ? " (encerrado)" : " (neste local)"}
+                      <span className="block text-xs text-muted-foreground">
+                        Entrada: {new Date(m.entered_at).toLocaleString("pt-BR")}
+                        {m.left_at
+                          ? ` · Saída: ${new Date(m.left_at).toLocaleString("pt-BR")}`
+                          : ""}
+                      </span>
+                    </p>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Sem encaminhamentos registrados. O tempo passa a ser registrado a partir do
+                    encaminhamento.
+                  </p>
+                )}
+              </section>
               {/* Histórico de check-ins */}
               <div className="border-t pt-3">
                 <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold">
@@ -422,16 +544,24 @@ export function YardDetailModal({
                     {checkInRecords.map((rec) => (
                       <div key={rec.id} className="rounded border bg-muted/20 p-2.5 text-xs">
                         <div className="flex items-center justify-between">
-                          <span className={cn(
-                            "rounded px-1.5 py-0.5 text-[10px] font-bold",
-                            rec.type === "entrada"
-                              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                              : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
-                          )}>
+                          <span
+                            className={cn(
+                              "rounded px-1.5 py-0.5 text-[10px] font-bold",
+                              rec.type === "entrada"
+                                ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                                : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+                            )}
+                          >
                             {rec.type === "entrada" ? "ENTRADA" : "SAÍDA"}
                           </span>
                           <span className="text-muted-foreground">
-                            {new Date(rec.occurred_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                            {new Date(rec.occurred_at).toLocaleString("pt-BR", {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "2-digit",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
                           </span>
                         </div>
                         {rec.note && <p className="mt-1">{rec.note}</p>}
@@ -442,9 +572,14 @@ export function YardDetailModal({
                               onClick={() => setPhotoExpanded(rec.photo_url)}
                               className="overflow-hidden rounded border"
                             >
-                              <img src={rec.photo_url} alt="Foto check-in" className="h-12 w-16 object-cover" />
+                              <img
+                                src={rec.photo_url}
+                                alt="Foto check-in"
+                                className="h-12 w-16 object-cover"
+                              />
                             </button>
-                            {(rec.performed_by === currentUserId || currentUserRole === "master") && (
+                            {(rec.performed_by === currentUserId ||
+                              currentUserRole === "master") && (
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -464,13 +599,19 @@ export function YardDetailModal({
 
               {/* Botão Salvar */}
               <div className="flex justify-end gap-2 border-t pt-3">
-                <Button variant="outline" onClick={() => onOpenChange(false)}>Fechar</Button>
+                <Button variant="outline" onClick={() => onOpenChange(false)}>
+                  Fechar
+                </Button>
                 <Button
                   className="gap-1.5"
                   disabled={saving || !hasChanges}
                   onClick={() => void handleSave()}
                 >
-                  {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+                  {saving ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Save className="size-4" />
+                  )}
                   {saving ? "Salvando…" : "Salvar alterações"}
                 </Button>
               </div>
