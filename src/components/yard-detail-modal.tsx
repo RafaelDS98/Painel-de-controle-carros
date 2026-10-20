@@ -18,6 +18,9 @@ import {
 } from "@/components/ui/select";
 import { Save, Loader2, LogIn, LogOut, Trash2, Clock, History, X, Image as ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import {useQuery} from '@tanstack/react-query';
+import {ForwardWorkshop} from '@/components/forward-workshop';
+import {formatDuration,elapsedSince} from '@/lib/yard-utils';
 import { toast } from "sonner";
 import { statusColorProps, type StatusOption } from "@/lib/agenda-config";
 import { cn } from "@/lib/utils";
@@ -62,6 +65,7 @@ export function YardDetailModal({
   const [checkInRecords, setCheckInRecords] = useState<CheckInRecord[]>([]);
   const [loadingRecords, setLoadingRecords] = useState(false);
   const [photoExpanded, setPhotoExpanded] = useState<string | null>(null);
+  const localHistory=useQuery({queryKey:['local-history',appointment?.dbId],enabled:open&&!!appointment,queryFn:async()=>{if(!appointment)return [];const {data,error}=await supabase.from('workshop_movements').select('id,entered_at,left_at,workshops(name),ordens_servico(numero)').eq('appointment_id',appointment.dbId).order('entered_at');if(error)throw error;return data??[];}});
 
   useEffect(() => {
     if (appointment && open) {
@@ -380,6 +384,7 @@ export function YardDetailModal({
 
               {/* Check-in / Check-out actions */}
               <div className="flex flex-wrap gap-2 border-t pt-3">
+                {currentUserRole!=='oficina'&&<ForwardWorkshop appointmentId={appointment.dbId} onDone={()=>{onSaved();void localHistory.refetch();}}/>}
                 {!appointment.checkInAt && (
                   <Button variant="outline" className="gap-1.5" onClick={() => { onOpenChange(false); onCheckIn(appointment); }}>
                     <LogIn className="size-4" /> Registrar entrada
@@ -402,6 +407,7 @@ export function YardDetailModal({
                 )}
               </div>
 
+              <section className="border-t pt-3"><h3 className="font-semibold text-sm">Tempo por local</h3>{localHistory.isLoading?<p>Carregando…</p>:localHistory.isError?<p className="text-destructive">Não foi possível carregar o histórico por local.</p>:localHistory.data?.length?localHistory.data.map(m=><p key={m.id} className="py-2 text-sm">{m.workshops?.name??'—'} · O.S. {m.ordens_servico?.numero??'—'} · {formatDuration(elapsedSince(m.entered_at,m.left_at?Date.parse(m.left_at):Date.now()))}{m.left_at?' (encerrado)':' (neste local)'}<span className="block text-xs text-muted-foreground">Entrada: {new Date(m.entered_at).toLocaleString('pt-BR')}{m.left_at?` · Saída: ${new Date(m.left_at).toLocaleString('pt-BR')}`:''}</span></p>):<p className="text-sm text-muted-foreground">Sem encaminhamentos registrados. O tempo passa a ser registrado a partir do encaminhamento.</p>}</section>
               {/* Histórico de check-ins */}
               <div className="border-t pt-3">
                 <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold">

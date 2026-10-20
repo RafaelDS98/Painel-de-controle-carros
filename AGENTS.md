@@ -22,7 +22,9 @@
 - Urgência só gerente/master, filtrada em triggers BEFORE INSERT/UPDATE — tela, importação e chamadas diretas não burlam.
 - Perfis são listados/alterados só por funções protegidas no banco (exigem master e impedem alterar o próprio) — a tela não grava user_roles.
 - Excluir agendamento = arquivar (archived_at/archived_by), só master, em trigger e RLS; o painel carrega só ativos (agenda-safety.ts) e a dedupe de importação inclui arquivados — nada é apagado nem some de uma tela só.
-- Perfil Oficina usa o módulo "oficina" (decidido só pelo perfil): a tela mode="oficina" esconde criar/importar/lote/excluir/configurar e o banco bloqueia INSERT e urgência. TEMPORÁRIO: vê/edita todos os ativos; forwarded_* e workshop_users sem uso até existir fluxo entre setores.
+- Perfil Oficina uses the oficina module and sees active appointments; forwarding is available to creation roles through os_forward_appointment, while workshop_users remains unused — preserves current visibility and separates routing from access grants.
+- Fleet uses vehicles plus extra_data, normalized plate reconciliation and vehicle_screen_access enforced by RLS; OS links use vehicle_id populated by a trigger — avoids duplicate vehicle stores and preserves workflow links independently of screen permission.
+- Yard separates configured own-yard locations from external workshops; workshop_movements records closed/open stays, and os_forward_appointment atomically creates/reuses the linked OS under appointment locking — prevents duplicate forwarding and invented historical durations.
 - Setor é só rótulo (profiles.sector, catalog_items kind "sector"; o do agendamento via appointment_creator_sectors()) — sem efeito em módulos, permissões ou RLS.
 - Migrations em drizzle/migrations são histórico já aplicado no banco (sem _journal); a verdade é o que está em produção.
 - Listas que podem passar de 1000 linhas buscam em blocos `.range(0,999)` — consulta única é cortada no limite padrão e a contagem sai errada.
