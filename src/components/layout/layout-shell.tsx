@@ -69,11 +69,11 @@ const NAV: NavItem[] = [
   { to: "/", label: "Agenda de Manutenção", icon: CalendarClock, exact: true },
   { to: "/ordens-servico", label: "Ordens de Serviço", icon: ClipboardList },
   { to: "/historicos", label: "Históricos", icon: History, hideFor: ["oficina"] },
+  { to: "/veiculos", label: "Veículos", icon: Truck },
 ];
 
 /** Módulos futuros — visíveis desabilitados até existirem. */
 const SOON: { label: string; icon: LucideIcon }[] = [
-  { label: "Frota / Veículos", icon: Truck },
   { label: "Motoristas", icon: Users },
   { label: "Contratos", icon: FileText },
   { label: "Financeiro", icon: DollarSign },
@@ -86,6 +86,7 @@ const SECTION_LABELS: Record<string, string> = {
   "/ordens-servico/nova": "Nova O.S.",
   "/historicos": "Históricos",
   "/veiculo": "Veículo",
+  "/veiculos": "Veículos",
 };
 
 function useCrumbs(): { label: string; to?: string }[] {
