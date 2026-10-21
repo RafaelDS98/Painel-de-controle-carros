@@ -20,6 +20,8 @@ import {
 import { Save, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { YardGroupsSettings } from "@/components/yard-groups-settings";
+import { YardPlacesSettings } from "@/components/yard-places-settings";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import type { YardSettings, WorkshopInfo } from "@/lib/yard-utils";
 import { YARD_EDITABLE_FIELD_LABELS } from "@/lib/yard-utils";
@@ -106,13 +108,22 @@ export function YardSettingsPanel({
     }));
   }
 
+  const SaveBar = ({ label = "Salvar" }: { label?: string }) => (
+    <div className="flex justify-end">
+      <Button size="sm" className="gap-1.5" disabled={saving} onClick={() => void handleSaveSettings()}>
+        {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+        {saving ? "Salvando…" : label}
+      </Button>
+    </div>
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Configurações do Pátio</DialogTitle>
           <DialogDescription>
-            Configure timer, check-in, notificações, campos editáveis e statuses por tela.
+            Escolha a aba e salve cada uma separadamente.
           </DialogDescription>
         </DialogHeader>
 
@@ -243,15 +254,18 @@ export function YardSettingsPanel({
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs" title="Tempo que o aviso pequeno no canto da tela fica visível (4000 = 4 segundos)">Duração do aviso na tela (ms)</Label>
+                <Label className="text-xs" title="Tempo que o aviso pequeno no canto da tela fica visível (4000 = 4 segundos)">Duração do aviso na tela (segundos)</Label>
                 <Input
                   type="number"
-                  min={1000}
-                  max={15000}
-                  step={500}
-                  value={draft.toast_duration_ms}
+                  min={1}
+                  max={15}
+                  step={0.5}
+                  value={draft.toast_duration_ms / 1000}
                   onChange={(e) =>
-                    setDraft((d) => ({ ...d, toast_duration_ms: Number(e.target.value) || 4000 }))
+                    setDraft((d) => ({
+                      ...d,
+                      toast_duration_ms: Math.round((Number(e.target.value) || 4) * 1000),
+                    }))
                   }
                   className="w-28"
                 />
