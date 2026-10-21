@@ -279,6 +279,22 @@ function SidebarContent({
       !item.hideFor?.includes(role ?? "") &&
       (!item.onlyFor || item.onlyFor.includes(role ?? "")),
   );
+  const logo = (
+    <Link
+      to="/home"
+      onClick={onNavigate}
+      aria-label="ANPEXC — voltar para a tela inicial"
+      className="flex min-w-0 items-center gap-2 rounded-md hover:opacity-80"
+    >
+      <img src={phoenixAsset.url} alt="" className="size-9 shrink-0 object-contain" />
+      {!collapsed && (
+        <div className="min-w-0">
+          <p className="text-base font-bold leading-tight">ANPEXC</p>
+          <p className="truncate text-[11px] text-muted-foreground">Gestão de Frota</p>
+        </div>
+      )}
+    </Link>
+  );
   return (
     <>
       <div
@@ -287,21 +303,7 @@ function SidebarContent({
           collapsed && "justify-center px-0",
         )}
       >
-        <Link
-          to="/home"
-          onClick={onNavigate}
-          title="Ir para a tela inicial"
-          aria-label="ANPEXC — voltar para a tela inicial"
-          className="flex min-w-0 items-center gap-2 rounded-md hover:opacity-80"
-        >
-          <img src={phoenixAsset.url} alt="" className="size-9 shrink-0 object-contain" />
-          {!collapsed && (
-            <div className="min-w-0">
-              <p className="text-base font-bold leading-tight">ANPEXC</p>
-              <p className="truncate text-[11px] text-muted-foreground">Gestão de Frota</p>
-            </div>
-          )}
-        </Link>
+        {collapsed ? <NameTip label="ANPEXC — tela inicial">{logo}</NameTip> : logo}
       </div>
       <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-3" aria-label="Navegação principal">
         {items.map((item) => {
