@@ -605,7 +605,7 @@ export function LayoutShell({
                 <Menu className="size-5" />
               </Button>
             </NameTip>
-            <Breadcrumb className="min-w-0 shrink">
+            <Breadcrumb className="min-w-0 flex-1 sm:flex-initial">
               <BreadcrumbList className="flex-nowrap">
                 <BreadcrumbItem className="hidden sm:inline-flex">
                   <BreadcrumbLink asChild>
@@ -630,7 +630,7 @@ export function LayoutShell({
                 ))}
               </BreadcrumbList>
             </Breadcrumb>
-            <div className="flex min-w-0 flex-1 items-center justify-end gap-1 whitespace-nowrap">
+            <div className="flex shrink-0 items-center justify-end gap-1 whitespace-nowrap sm:min-w-0 sm:flex-1">
               {me?.role && me.role !== "oficina" && (
                 <Button
                   variant="ghost"

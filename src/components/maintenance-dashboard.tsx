@@ -2370,12 +2370,14 @@ export function MaintenanceDashboard({
             </div>
             <SearchableSelect
               label="Todos os contatos"
+              className={mobileFilters ? undefined : "hidden sm:flex"}
               value={contact}
               options={option("contact")}
               onChange={setContact}
             />
             <SearchableSelect
               label="Todas as oficinas"
+              className={mobileFilters ? undefined : "hidden sm:flex"}
               value={workshop}
               options={filterOptions(catalog.workshop, option("workshop"))}
               onChange={setWorkshop}
