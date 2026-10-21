@@ -2381,7 +2381,12 @@ export function MaintenanceDashboard({
               onChange={setWorkshop}
             />
           </div>
-          <div className={cn("mt-3 gap-3 sm:grid sm:grid-cols-2 xl:grid-cols-4", mobileFilters ? "grid" : "hidden")}>
+          <div
+            className={cn(
+              "mt-3 gap-3 sm:grid sm:grid-cols-2 xl:grid-cols-4",
+              mobileFilters ? "grid" : "hidden",
+            )}
+          >
             <SearchableSelect
               label="Todas as placas"
               value={plateFilter}
@@ -2413,7 +2418,12 @@ export function MaintenanceDashboard({
               }}
             />
           </div>
-          <div className={cn("mt-3 flex-wrap items-center gap-2 sm:flex", mobileFilters ? "flex" : "hidden")}>
+          <div
+            className={cn(
+              "mt-3 flex-wrap items-center gap-2 sm:flex",
+              mobileFilters ? "flex" : "hidden",
+            )}
+          >
             <label className="flex min-h-10 items-center gap-2 text-sm text-foreground">
               <Checkbox
                 checked={reworksOnly}
@@ -2464,7 +2474,7 @@ export function MaintenanceDashboard({
         {activeFilters.length > 0 && (
           <section
             aria-label="Filtros ativos"
-            className="flex flex-wrap items-center gap-2 border-y py-3 text-sm"
+            className="-mt-2 flex flex-wrap items-center gap-2 text-sm"
           >
             <strong className="mr-1">Filtros ativos</strong>
             {activeFilters.map((filter) => (
@@ -2472,7 +2482,7 @@ export function MaintenanceDashboard({
                 key={filter.key}
                 variant="secondary"
                 size="sm"
-                className="min-h-11 max-w-full gap-2"
+                className="h-8 max-w-full gap-1.5 text-xs"
                 aria-label={`Remover filtro ${filter.label}`}
                 onClick={() => {
                   filter.remove();
@@ -2486,7 +2496,7 @@ export function MaintenanceDashboard({
             <Button
               variant="outline"
               size="sm"
-              className="min-h-11 border-primary font-semibold text-primary"
+              className="h-8 text-xs font-semibold text-link"
               onClick={resetFilters}
             >
               <RotateCcw className="size-4" />
@@ -2497,13 +2507,15 @@ export function MaintenanceDashboard({
 
         <section
           aria-label="Entregas pendentes"
-          className="flex flex-wrap gap-x-8 gap-y-2 border-y py-4 text-sm"
+          className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted-foreground"
         >
           <p>
-            <span className="font-semibold">Hoje:</span> {pendingToday} veículo(s) a entregar
+            <span className="font-semibold text-foreground">Hoje:</span> {pendingToday} veículo(s) a
+            entregar
           </p>
           <p>
-            <span className="font-semibold">Esta semana:</span> {pendingWeek} veículo(s) a entregar
+            <span className="font-semibold text-foreground">Esta semana:</span> {pendingWeek}{" "}
+            veículo(s) a entregar
           </p>
         </section>
         <section className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
@@ -2513,15 +2525,15 @@ export function MaintenanceDashboard({
               variant="outline"
               onClick={() => setKpiOpen(label)}
               title={`Ver detalhes de ${label}`}
-              className="h-auto min-h-28 min-w-0 cursor-pointer flex-col items-stretch justify-start whitespace-normal rounded-md bg-card p-4 text-left shadow-sm transition-colors hover:border-primary hover:bg-accent/20"
+              className="h-auto min-h-24 min-w-0 cursor-pointer flex-col items-stretch justify-start whitespace-normal rounded-md bg-card p-3 text-left shadow-sm transition-colors hover:border-primary hover:bg-accent/20"
             >
-              <span className="mb-4 flex w-full items-center justify-between gap-2">
-                <span className="text-xs font-medium text-muted-foreground">{label}</span>
+              <span className="mb-2 flex w-full items-center justify-between gap-2">
+                <span className="truncate text-xs font-medium text-muted-foreground">{label}</span>
                 <Icon className="size-4 shrink-0 text-accent-foreground" />
               </span>
               <span className="text-3xl font-bold tabular-nums">{value}</span>
               <span className="mt-1 text-xs font-normal text-muted-foreground">{detail}</span>
-              <span className="mt-2 flex items-center gap-1 text-xs font-semibold text-primary">
+              <span className="mt-2 flex items-center gap-1 text-xs font-semibold text-link">
                 Ver detalhes
                 <ChevronRight className="size-3" />
               </span>
