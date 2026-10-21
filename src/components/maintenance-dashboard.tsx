@@ -50,6 +50,13 @@ import { useCan } from "@/lib/permissions";
 import { AppointmentHistory } from "@/components/edit-history";
 import { Link } from "@tanstack/react-router";
 import { usePageAction } from "@/hooks/use-page-action";
+import { MoreHorizontal } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { AdvancedFilterDrawer, type SavedView } from "@/components/advanced-filter-drawer";
 import {
   activeAdvancedCount,
@@ -668,6 +675,7 @@ export function MaintenanceDashboard({
   }, [startDate, endDate]);
   const [selected, setSelected] = useState<Appointment | null>(null);
   const [topbarSlot, setTopbarSlot] = useState<HTMLElement | null>(null);
+  const [mobileFilters, setMobileFilters] = useState(false);
   useEffect(() => setTopbarSlot(document.getElementById("topbar-actions")), []);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(() => new Set());
   const [trashOpen, setTrashOpen] = useState(false);
@@ -2036,7 +2044,7 @@ export function MaintenanceDashboard({
           <Button
             variant="outline"
             size="sm"
-            className="mt-2 h-8 w-full justify-center gap-1 px-2 text-xs text-foreground"
+            className="mt-2 h-8 w-full min-w-0 justify-center gap-1 truncate px-2 text-xs text-foreground"
             onClick={() => setSelected(item)}
           >
             Abrir agendamento
@@ -2059,10 +2067,41 @@ export function MaintenanceDashboard({
     <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
       {topbarSlot
         ? createPortal(
-            <div className="flex items-center gap-1">
-              <Button variant="ghost" size="sm" onClick={() => setAccountOpen(true)}>
-                <UserCircle /> Minha conta
-              </Button>
+            <>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" aria-label="Mais opções da agenda">
+                    <MoreHorizontal /> <span className="hidden xl:inline">Mais</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => setAccountOpen(true)}>
+                    <UserCircle /> Minha conta
+                  </DropdownMenuItem>
+                  {!workshopMode && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/historicos">
+                        <History /> Históricos
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  {currentUser.role === "gerente" && (
+                    <DropdownMenuItem onSelect={() => setListsOpen(true)}>
+                      <ListChecks /> Listas
+                    </DropdownMenuItem>
+                  )}
+                  {currentUser.role === "master" && !workshopMode && (
+                    <DropdownMenuItem onSelect={() => setTrashOpen(true)}>
+                      <Trash2 /> Lixeira
+                    </DropdownMenuItem>
+                  )}
+                  {canCreate && (
+                    <DropdownMenuItem onSelect={() => inputRef.current?.click()}>
+                      <Upload /> Importar agenda
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
               <MyAccountDialog
                 open={accountOpen}
                 onOpenChange={setAccountOpen}
@@ -2075,28 +2114,6 @@ export function MaintenanceDashboard({
                   })
                 }
               />
-              {!workshopMode && (
-                <Button asChild variant="ghost" size="sm">
-                  <Link to="/historicos">
-                    <History /> Históricos
-                  </Link>
-                </Button>
-              )}
-              {currentUser.role === "gerente" && (
-                <Button variant="ghost" size="sm" onClick={() => setListsOpen(true)}>
-                  <ListChecks /> Listas
-                </Button>
-              )}
-              {currentUser.role === "master" && !workshopMode && (
-                <Button variant="ghost" size="sm" onClick={() => setTrashOpen(true)}>
-                  <Trash2 /> Lixeira
-                </Button>
-              )}
-              {canCreate && (
-                <Button variant="ghost" size="sm" onClick={() => inputRef.current?.click()}>
-                  <Upload /> Importar agenda
-                </Button>
-              )}
               <input
                 ref={inputRef}
                 type="file"
@@ -2104,16 +2121,16 @@ export function MaintenanceDashboard({
                 className="hidden"
                 onChange={(event) => importFile(event.target.files?.[0])}
               />
-            </div>,
+            </>,
             topbarSlot,
           )
         : null}
 
-      <main className="mx-auto max-w-[1600px] space-y-6 px-5 py-6 lg:px-8">
+      <main className="mx-auto max-w-[1600px] space-y-5 px-4 py-5 sm:px-5 lg:px-8">
         {tabs}
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="mb-1 text-xs font-semibold uppercase text-accent-foreground">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="min-w-0">
+            <p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">
               Operação semanal
             </p>
             <h1 className="text-2xl font-bold lg:text-3xl">
@@ -2125,24 +2142,31 @@ export function MaintenanceDashboard({
                 : "Acompanhamento da frota, oficinas e serviços programados."}
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border bg-card px-3 py-2 text-xs">
+            <div>
+              <p className="text-muted-foreground">Período carregado</p>
+              <p className="text-sm font-semibold">{loadedPeriod}</p>
+            </div>
             {canRefresh && (
-              <div className="flex items-center gap-2 rounded-md border bg-card px-3 py-2">
-                <div className="text-right">
-                  <p className="text-xs text-muted-foreground">Última atualização</p>
-                  <p className="text-sm font-semibold">
-                    {lastSglocAt
-                      ? new Date(lastSglocAt).toLocaleString("pt-BR", {
-                          timeZone: "America/Sao_Paulo",
-                          day: "2-digit",
-                          month: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
-                      : "—"}
-                  </p>
-                </div>
+              <div>
+                <p className="text-muted-foreground">Última atualização SGLOC</p>
+                <p className="text-sm font-semibold">
+                  {lastSglocAt
+                    ? new Date(lastSglocAt).toLocaleString("pt-BR", {
+                        timeZone: "America/Sao_Paulo",
+                        day: "2-digit",
+                        month: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : "—"}
+                </p>
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              {canRefresh && (
                 <Button
+                  size="sm"
                   onClick={() => void refreshFromSgloc()}
                   disabled={refreshing}
                   aria-busy={refreshing}
@@ -2150,18 +2174,15 @@ export function MaintenanceDashboard({
                   <RefreshCw className={cn(refreshing && "animate-spin")} />
                   {refreshing ? "Atualizando…" : "Atualizar do SGLOC"}
                 </Button>
-              </div>
-            )}
-            <Button
-              variant="outline"
-              onClick={() => void loadAppointments()}
-              aria-label="Recarregar agenda"
-            >
-              <RotateCcw /> Recarregar
-            </Button>
-            <div className="rounded-md border bg-card px-4 py-2 text-right">
-              <p className="text-xs text-muted-foreground">Período carregado</p>
-              <p className="text-sm font-semibold">{loadedPeriod}</p>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void loadAppointments()}
+                aria-label="Recarregar agenda"
+              >
+                <RotateCcw /> Recarregar
+              </Button>
             </div>
           </div>
         </div>
@@ -2293,9 +2314,9 @@ export function MaintenanceDashboard({
           </section>
         )}
 
-        <section className="rounded-lg border bg-card p-4 shadow-sm">
-          <div className="flex flex-col gap-3 xl:flex-row xl:flex-wrap">
-            <label className="relative min-w-0 flex-[1.4] sm:min-w-64">
+        <section className="rounded-lg border bg-card p-3 shadow-sm sm:p-4">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <label className="relative min-w-0">
               <Search className="absolute left-3 top-3 size-4 text-muted-foreground" />
               <Input
                 value={search}
@@ -2307,7 +2328,20 @@ export function MaintenanceDashboard({
                 className="pl-9"
               />
             </label>
-            <div className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-md border border-input bg-background px-2 sm:min-w-64">
+            <Button
+              variant="outline"
+              className="sm:hidden"
+              onClick={() => setMobileFilters((v) => !v)}
+              aria-expanded={mobileFilters}
+            >
+              <SlidersHorizontal /> {mobileFilters ? "Ocultar filtros" : "Filtros"}
+            </Button>
+            <div
+              className={cn(
+                "h-10 min-w-0 items-center gap-2 rounded-md border border-input bg-background px-2",
+                mobileFilters ? "flex" : "hidden sm:flex",
+              )}
+            >
               <Input
                 type="date"
                 aria-label="Data inicial"
@@ -2336,18 +2370,25 @@ export function MaintenanceDashboard({
             </div>
             <SearchableSelect
               label="Todos os contatos"
+              className={mobileFilters ? undefined : "hidden sm:flex"}
               value={contact}
               options={option("contact")}
               onChange={setContact}
             />
             <SearchableSelect
               label="Todas as oficinas"
+              className={mobileFilters ? undefined : "hidden sm:flex"}
               value={workshop}
               options={filterOptions(catalog.workshop, option("workshop"))}
               onChange={setWorkshop}
             />
           </div>
-          <div className="mt-3 flex flex-col gap-3 md:flex-row md:flex-wrap">
+          <div
+            className={cn(
+              "mt-3 gap-3 sm:grid sm:grid-cols-2 xl:grid-cols-4",
+              mobileFilters ? "grid" : "hidden",
+            )}
+          >
             <SearchableSelect
               label="Todas as placas"
               value={plateFilter}
@@ -2378,6 +2419,13 @@ export function MaintenanceDashboard({
                 setPage(1);
               }}
             />
+          </div>
+          <div
+            className={cn(
+              "mt-3 flex-wrap items-center gap-2 sm:flex",
+              mobileFilters ? "flex" : "hidden",
+            )}
+          >
             <label className="flex min-h-10 items-center gap-2 text-sm text-foreground">
               <Checkbox
                 checked={reworksOnly}
@@ -2428,7 +2476,7 @@ export function MaintenanceDashboard({
         {activeFilters.length > 0 && (
           <section
             aria-label="Filtros ativos"
-            className="flex flex-wrap items-center gap-2 border-y py-3 text-sm"
+            className="-mt-2 flex flex-wrap items-center gap-2 text-sm"
           >
             <strong className="mr-1">Filtros ativos</strong>
             {activeFilters.map((filter) => (
@@ -2436,7 +2484,7 @@ export function MaintenanceDashboard({
                 key={filter.key}
                 variant="secondary"
                 size="sm"
-                className="min-h-11 max-w-full gap-2"
+                className="h-8 max-w-full gap-1.5 text-xs"
                 aria-label={`Remover filtro ${filter.label}`}
                 onClick={() => {
                   filter.remove();
@@ -2450,7 +2498,7 @@ export function MaintenanceDashboard({
             <Button
               variant="outline"
               size="sm"
-              className="min-h-11 border-primary font-semibold text-primary"
+              className="h-8 text-xs font-semibold text-link"
               onClick={resetFilters}
             >
               <RotateCcw className="size-4" />
@@ -2461,13 +2509,15 @@ export function MaintenanceDashboard({
 
         <section
           aria-label="Entregas pendentes"
-          className="flex flex-wrap gap-x-8 gap-y-2 border-y py-4 text-sm"
+          className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted-foreground"
         >
           <p>
-            <span className="font-semibold">Hoje:</span> {pendingToday} veículo(s) a entregar
+            <span className="font-semibold text-foreground">Hoje:</span> {pendingToday} veículo(s) a
+            entregar
           </p>
           <p>
-            <span className="font-semibold">Esta semana:</span> {pendingWeek} veículo(s) a entregar
+            <span className="font-semibold text-foreground">Esta semana:</span> {pendingWeek}{" "}
+            veículo(s) a entregar
           </p>
         </section>
         <section className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
@@ -2477,15 +2527,15 @@ export function MaintenanceDashboard({
               variant="outline"
               onClick={() => setKpiOpen(label)}
               title={`Ver detalhes de ${label}`}
-              className="h-auto min-h-28 min-w-0 cursor-pointer flex-col items-stretch justify-start whitespace-normal rounded-md bg-card p-4 text-left shadow-sm transition-colors hover:border-primary hover:bg-accent/20"
+              className="h-auto min-h-24 min-w-0 cursor-pointer flex-col items-stretch justify-start whitespace-normal rounded-md bg-card p-3 text-left shadow-sm transition-colors hover:border-primary hover:bg-accent/20"
             >
-              <span className="mb-4 flex w-full items-center justify-between gap-2">
-                <span className="text-xs font-medium text-muted-foreground">{label}</span>
+              <span className="mb-2 flex w-full items-center justify-between gap-2">
+                <span className="truncate text-xs font-medium text-muted-foreground">{label}</span>
                 <Icon className="size-4 shrink-0 text-accent-foreground" />
               </span>
               <span className="text-3xl font-bold tabular-nums">{value}</span>
               <span className="mt-1 text-xs font-normal text-muted-foreground">{detail}</span>
-              <span className="mt-2 flex items-center gap-1 text-xs font-semibold text-primary">
+              <span className="mt-2 flex items-center gap-1 text-xs font-semibold text-link">
                 Ver detalhes
                 <ChevronRight className="size-3" />
               </span>
@@ -2548,7 +2598,18 @@ export function MaintenanceDashboard({
                 </Button>
               </div>
             </div>
-            <div className="grid min-w-0 gap-3 md:grid-cols-3 xl:grid-cols-6">
+            <div
+              className="grid min-w-0 gap-3 md:grid-cols-3 xl:[grid-template-columns:var(--week-cols)]"
+              style={
+                {
+                  "--week-cols": days
+                    .map((_, i) =>
+                      (week.days[i]?.length ?? 0) > 0 ? "minmax(0,3fr)" : "minmax(6.5rem,1fr)",
+                    )
+                    .join(" "),
+                } as React.CSSProperties
+              }
+            >
               {days.map((day, index) => {
                 const rows = [...(week.days[index] ?? [])].sort((a, b) =>
                   comparePriority(a, b, today, completion),

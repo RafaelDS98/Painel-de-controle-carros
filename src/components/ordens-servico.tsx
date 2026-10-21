@@ -96,14 +96,16 @@ function Shell({
   title,
   children,
   back,
+  actions,
 }: {
   title: string;
   children: React.ReactNode;
   back?: boolean;
+  actions?: React.ReactNode;
 }) {
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <main className="mx-auto max-w-[1400px] space-y-5 px-5 py-6 lg:px-8">
+      <main className="mx-auto max-w-[1400px] space-y-5 px-4 py-5 sm:px-5 lg:px-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-semibold">{title}</h1>
           <div className="flex gap-2">
@@ -112,9 +114,7 @@ function Shell({
                 <Link to="/ordens-servico">Voltar à lista</Link>
               </Button>
             )}
-            <Button variant="outline" asChild>
-              <Link to="/">Ir para a Agenda</Link>
-            </Button>
+            {actions}
           </div>
         </div>
         {children}
@@ -144,14 +144,16 @@ export function Badge({
 
 export function OsListPage({ canCreate }: { canCreate: boolean }) {
   return (
-    <Shell title="Ordens de Serviço">
-      {canCreate && (
-        <div className="flex justify-end">
+    <Shell
+      title="Ordens de Serviço"
+      actions={
+        canCreate ? (
           <Button asChild>
             <Link to="/ordens-servico/nova">Nova O.S.</Link>
           </Button>
-        </div>
-      )}
+        ) : null
+      }
+    >
       <OsConsultaPanel />
     </Shell>
   );

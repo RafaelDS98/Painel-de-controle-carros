@@ -74,7 +74,7 @@ export function NewsListItem({ post, onOpen }: { post: NewsPost; onOpen: () => v
       <div className="min-w-0">
         {post.kicker && <p className="text-sm font-medium text-muted-foreground">{post.kicker}</p>}
         <button type="button" onClick={onOpen} className="text-left">
-          <h3 className="mt-1 text-xl font-bold leading-tight text-primary hover:underline">
+          <h3 className="mt-1 text-xl font-bold leading-tight text-foreground hover:text-link hover:underline">
             {post.title}
           </h3>
         </button>
@@ -105,7 +105,7 @@ export function NewsArticleDialog({
               {post.kicker && (
                 <p className="text-sm font-medium text-muted-foreground">{post.kicker}</p>
               )}
-              <DialogTitle className="text-2xl font-bold leading-tight text-primary">
+              <DialogTitle className="text-2xl font-bold leading-tight text-foreground">
                 {post.title}
               </DialogTitle>
               {post.subtitle && <p className="text-base text-foreground/80">{post.subtitle}</p>}

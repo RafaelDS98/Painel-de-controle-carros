@@ -146,7 +146,7 @@ function Index() {
     </Button>
   );
   const tabs = (
-    <div role="tablist" aria-label="Módulos" className="flex flex-wrap gap-2">
+    <div role="tablist" aria-label="Módulos" className="flex gap-2 overflow-x-auto md:hidden">
       {available.map((m) =>
         tabBtn(m, m === "agenda" ? "Agenda" : "Oficina", !movements && m === active, () => {
           go(false);

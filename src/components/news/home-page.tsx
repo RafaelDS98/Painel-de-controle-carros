@@ -65,7 +65,7 @@ function Featured({ posts, onOpen }: { posts: NewsPost[]; onOpen: (p: NewsPost) 
     return <p className="text-sm text-muted-foreground">Nenhuma notícia marcada como destaque.</p>;
   const [main, ...side] = list;
   return (
-    <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+    <div className={cn("grid gap-4", side.length > 0 && "lg:grid-cols-[2fr_1fr]")}>
       {main && (
         <button
           type="button"
@@ -74,9 +74,7 @@ function Featured({ posts, onOpen }: { posts: NewsPost[]; onOpen: (p: NewsPost) 
         >
           <NewsImage post={main} className="transition-transform group-hover:scale-105" />
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-background via-background/80 to-transparent p-5">
-            {main.kicker && (
-              <p className="text-sm font-medium text-muted-foreground">{main.kicker}</p>
-            )}
+            {main.kicker && <p className="text-sm font-medium text-foreground/80">{main.kicker}</p>}
             <h2 className="text-2xl font-bold leading-tight text-foreground">{main.title}</h2>
             {main.subtitle && <p className="mt-1 text-sm text-foreground/80">{main.subtitle}</p>}
           </div>

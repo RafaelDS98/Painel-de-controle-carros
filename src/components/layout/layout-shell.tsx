@@ -332,8 +332,8 @@ function SidebarContent({
                 className={cn(
                   "flex min-h-9 items-center rounded-md px-2 text-[13px] transition-colors",
                   kidActive
-                    ? "bg-accent font-semibold text-accent-foreground"
-                    : "text-foreground hover:bg-accent",
+                    ? "bg-sidebar-accent font-semibold text-sidebar-accent-foreground"
+                    : "text-foreground hover:bg-sidebar-accent/50",
                 )}
               >
                 {c.label}
@@ -396,7 +396,7 @@ function SidebarContent({
               title={`${item.label} — em breve`}
               aria-disabled
               className={cn(
-                "flex min-h-10 cursor-default select-none items-center gap-3 rounded-md px-3 text-sm text-muted-foreground/50",
+                "flex min-h-10 cursor-default select-none items-center gap-3 rounded-md px-3 text-sm text-muted-foreground/70",
                 collapsed && "justify-center px-0",
               )}
             >
@@ -411,7 +411,7 @@ function SidebarContent({
           <span
             title="Central de Ajuda — em breve"
             aria-disabled
-            className="flex min-h-10 cursor-default select-none items-center gap-3 rounded-md px-3 text-sm text-muted-foreground/50"
+            className="flex min-h-10 cursor-default select-none items-center gap-3 rounded-md px-3 text-sm text-muted-foreground/70"
           >
             <HelpCircle className="size-4 shrink-0" />
             {!collapsed && <span>Central de Ajuda</span>}
@@ -605,16 +605,16 @@ export function LayoutShell({
                 <Menu className="size-5" />
               </Button>
             </NameTip>
-            <Breadcrumb className="min-w-0 shrink">
-              <BreadcrumbList className="flex-wrap">
-                <BreadcrumbItem>
+            <Breadcrumb className="min-w-0 flex-1 sm:flex-initial">
+              <BreadcrumbList className="flex-nowrap">
+                <BreadcrumbItem className="hidden sm:inline-flex">
                   <BreadcrumbLink asChild>
                     <Link to="/dashboard">ANPEXC</Link>
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 {crumbs.map((crumb, index) => (
                   <span key={`${crumb.label}-${index}`} className="contents">
-                    <BreadcrumbSeparator />
+                    <BreadcrumbSeparator className={index === 0 ? "hidden sm:block" : undefined} />
                     <BreadcrumbItem className="max-w-[200px] truncate">
                       {index === crumbs.length - 1 ? (
                         <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
@@ -630,28 +630,38 @@ export function LayoutShell({
                 ))}
               </BreadcrumbList>
             </Breadcrumb>
-            <div className="flex min-w-0 flex-1 items-center justify-end gap-1 whitespace-nowrap">
+            <div className="flex shrink-0 items-center justify-end gap-1 whitespace-nowrap sm:min-w-0 sm:flex-1">
               {me?.role && me.role !== "oficina" && (
                 <Button
                   variant="ghost"
                   size="sm"
+                  className="hidden md:inline-flex"
+                  title="Novo agendamento"
                   onClick={() => void navigate({ to: "/", search: { acao: "novo" } })}
                 >
-                  <Plus /> Novo agendamento
+                  <Plus /> <span className="hidden xl:inline">Novo agendamento</span>
                 </Button>
               )}
               {me?.role && me.role !== "oficina" && (
-                <Button variant="ghost" size="sm" asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  asChild
+                  className="hidden md:inline-flex"
+                  title="Nova O.S."
+                >
                   <Link to="/ordens-servico/nova">
-                    <ClipboardPlus /> Nova O.S.
+                    <ClipboardPlus /> <span className="hidden xl:inline">Nova O.S.</span>
                   </Link>
                 </Button>
               )}
-              {me?.role && <QuickCheckInButton />}
+              {me?.role && <QuickCheckInButton compact />}
               {me?.role === "master" && (
                 <Button
                   variant="ghost"
                   size="sm"
+                  className="hidden md:inline-flex"
+                  title="Configurações"
                   onClick={() =>
                     void navigate({
                       to: "/",
@@ -659,10 +669,10 @@ export function LayoutShell({
                     })
                   }
                 >
-                  <Settings /> Configurações
+                  <Settings /> <span className="hidden xl:inline">Configurações</span>
                 </Button>
               )}
-              <div id="topbar-actions" className="flex flex-wrap items-center gap-1" />
+              <div id="topbar-actions" className="flex items-center gap-1" />
             </div>
             <div className="ml-auto flex shrink-0 items-center gap-1">
               <NameTip label="Buscar (Ctrl+K)" side="bottom">

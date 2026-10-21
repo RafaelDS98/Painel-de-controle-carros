@@ -24,7 +24,9 @@ export function SearchableSelect({
   value,
   options,
   onChange,
+  className,
 }: {
+  className?: string | undefined;
   label: string;
   value: string;
   options: string[];
@@ -52,7 +54,10 @@ export function SearchableSelect({
           role="combobox"
           aria-expanded={open}
           aria-label={label}
-          className="relative flex h-10 min-w-44 flex-1 items-center rounded-md border border-input bg-background px-3 pr-8 text-left text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+          className={cn(
+            "relative flex h-10 min-h-10 w-full min-w-0 shrink-0 flex-1 sm:min-w-44 items-center rounded-md border border-input bg-background px-3 pr-8 text-left text-sm text-foreground outline-none focus:ring-2 focus:ring-ring",
+            className,
+          )}
         >
           <span className="truncate">{value || label}</span>
           <ChevronDown className="pointer-events-none absolute right-3 top-3 size-4 text-muted-foreground" />
