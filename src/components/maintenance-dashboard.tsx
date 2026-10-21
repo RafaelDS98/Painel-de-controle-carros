@@ -50,6 +50,13 @@ import { useCan } from "@/lib/permissions";
 import { AppointmentHistory } from "@/components/edit-history";
 import { Link } from "@tanstack/react-router";
 import { usePageAction } from "@/hooks/use-page-action";
+import { MoreHorizontal } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { AdvancedFilterDrawer, type SavedView } from "@/components/advanced-filter-drawer";
 import {
   activeAdvancedCount,

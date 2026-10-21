@@ -606,8 +606,8 @@ export function LayoutShell({
               </Button>
             </NameTip>
             <Breadcrumb className="min-w-0 shrink">
-              <BreadcrumbList className="flex-wrap">
-                <BreadcrumbItem>
+              <BreadcrumbList className="flex-nowrap">
+                <BreadcrumbItem className="hidden sm:inline-flex">
                   <BreadcrumbLink asChild>
                     <Link to="/dashboard">ANPEXC</Link>
                   </BreadcrumbLink>
@@ -635,23 +635,33 @@ export function LayoutShell({
                 <Button
                   variant="ghost"
                   size="sm"
+                  className="hidden md:inline-flex"
+                  title="Novo agendamento"
                   onClick={() => void navigate({ to: "/", search: { acao: "novo" } })}
                 >
-                  <Plus /> Novo agendamento
+                  <Plus /> <span className="hidden xl:inline">Novo agendamento</span>
                 </Button>
               )}
               {me?.role && me.role !== "oficina" && (
-                <Button variant="ghost" size="sm" asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  asChild
+                  className="hidden md:inline-flex"
+                  title="Nova O.S."
+                >
                   <Link to="/ordens-servico/nova">
-                    <ClipboardPlus /> Nova O.S.
+                    <ClipboardPlus /> <span className="hidden xl:inline">Nova O.S.</span>
                   </Link>
                 </Button>
               )}
-              {me?.role && <QuickCheckInButton />}
+              {me?.role && <QuickCheckInButton compact />}
               {me?.role === "master" && (
                 <Button
                   variant="ghost"
                   size="sm"
+                  className="hidden md:inline-flex"
+                  title="Configurações"
                   onClick={() =>
                     void navigate({
                       to: "/",
@@ -659,10 +669,10 @@ export function LayoutShell({
                     })
                   }
                 >
-                  <Settings /> Configurações
+                  <Settings /> <span className="hidden xl:inline">Configurações</span>
                 </Button>
               )}
-              <div id="topbar-actions" className="flex flex-wrap items-center gap-1" />
+              <div id="topbar-actions" className="flex items-center gap-1" />
             </div>
             <div className="ml-auto flex shrink-0 items-center gap-1">
               <NameTip label="Buscar (Ctrl+K)" side="bottom">
