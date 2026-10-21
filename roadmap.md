@@ -73,8 +73,19 @@
 - [x] Externos: abas por local, total sempre visível, permanência registrada nos novos encaminhamentos e histórico por local.
 - [x] Veículos: planilha conciliada (1 novo, 1.136 atualizados, 1 resumo ignorado, 0 erros); preservados veículos ausentes e sem limite de frota.
 - [x] Veículos: tela ativa com filtros, cadastro Master/Gerente e permissão individual Master protegida por RLS; ficha com O.S. por placa verificada.
-- [ ] Pátio próprio: selecionar qual local da lista pertence à empresa — aguardando identificação do Rafael (botão Definir pátio próprio).
+- [ ] Pátio próprio: marcar os locais da empresa em Pátio → Configurações → Locais (agora em lote, vários pátios) — aguardando o Rafael escolher.
 - [ ] Encaminhamento: confirmar com um agendamento real escolhido pelo Rafael — não foi alterado destino de carros nem criada O.S. fictícia nesta validação.
 - [ ] Filtros de frota sem dados (reserva, tipo, ano emplacamento e status operacional): aguardando base complementar; controles indisponíveis quando faltam dados.
 
 - [x] Permissões por usuário (abas e ações) em Usuários · Permissões; encaminhamento liberado para Atendimento; logo e Home voltam ao início.
+- [x] Entrada/Saída rápida pela barra superior: placa só do cadastro (lista estilo SGLOC), ligada ao agendamento aberto ou avulsa; banco recusa placa avulsa não cadastrada.
+- [x] Configurações do Pátio em abas; tabela de Locais com seleção múltipla para marcar pátio próprio/oficina externa e incluir/remover de grupos em lote; aviso em segundos.
+- [x] Barra superior fixa e maior com atalhos globais; busca só pela lupa (abre a barra ao clicar ou Ctrl+K).
+- [x] Menu lateral com subtelas (Agenda, Oficina/Pátio, Consultas, O.S.; Históricos → Alterações/Check-ins).
+- [ ] Menu recolhido: subtelas aparecem só com o menu aberto (sem lista flutuante ao passar o mouse).
+
+## Como continuar (para uma sessão nova)
+- Ler AGENTS.md (raiz e subpastas) antes de mexer; regras de negócio ficam no banco (triggers/funções), a tela só espelha.
+- Migrações em drizzle/migrations já estão aplicadas; nunca reaplicar nem reescrever. `0026_yard_oficina.sql` é duplicada e NUNCA deve ser executada.
+- Pendências que dependem do Rafael: escolher pátios próprios, lojas das O.S. importadas, limpeza da linha "1146 VEÍCULOS"/"MITISHUBISH", teste real de encaminhamento com conta Atendimento, tarefa agendada do SGLOC (sem mecanismo aprovado), envio real ao SGLOC.
+- Validar sempre: `bunx tsgo --noEmit`, `bunx vitest run`, `bun run lint`.
