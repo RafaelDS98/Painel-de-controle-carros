@@ -82,7 +82,13 @@ type NavItem = {
   onlyFor?: string[];
   perm?: string;
   anyPerm?: string[];
-  children?: { label: string; search?: Record<string, string>; to?: string; perm?: string; anyPerm?: string[] }[];
+  children?: {
+    label: string;
+    search?: Record<string, string>;
+    to?: string;
+    perm?: string;
+    anyPerm?: string[];
+  }[];
 };
 
 const NAV: NavItem[] = [
@@ -97,7 +103,11 @@ const NAV: NavItem[] = [
     children: [
       { label: "Agenda", search: { tab: "agenda" }, perm: "module.agenda" },
       { label: "Oficina / Pátio", search: { tab: "oficina" }, perm: "module.oficina" },
-      { label: "Consultas", search: { tab: "consultas" }, anyPerm: ["module.veiculos", "module.os"] },
+      {
+        label: "Consultas",
+        search: { tab: "consultas" },
+        anyPerm: ["module.veiculos", "module.os"],
+      },
       { label: "Ordens de Serviço", to: "/ordens-servico", perm: "module.os" },
     ],
   },
@@ -160,7 +170,15 @@ function useCrumbs(): { label: string; to?: string }[] {
   }, [pathname]);
 }
 
-function CollapsedSubmenu({ item, active, children }: { item: NavItem; active: boolean; children: ReactNode }) {
+function CollapsedSubmenu({
+  item,
+  active,
+  children,
+}: {
+  item: NavItem;
+  active: boolean;
+  children: ReactNode;
+}) {
   const [open, setOpen] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   function cancelClose() {
@@ -171,28 +189,45 @@ function CollapsedSubmenu({ item, active, children }: { item: NavItem; active: b
     cancelClose();
     timer.current = setTimeout(() => setOpen(false), 180);
   }
-  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    [],
+  );
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="ghost"
           aria-label={item.label}
-          className={cn("h-10 w-full px-0", active && "bg-sidebar-accent text-sidebar-accent-foreground")}
-          onPointerEnter={(event) => { if (event.pointerType === "mouse") { cancelClose(); setOpen(true); } }}
+          className={cn(
+            "h-10 w-full px-0",
+            active && "bg-sidebar-accent text-sidebar-accent-foreground",
+          )}
+          onPointerEnter={(event) => {
+            if (event.pointerType === "mouse") {
+              cancelClose();
+              setOpen(true);
+            }
+          }}
           onPointerLeave={scheduleClose}
         >
           <item.icon className={cn("size-4", active && "text-primary")} />
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        side="right" align="start" sideOffset={8}
+        side="right"
+        align="start"
+        sideOffset={8}
         aria-label={`Subtelas de ${item.label}`}
         className="w-60 max-h-[80vh] overflow-y-auto p-2"
         onPointerEnter={cancelClose}
         onPointerLeave={scheduleClose}
         onOpenAutoFocus={(event) => event.preventDefault()}
-        onClick={(event) => { if ((event.target as HTMLElement).closest("a")) setOpen(false); }}
+        onClick={(event) => {
+          if ((event.target as HTMLElement).closest("a")) setOpen(false);
+        }}
       >
         <p className="px-2 py-2 text-xs font-semibold text-muted-foreground">{item.label}</p>
         {children}
@@ -252,56 +287,75 @@ function SidebarContent({
       <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-3" aria-label="Navegação principal">
         {items.map((item) => {
           const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
-          const kids = (item.children ?? []).filter((c) => canSeeNavigation(permissions, c.perm, c.anyPerm));
+          const kids = (item.children ?? []).filter((c) =>
+            canSeeNavigation(permissions, c.perm, c.anyPerm),
+          );
           const open = !collapsed && kids.length > 0 && (active || expanded === item.label);
           const childLinks = kids.map((c, index) => {
             const target = c.to ?? item.to;
             const childSearch = c.label === "Consultas" ? consultasSearch(permissions) : c.search;
-            const kidActive = isNavigationChildActive(pathname, target, search, childSearch, index === 0);
+            const kidActive = isNavigationChildActive(
+              pathname,
+              target,
+              search,
+              childSearch,
+              index === 0,
+            );
             return (
-              <Link key={c.label} to={target} search={childSearch as never} onClick={onNavigate}
+              <Link
+                key={c.label}
+                to={target}
+                search={childSearch as never}
+                onClick={onNavigate}
                 aria-current={kidActive ? "page" : undefined}
-                className={cn("flex min-h-9 items-center rounded-md px-2 text-[13px] transition-colors",
-                  kidActive ? "bg-accent font-semibold text-accent-foreground" : "text-foreground hover:bg-accent")}
-              >{c.label}</Link>
+                className={cn(
+                  "flex min-h-9 items-center rounded-md px-2 text-[13px] transition-colors",
+                  kidActive
+                    ? "bg-accent font-semibold text-accent-foreground"
+                    : "text-foreground hover:bg-accent",
+                )}
+              >
+                {c.label}
+              </Link>
             );
           });
           return (
             <div key={item.label}>
               {collapsed && kids.length > 0 ? (
-                <CollapsedSubmenu item={item} active={active}>{childLinks}</CollapsedSubmenu>
-              ) : (
-              <Link
-                to={item.to}
-                onClick={() => {
-                  setExpanded(item.label);
-                  onNavigate();
-                }}
-                title={item.label}
-                aria-current={active ? "page" : undefined}
-                aria-expanded={kids.length ? open : undefined}
-                className={cn(
-                  "flex min-h-10 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors",
-                  collapsed && "justify-center px-0",
-                  active
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground/75 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
-                )}
-              >
-                <item.icon className={cn("size-4 shrink-0", active && "text-primary")} />
-                {!collapsed && <span className="flex-1 truncate">{item.label}</span>}
-                {!collapsed && kids.length > 0 && (
-                  <ChevronDown
-                    className={cn("size-3.5 shrink-0 transition-transform", !open && "-rotate-90")}
-                  />
-                )}
-              </Link>
-              )}
-              {open && (
-                <div className="ml-5 mt-1 space-y-0.5 border-l pl-3">
+                <CollapsedSubmenu item={item} active={active}>
                   {childLinks}
-                </div>
+                </CollapsedSubmenu>
+              ) : (
+                <Link
+                  to={item.to}
+                  onClick={() => {
+                    setExpanded(item.label);
+                    onNavigate();
+                  }}
+                  title={item.label}
+                  aria-current={active ? "page" : undefined}
+                  aria-expanded={kids.length ? open : undefined}
+                  className={cn(
+                    "flex min-h-10 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors",
+                    collapsed && "justify-center px-0",
+                    active
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                      : "text-sidebar-foreground/75 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
+                  )}
+                >
+                  <item.icon className={cn("size-4 shrink-0", active && "text-primary")} />
+                  {!collapsed && <span className="flex-1 truncate">{item.label}</span>}
+                  {!collapsed && kids.length > 0 && (
+                    <ChevronDown
+                      className={cn(
+                        "size-3.5 shrink-0 transition-transform",
+                        !open && "-rotate-90",
+                      )}
+                    />
+                  )}
+                </Link>
               )}
+              {open && <div className="ml-5 mt-1 space-y-0.5 border-l pl-3">{childLinks}</div>}
             </div>
           );
         })}

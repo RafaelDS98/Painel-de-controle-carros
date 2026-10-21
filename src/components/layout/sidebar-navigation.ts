@@ -3,10 +3,14 @@ export function canSeeNavigation(
   required?: string,
   anyOf?: readonly string[],
 ): boolean {
-  return (!required || permissions.has(required)) && (!anyOf || anyOf.some((p) => permissions.has(p)));
+  return (
+    (!required || permissions.has(required)) && (!anyOf || anyOf.some((p) => permissions.has(p)))
+  );
 }
 
-export function consultasSearch(permissions: ReadonlySet<string>): { tab: "consultas" | "consultas-os" } {
+export function consultasSearch(permissions: ReadonlySet<string>): {
+  tab: "consultas" | "consultas-os";
+} {
   return { tab: permissions.has("module.veiculos") ? "consultas" : "consultas-os" };
 }
 
@@ -22,6 +26,8 @@ export function isNavigationChildActive(
   if (childSearch.tab === "consultas" || childSearch.tab === "consultas-os") {
     return search.tab === "consultas" || search.tab === "consultas-os";
   }
-  return Object.entries(childSearch).every(([key, value]) => search[key] === value) ||
-    (first && !Object.keys(childSearch).some((key) => search[key]));
+  return (
+    Object.entries(childSearch).every(([key, value]) => search[key] === value) ||
+    (first && !Object.keys(childSearch).some((key) => search[key]))
+  );
 }
