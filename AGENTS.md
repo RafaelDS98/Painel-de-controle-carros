@@ -36,7 +36,8 @@
 - Mudanças de banco (tabelas, triggers, RLS, funções) viram arquivo em drizzle/migrations e SQL entregue ao Rafael, que aplica no SQL Editor; só depois a tela que depende delas é enviada.
 - Ao terminar cada mudança, atualizar este arquivo (decisão nova) e o roadmap.md (concluído ou pendente).
 - Envio ao SGLOC nunca é silencioso: desligado, criação/reenvio fica `push_failed` com o motivo e botão "Reenviar"; só atualização sem sgloc_reference é ignorada.
-- Layout autenticado: shell `layout-shell.tsx` (sidebar colapsável + topbar com breadcrumb e busca Ctrl+K) via `_authenticated/route.tsx`; novas rotas entram na NAV/SECTION_LABELS do shell; módulos futuros em "Em breve".
+- Layout: shell `layout-shell.tsx` com atalhos globais na topbar (via `?acao=`, lido por `usePageAction`) e subtelas em `children` da NAV usando parâmetro de URL (`?tab=`, `?aba=`) — uma fonte para menu, abas e atalhos.
 - Tema global: hook `use-theme.ts` (`.dark` no `<html>`, localStorage "theme", anti-flash em `__root.tsx`); gráficos leem `--chart-*` via `useChartColors`. Home/notícias em `/home`, Agenda em `/`.
 - `src/integrations` é gerado pela plataforma e fica fora do eslint; o resto segue `prettier`, de modo que `bun run lint` termine sem erros — formate antes de commitar.
 - Permissões por usuário: user_permissions + has_permission()/permission_default(); aba/ação nova entra em PERMISSIONS (src/lib/permissions.ts), permission_default() e get_my_permissions() juntas — o master libera sem código.
+- Sessão nova: ler estes AGENTS.md e "Como continuar" no roadmap.md antes de mudar algo.

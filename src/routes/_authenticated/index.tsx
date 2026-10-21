@@ -26,8 +26,17 @@ export const Route = createFileRoute("/_authenticated/")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
+  validateSearch: (
+    s: Record<string, unknown>,
+  ): { tab?: AgendaTab | undefined; acao?: string | undefined } => ({
+    tab: TABS.includes(s["tab"] as AgendaTab) ? (s["tab"] as AgendaTab) : undefined,
+    acao: typeof s["acao"] === "string" ? s["acao"] : undefined,
+  }),
   component: Index,
 });
+
+const TABS = ["agenda", "oficina", "consultas", "consultas-os"] as const;
+type AgendaTab = (typeof TABS)[number];
 
 function Index() {
   const { user } = Route.useRouteContext();
@@ -40,6 +49,16 @@ function Index() {
   const [movReq, setMovReq] = useState<{ plate: string; nonce: number } | null>(null);
   const scrolls = useRef<Record<string, number>>({});
   const view = movements ? "mov" : "dash";
+  const { tab: urlTab } = Route.useSearch();
+  useEffect(() => {
+    if (urlTab === "agenda" || urlTab === "oficina") {
+      setTab(urlTab);
+      setMovements(false);
+    } else if (urlTab === "consultas" || urlTab === "consultas-os") {
+      setSub(urlTab === "consultas" ? "veiculos" : "os");
+      setMovements(true);
+    }
+  }, [urlTab]);
   useEffect(() => {
     window.scrollTo(0, scrolls.current[view] ?? 0);
   }, [view]);
@@ -132,9 +151,13 @@ function Index() {
         tabBtn(m, m === "agenda" ? "Agenda" : "Oficina", !movements && m === active, () => {
           go(false);
           setTab(m);
+          void navigate({ to: "/", search: { tab: m } });
         }),
       )}
-      {tabBtn("mov", "Consultas", movements, () => go(true))}
+      {tabBtn("mov", "Consultas", movements, () => {
+        go(true);
+        void navigate({ to: "/", search: { tab: sub === "os" ? "consultas-os" : "consultas" } });
+      })}
       <Button variant="outline" onClick={() => navigate({ to: "/ordens-servico" })}>
         Ordens de Serviço
       </Button>
@@ -149,7 +172,7 @@ function Index() {
   return (
     <>
       <div className={movements ? "hidden" : undefined}>
-        {(active === "oficina" || profile.data.role === "oficina") ? (
+        {active === "oficina" || profile.data.role === "oficina" ? (
           <WorkshopYard
             key="yard"
             currentUser={currentUser}

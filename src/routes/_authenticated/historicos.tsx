@@ -1,4 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { Button } from "@/components/ui/button";
 import { HistoryLogPage } from "@/components/historicos";
 import { CheckInLog } from "@/components/check-in-log";
 import { ProfileGate } from "@/components/profile-gate";
@@ -20,18 +21,33 @@ export const Route = createFileRoute("/_authenticated/historicos")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
+  validateSearch: (s: Record<string, unknown>): { aba?: "geral" | "checkins" | undefined } => ({
+    aba: s["aba"] === "checkins" ? "checkins" : s["aba"] === "geral" ? "geral" : undefined,
+  }),
   component: Page,
 });
 
 function Page() {
   const { user } = Route.useRouteContext();
+  const { aba } = Route.useSearch();
   return (
     <ProfileGate user={user} module="historicos">
       {() => (
-        <>
-          <HistoryLogPage />
-          <CheckInLog />
-        </>
+        <div className="space-y-4">
+          <div role="tablist" className="flex gap-2">
+            <Button asChild variant={aba !== "checkins" ? "default" : "outline"} size="sm">
+              <Link to="/historicos" search={{ aba: "geral" }}>
+                Alterações
+              </Link>
+            </Button>
+            <Button asChild variant={aba === "checkins" ? "default" : "outline"} size="sm">
+              <Link to="/historicos" search={{ aba: "checkins" }}>
+                Check-ins
+              </Link>
+            </Button>
+          </div>
+          {aba === "checkins" ? <CheckInLog /> : <HistoryLogPage />}
+        </div>
       )}
     </ProfileGate>
   );

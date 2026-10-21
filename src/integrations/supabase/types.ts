@@ -2322,7 +2322,15 @@ export type Database = {
         Args: { _max: number; _user_id: string }
         Returns: undefined
       }
+      set_group_members_bulk: {
+        Args: { _add: boolean; _group_id: string; _ids: string[] }
+        Returns: number
+      }
       set_own_yard: { Args: { _workshop_id: string }; Returns: undefined }
+      set_own_yards: {
+        Args: { _ids: string[]; _value: boolean }
+        Returns: number
+      }
       set_user_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

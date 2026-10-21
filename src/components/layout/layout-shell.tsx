@@ -5,7 +5,11 @@ import {
   BarChart3,
   Bell,
   CalendarClock,
+  ChevronDown,
   ChevronsLeft,
+  ClipboardPlus,
+  Plus,
+  Settings,
   ChevronsRight,
   ClipboardList,
   DollarSign,
@@ -57,6 +61,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useTheme } from "@/hooks/use-theme";
 import { cn } from "@/lib/utils";
 import { useMyPermissions } from "@/lib/permissions";
+import { QuickCheckInButton } from "@/components/quick-check-in";
 import phoenixAsset from "@/assets/logo-anpexc-marca.png.asset.json";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -74,12 +79,25 @@ type NavItem = {
   hideFor?: string[];
   onlyFor?: string[];
   perm?: string;
+  children?: { label: string; search?: Record<string, string>; to?: string; hideFor?: string[] }[];
 };
 
 const NAV: NavItem[] = [
   { to: "/home", label: "Home", icon: Home, exact: true },
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/", label: "Agenda de Manutenção", icon: CalendarClock, exact: true },
+  {
+    to: "/",
+    label: "Agenda de Manutenção",
+    icon: CalendarClock,
+    exact: true,
+    children: [
+      { label: "Agenda", search: { tab: "agenda" }, hideFor: ["oficina"] },
+      { label: "Oficina / Pátio", search: { tab: "oficina" } },
+      { label: "Consultas · Veículos", search: { tab: "consultas" } },
+      { label: "Consultas · O.S.", search: { tab: "consultas-os" } },
+      { label: "Ordens de Serviço", to: "/ordens-servico" },
+    ],
+  },
   {
     to: "/usuarios/permissoes",
     label: "Usuários · Permissões",
@@ -88,7 +106,16 @@ const NAV: NavItem[] = [
   },
   { to: "/noticias", label: "Notícias", icon: Newspaper, perm: "module.noticias" },
   { to: "/ordens-servico", label: "Ordens de Serviço", icon: ClipboardList },
-  { to: "/historicos", label: "Históricos", icon: History, hideFor: ["oficina"] },
+  {
+    to: "/historicos",
+    label: "Históricos",
+    icon: History,
+    hideFor: ["oficina"],
+    children: [
+      { label: "Alterações", search: { aba: "geral" } },
+      { label: "Check-ins", search: { aba: "checkins" } },
+    ],
+  },
   { to: "/veiculos", label: "Veículos", icon: Truck },
 ];
 
@@ -141,6 +168,10 @@ function SidebarContent({
   onToggleCollapse?: () => void;
 }) {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const search = useRouterState({
+    select: (state) => state.location.search as Record<string, unknown>,
+  });
+  const [expanded, setExpanded] = useState<string | null>(null);
   const perms = useMyPermissions();
   const items = NAV.filter(
     (item) =>
@@ -175,24 +206,64 @@ function SidebarContent({
       <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-3" aria-label="Navegação principal">
         {items.map((item) => {
           const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
+          const kids = (item.children ?? []).filter((c) => !c.hideFor?.includes(role ?? ""));
+          const open = !collapsed && kids.length > 0 && (active || expanded === item.label);
           return (
-            <Link
-              key={item.label}
-              to={item.to}
-              onClick={onNavigate}
-              title={item.label}
-              aria-current={active ? "page" : undefined}
-              className={cn(
-                "flex min-h-10 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors",
-                collapsed && "justify-center px-0",
-                active
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "text-sidebar-foreground/75 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
+            <div key={item.label}>
+              <Link
+                to={item.to}
+                onClick={() => {
+                  setExpanded(item.label);
+                  onNavigate();
+                }}
+                title={item.label}
+                aria-current={active ? "page" : undefined}
+                aria-expanded={kids.length ? open : undefined}
+                className={cn(
+                  "flex min-h-10 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors",
+                  collapsed && "justify-center px-0",
+                  active
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                    : "text-sidebar-foreground/75 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
+                )}
+              >
+                <item.icon className={cn("size-4 shrink-0", active && "text-primary")} />
+                {!collapsed && <span className="flex-1 truncate">{item.label}</span>}
+                {!collapsed && kids.length > 0 && (
+                  <ChevronDown
+                    className={cn("size-3.5 shrink-0 transition-transform", !open && "-rotate-90")}
+                  />
+                )}
+              </Link>
+              {open && (
+                <div className="ml-5 mt-1 space-y-0.5 border-l pl-3">
+                  {kids.map((c) => {
+                    const target = c.to ?? item.to;
+                    const kidActive =
+                      pathname === target &&
+                      (!c.search ||
+                        Object.entries(c.search).every(([k, v]) => search[k] === v) ||
+                        (c === kids[0] && !Object.keys(c.search).some((k) => search[k])));
+                    return (
+                      <Link
+                        key={c.label}
+                        to={target}
+                        search={c.search as never}
+                        onClick={onNavigate}
+                        className={cn(
+                          "flex min-h-8 items-center rounded-md px-2 text-[13px] transition-colors",
+                          kidActive
+                            ? "font-semibold text-primary"
+                            : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
+                        )}
+                      >
+                        {c.label}
+                      </Link>
+                    );
+                  })}
+                </div>
               )}
-            >
-              <item.icon className={cn("size-4 shrink-0", active && "text-primary")} />
-              {!collapsed && <span className="truncate">{item.label}</span>}
-            </Link>
+            </div>
           );
         })}
         <Separator className="my-2" />
@@ -320,6 +391,10 @@ export function LayoutShell({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const crumbs = useCrumbs();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const currentTab = useRouterState({
+    select: (state) => (state.location.search as { tab?: "agenda" | "oficina" }).tab,
+  });
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -387,7 +462,7 @@ export function LayoutShell({
         />
       </aside>
       <div className={cn("flex min-h-screen flex-col", collapsed ? "lg:pl-16" : "lg:pl-60")}>
-        <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b bg-card px-4">
+        <header className="sticky top-0 z-20 flex min-h-16 shrink-0 items-center gap-3 border-b bg-card px-4 py-2 lg:px-6">
           <Button
             variant="ghost"
             size="icon"
@@ -397,7 +472,7 @@ export function LayoutShell({
           >
             <Menu className="size-5" />
           </Button>
-          <Breadcrumb className="min-w-0 flex-1">
+          <Breadcrumb className="min-w-0 shrink">
             <BreadcrumbList className="flex-wrap">
               <BreadcrumbItem>
                 <BreadcrumbLink asChild>
@@ -422,23 +497,50 @@ export function LayoutShell({
               ))}
             </BreadcrumbList>
           </Breadcrumb>
-          <div
-            id="topbar-actions"
-            className="mx-2 flex min-w-0 flex-1 items-center justify-center overflow-x-auto"
-          />
+          <div className="flex min-w-0 flex-1 items-center justify-end gap-1 whitespace-nowrap">
+            {me?.role && me.role !== "oficina" && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => void navigate({ to: "/", search: { acao: "novo" } })}
+              >
+                <Plus /> Novo agendamento
+              </Button>
+            )}
+            {me?.role && me.role !== "oficina" && (
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/ordens-servico/nova">
+                  <ClipboardPlus /> Nova O.S.
+                </Link>
+              </Button>
+            )}
+            {me?.role && <QuickCheckInButton />}
+            {me?.role === "master" && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() =>
+                  void navigate({
+                    to: "/",
+                    search: { acao: "config", tab: pathname === "/" ? currentTab : undefined },
+                  })
+                }
+              >
+                <Settings /> Configurações
+              </Button>
+            )}
+            <div id="topbar-actions" className="flex flex-wrap items-center gap-1" />
+          </div>
           <div className="ml-auto flex shrink-0 items-center gap-1">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setSearchOpen(true)}
-              className="gap-2 bg-primary/15 text-foreground hover:bg-primary/25"
-              aria-label="Buscar"
+              className="size-9 p-0 text-foreground"
+              aria-label="Buscar (Ctrl+K)"
+              title="Buscar (Ctrl+K)"
             >
               <Search className="size-4" />
-              <span className="hidden text-xs sm:inline">Buscar</span>
-              <kbd className="pointer-events-none hidden rounded border bg-muted px-1.5 font-mono text-[10px] md:inline-block">
-                Ctrl K
-              </kbd>
             </Button>
             <Button
               variant="ghost"
@@ -472,7 +574,7 @@ export function LayoutShell({
                       {initials || "U"}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="hidden text-left sm:block">
+                  <span className="hidden text-left 2xl:block">
                     <span className="block max-w-36 truncate text-xs font-semibold leading-tight">
                       {name}
                     </span>

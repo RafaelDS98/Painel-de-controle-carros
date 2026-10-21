@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, lazy, Suspense, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { usePageAction } from "@/hooks/use-page-action";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -124,6 +125,9 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
   const [detailTarget, setDetailTarget] = useState<YardAppointment | null>(null);
   const [accountOpen, setAccountOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  usePageAction((a) => {
+    if (a === "config" && currentUser.role === "master") setSettingsOpen(true);
+  });
   const [completionStatus, setCompletionStatus] = useState("");
   const [locationTab, setLocationTab] = useState<string>("patio");
   const yardGroups = useYardGroups();

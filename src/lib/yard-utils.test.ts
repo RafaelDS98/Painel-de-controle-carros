@@ -58,6 +58,18 @@ describe("Pátio e externos", () => {
     );
     expect(r.externalByWorkshop.size).toBe(0);
   });
+  it("aceita vários pátios próprios", () => {
+    const r = splitYardAndExternal(
+      [apt("1", "ABC1234", "Pátio 1"), apt("2", "DEF1234", "Pátio 2"), apt("3", "GHI1234", "Ext")],
+      [
+        { name: "Pátio 1", isOwnYard: true },
+        { name: "Pátio 2", isOwnYard: true },
+      ],
+      [],
+    );
+    expect(r.patio).toHaveLength(2);
+    expect(r.externalByWorkshop.get("Ext")).toHaveLength(1);
+  });
   it("não inventa tempo com data inválida", () => {
     expect(elapsedSince("bad", 0)).toBe(0);
     expect(formatDuration(NaN)).toBe("0min");
