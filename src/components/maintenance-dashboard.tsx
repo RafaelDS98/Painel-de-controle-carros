@@ -675,6 +675,7 @@ export function MaintenanceDashboard({
   }, [startDate, endDate]);
   const [selected, setSelected] = useState<Appointment | null>(null);
   const [topbarSlot, setTopbarSlot] = useState<HTMLElement | null>(null);
+  const [mobileFilters, setMobileFilters] = useState(false);
   useEffect(() => setTopbarSlot(document.getElementById("topbar-actions")), []);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(() => new Set());
   const [trashOpen, setTrashOpen] = useState(false);
@@ -2313,9 +2314,9 @@ export function MaintenanceDashboard({
           </section>
         )}
 
-        <section className="rounded-lg border bg-card p-4 shadow-sm">
-          <div className="flex flex-col gap-3 xl:flex-row xl:flex-wrap">
-            <label className="relative min-w-0 flex-[1.4] sm:min-w-64">
+        <section className="rounded-lg border bg-card p-3 shadow-sm sm:p-4">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <label className="relative min-w-0">
               <Search className="absolute left-3 top-3 size-4 text-muted-foreground" />
               <Input
                 value={search}
@@ -2327,7 +2328,20 @@ export function MaintenanceDashboard({
                 className="pl-9"
               />
             </label>
-            <div className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-md border border-input bg-background px-2 sm:min-w-64">
+            <Button
+              variant="outline"
+              className="sm:hidden"
+              onClick={() => setMobileFilters((v) => !v)}
+              aria-expanded={mobileFilters}
+            >
+              <SlidersHorizontal /> {mobileFilters ? "Ocultar filtros" : "Filtros"}
+            </Button>
+            <div
+              className={cn(
+                "h-10 min-w-0 items-center gap-2 rounded-md border border-input bg-background px-2",
+                mobileFilters ? "flex" : "hidden sm:flex",
+              )}
+            >
               <Input
                 type="date"
                 aria-label="Data inicial"
@@ -2367,7 +2381,7 @@ export function MaintenanceDashboard({
               onChange={setWorkshop}
             />
           </div>
-          <div className="mt-3 flex flex-col gap-3 md:flex-row md:flex-wrap">
+          <div className={cn("mt-3 gap-3 sm:grid sm:grid-cols-2 xl:grid-cols-4", mobileFilters ? "grid" : "hidden")}>
             <SearchableSelect
               label="Todas as placas"
               value={plateFilter}
@@ -2398,6 +2412,8 @@ export function MaintenanceDashboard({
                 setPage(1);
               }}
             />
+          </div>
+          <div className={cn("mt-3 flex-wrap items-center gap-2 sm:flex", mobileFilters ? "flex" : "hidden")}>
             <label className="flex min-h-10 items-center gap-2 text-sm text-foreground">
               <Checkbox
                 checked={reworksOnly}
