@@ -614,7 +614,7 @@ export function LayoutShell({
                 </BreadcrumbItem>
                 {crumbs.map((crumb, index) => (
                   <span key={`${crumb.label}-${index}`} className="contents">
-                    <BreadcrumbSeparator />
+                    <BreadcrumbSeparator className={index === 0 ? "hidden sm:block" : undefined} />
                     <BreadcrumbItem className="max-w-[200px] truncate">
                       {index === crumbs.length - 1 ? (
                         <BreadcrumbPage>{crumb.label}</BreadcrumbPage>

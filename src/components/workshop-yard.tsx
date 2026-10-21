@@ -337,109 +337,39 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
     >
       <Toaster />
 
-      {/* HEADER */}
-      <header className="border-b bg-primary text-primary-foreground">
-        <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-4 px-5 py-4 lg:px-8">
-          <div className="flex items-center gap-3">
-            <div className="grid size-10 place-items-center rounded-md bg-primary-foreground text-primary">
-              <Wrench className="size-5" />
-            </div>
-            <div>
-              <p className="text-xl font-bold">ANPEXC</p>
-              <p className="text-xs text-primary-foreground/70">Pátio da Oficina</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {/* Notification badge */}
-            <button
-              type="button"
-              onClick={clearNew}
-              className="relative min-h-11 rounded-md px-2 hover:bg-primary-foreground/10"
-              title={
-                newCount > 0 ? `${newCount} novidade(s) — clique para limpar` : "Sem novidades"
-              }
-            >
-              {newCount > 0 ? <Bell className="size-5" /> : <Bell className="size-5 opacity-50" />}
-              {newCount > 0 && (
-                <span className="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
-                  {newCount > 99 ? "99+" : newCount}
-                </span>
-              )}
-            </button>
+      <MyAccountDialog
+        open={accountOpen}
+        onOpenChange={setAccountOpen}
+        userId={currentUser.id}
+        email={currentUser.email}
+        name={currentUser.name}
+        onSaved={() =>
+          void queryClient.invalidateQueries({ queryKey: ["profile", currentUser.id] })
+        }
+      />
 
-            {/* Sound toggle */}
-            <button
-              type="button"
-              onClick={toggleSound}
-              className="min-h-11 rounded-md px-2 hover:bg-primary-foreground/10"
-              title={soundEnabled ? "Som ativado" : "Som desativado"}
-            >
-              {soundEnabled ? (
-                <Bell className="size-4" />
-              ) : (
-                <BellOff className="size-4 opacity-50" />
-              )}
-            </button>
-
-            {/* User */}
-            <button
-              type="button"
-              onClick={() => setAccountOpen(true)}
-              className="mr-2 min-h-11 rounded-md px-2 text-right text-sm hover:bg-primary-foreground/10"
-            >
-              <p className="font-semibold">
-                <UserCircle className="mr-1 inline size-4" />
-                {currentUser.name}
-              </p>
-              <p className="text-xs text-primary-foreground/70">Oficina · Minha conta</p>
-            </button>
-            <MyAccountDialog
-              open={accountOpen}
-              onOpenChange={setAccountOpen}
-              userId={currentUser.id}
-              email={currentUser.email}
-              name={currentUser.name}
-              onSaved={() =>
-                void queryClient.invalidateQueries({ queryKey: ["profile", currentUser.id] })
-              }
-            />
-
-            {/* Master settings */}
-            {currentUser.role === "master" && (
-              <Button variant="secondary" size="sm" onClick={() => setSettingsOpen(true)}>
-                <Settings className="size-4" /> Config
-              </Button>
-            )}
-
-            {/* Dark mode */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setDark((v) => !v)}
-              className="text-primary-foreground hover:bg-primary-foreground/10"
-              aria-label="Alternar tema"
-            >
-              {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
-            </Button>
-
-            {/* Sign out */}
-            {onSignOut && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onSignOut}
-                className="text-primary-foreground hover:bg-primary-foreground/10"
-                aria-label="Sair"
-              >
-                <LogOut className="size-4" />
-              </Button>
-            )}
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-[1600px] space-y-5 px-5 py-5 lg:px-8">
+      <main className="mx-auto max-w-[1600px] space-y-5 px-4 py-5 sm:px-5 lg:px-8">
         {tabs}
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={clearNew}
+            title={newCount > 0 ? `${newCount} novidade(s) — clique para limpar` : "Sem novidades"}
+          >
+            <Bell className={cn("size-4", newCount === 0 && "opacity-50")} />
+            {newCount > 0 ? `${newCount > 99 ? "99+" : newCount} novidade(s)` : "Sem novidades"}
+          </Button>
+          <Button variant="outline" size="sm" onClick={toggleSound}>
+            {soundEnabled ? <Bell className="size-4" /> : <BellOff className="size-4" />}
+            {soundEnabled ? "Som ligado" : "Som desligado"}
+          </Button>
+          {currentUser.role === "master" && (
+            <Button variant="outline" size="sm" onClick={() => setSettingsOpen(true)}>
+              <Settings className="size-4" /> Configurar pátio
+            </Button>
+          )}
+        </div>
 
         {/* Title + reload */}
         <div className="flex flex-wrap items-end justify-between gap-4">

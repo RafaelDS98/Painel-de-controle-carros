@@ -112,9 +112,6 @@ function Shell({
                 <Link to="/ordens-servico">Voltar à lista</Link>
               </Button>
             )}
-            <Button variant="outline" asChild>
-              <Link to="/">Ir para a Agenda</Link>
-            </Button>
           </div>
         </div>
         {children}

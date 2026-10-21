@@ -31,7 +31,7 @@ function Page() {
       {(me) => (
         <>
           <div
-            className="mx-auto flex max-w-[1400px] flex-wrap gap-2 px-5 pt-6 lg:px-8"
+            className="mx-auto flex max-w-[1400px] gap-2 overflow-x-auto px-4 pt-4 sm:px-5 md:hidden"
             aria-label="Módulos"
           >
             {me.modules.includes("agenda") && (
