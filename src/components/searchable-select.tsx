@@ -39,6 +39,7 @@ export function SearchableSelect({
   }, [sorted, query]);
   return (
     <Popover
+      modal
       open={open}
       onOpenChange={(o) => {
         setOpen(o);
