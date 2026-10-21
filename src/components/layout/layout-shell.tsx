@@ -578,183 +578,188 @@ export function LayoutShell({
   return (
     <TooltipProvider delayDuration={200}>
       <div className="min-h-screen bg-background text-foreground">
-      <aside
-        className={cn(
-          "fixed inset-y-0 left-0 z-30 hidden flex-col border-r bg-sidebar text-sidebar-foreground lg:flex",
-          collapsed ? "w-16" : "w-60",
-        )}
-      >
-        <SidebarContent
-          collapsed={collapsed}
-          role={me?.role ?? null}
-          onNavigate={() => {}}
-          onToggleCollapse={toggleCollapse}
-        />
-      </aside>
-      <div className={cn("flex min-h-screen flex-col", collapsed ? "lg:pl-16" : "lg:pl-60")}>
-        <header className="sticky top-0 z-20 flex min-h-16 shrink-0 items-center gap-3 border-b bg-card px-4 py-2 lg:px-6">
-          <NameTip label="Abrir menu" side="bottom">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="lg:hidden"
-              onClick={() => setDrawerOpen(true)}
-              aria-label="Abrir menu"
-            >
-              <Menu className="size-5" />
-            </Button>
-          </NameTip>
-          <Breadcrumb className="min-w-0 shrink">
-            <BreadcrumbList className="flex-wrap">
-              <BreadcrumbItem>
-                <BreadcrumbLink asChild>
-                  <Link to="/dashboard">ANPEXC</Link>
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              {crumbs.map((crumb, index) => (
-                <span key={`${crumb.label}-${index}`} className="contents">
-                  <BreadcrumbSeparator />
-                  <BreadcrumbItem className="max-w-[200px] truncate">
-                    {index === crumbs.length - 1 ? (
-                      <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
-                    ) : (
-                      crumb.to && (
-                        <BreadcrumbLink asChild>
-                          <Link to={crumb.to}>{crumb.label}</Link>
-                        </BreadcrumbLink>
-                      )
-                    )}
-                  </BreadcrumbItem>
-                </span>
-              ))}
-            </BreadcrumbList>
-          </Breadcrumb>
-          <div className="flex min-w-0 flex-1 items-center justify-end gap-1 whitespace-nowrap">
-            {me?.role && me.role !== "oficina" && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => void navigate({ to: "/", search: { acao: "novo" } })}
-              >
-                <Plus /> Novo agendamento
-              </Button>
-            )}
-            {me?.role && me.role !== "oficina" && (
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/ordens-servico/nova">
-                  <ClipboardPlus /> Nova O.S.
-                </Link>
-              </Button>
-            )}
-            {me?.role && <QuickCheckInButton />}
-            {me?.role === "master" && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() =>
-                  void navigate({
-                    to: "/",
-                    search: { acao: "config", tab: pathname === "/" ? currentTab : undefined },
-                  })
-                }
-              >
-                <Settings /> Configurações
-              </Button>
-            )}
-            <div id="topbar-actions" className="flex flex-wrap items-center gap-1" />
-          </div>
-          <div className="ml-auto flex shrink-0 items-center gap-1">
-            <NameTip label="Buscar (Ctrl+K)" side="bottom">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSearchOpen(true)}
-                className="size-9 p-0 text-foreground"
-                aria-label="Buscar (Ctrl+K)"
-              >
-                <Search className="size-4" />
-              </Button>
-            </NameTip>
-            <NameTip
-              label={dark ? "Mudar para tema claro" : "Mudar para tema escuro"}
-              side="bottom"
-            >
+        <aside
+          className={cn(
+            "fixed inset-y-0 left-0 z-30 hidden flex-col border-r bg-sidebar text-sidebar-foreground lg:flex",
+            collapsed ? "w-16" : "w-60",
+          )}
+        >
+          <SidebarContent
+            collapsed={collapsed}
+            role={me?.role ?? null}
+            onNavigate={() => {}}
+            onToggleCollapse={toggleCollapse}
+          />
+        </aside>
+        <div className={cn("flex min-h-screen flex-col", collapsed ? "lg:pl-16" : "lg:pl-60")}>
+          <header className="sticky top-0 z-20 flex min-h-16 shrink-0 items-center gap-3 border-b bg-card px-4 py-2 lg:px-6">
+            <NameTip label="Abrir menu" side="bottom">
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={toggleTheme}
-                aria-label={dark ? "Mudar para tema claro" : "Mudar para tema escuro"}
+                className="lg:hidden"
+                onClick={() => setDrawerOpen(true)}
+                aria-label="Abrir menu"
               >
-                {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+                <Menu className="size-5" />
               </Button>
             </NameTip>
-            <DropdownMenu>
-              <NameTip label="Notificações" side="bottom">
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" aria-label="Notificações">
-                    <Bell className="size-4" />
-                  </Button>
-                </DropdownMenuTrigger>
+            <Breadcrumb className="min-w-0 shrink">
+              <BreadcrumbList className="flex-wrap">
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild>
+                    <Link to="/dashboard">ANPEXC</Link>
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                {crumbs.map((crumb, index) => (
+                  <span key={`${crumb.label}-${index}`} className="contents">
+                    <BreadcrumbSeparator />
+                    <BreadcrumbItem className="max-w-[200px] truncate">
+                      {index === crumbs.length - 1 ? (
+                        <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+                      ) : (
+                        crumb.to && (
+                          <BreadcrumbLink asChild>
+                            <Link to={crumb.to}>{crumb.label}</Link>
+                          </BreadcrumbLink>
+                        )
+                      )}
+                    </BreadcrumbItem>
+                  </span>
+                ))}
+              </BreadcrumbList>
+            </Breadcrumb>
+            <div className="flex min-w-0 flex-1 items-center justify-end gap-1 whitespace-nowrap">
+              {me?.role && me.role !== "oficina" && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => void navigate({ to: "/", search: { acao: "novo" } })}
+                >
+                  <Plus /> Novo agendamento
+                </Button>
+              )}
+              {me?.role && me.role !== "oficina" && (
+                <Button variant="ghost" size="sm" asChild>
+                  <Link to="/ordens-servico/nova">
+                    <ClipboardPlus /> Nova O.S.
+                  </Link>
+                </Button>
+              )}
+              {me?.role && <QuickCheckInButton />}
+              {me?.role === "master" && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    void navigate({
+                      to: "/",
+                      search: { acao: "config", tab: pathname === "/" ? currentTab : undefined },
+                    })
+                  }
+                >
+                  <Settings /> Configurações
+                </Button>
+              )}
+              <div id="topbar-actions" className="flex flex-wrap items-center gap-1" />
+            </div>
+            <div className="ml-auto flex shrink-0 items-center gap-1">
+              <NameTip label="Buscar (Ctrl+K)" side="bottom">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSearchOpen(true)}
+                  className="size-9 p-0 text-foreground"
+                  aria-label="Buscar (Ctrl+K)"
+                >
+                  <Search className="size-4" />
+                </Button>
               </NameTip>
-              <DropdownMenuContent align="end" className="w-56">
-                <p className="px-2 py-1.5 text-sm text-muted-foreground">
-                  Sem notificações no momento.
-                </p>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <DropdownMenu>
-              <NameTip label="Menu do usuário" side="bottom">
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className="flex min-h-10 items-center gap-2 rounded-md px-2 text-left transition-colors hover:bg-accent"
-                    aria-label="Menu do usuário"
-                  >
-                    <Avatar className="size-7">
-                      <AvatarFallback className="text-xs font-semibold">
-                        {initials || "U"}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="hidden text-left 2xl:block">
-                      <span className="block max-w-36 truncate text-xs font-semibold leading-tight">
-                        {name}
+              <NameTip
+                label={dark ? "Mudar para tema claro" : "Mudar para tema escuro"}
+                side="bottom"
+              >
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleTheme}
+                  aria-label={dark ? "Mudar para tema claro" : "Mudar para tema escuro"}
+                >
+                  {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+                </Button>
+              </NameTip>
+              <DropdownMenu>
+                <NameTip label="Notificações" side="bottom">
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" aria-label="Notificações">
+                      <Bell className="size-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                </NameTip>
+                <DropdownMenuContent align="end" className="w-56">
+                  <p className="px-2 py-1.5 text-sm text-muted-foreground">
+                    Sem notificações no momento.
+                  </p>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <DropdownMenu>
+                <NameTip label="Menu do usuário" side="bottom">
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex min-h-10 items-center gap-2 rounded-md px-2 text-left transition-colors hover:bg-accent"
+                      aria-label="Menu do usuário"
+                    >
+                      <Avatar className="size-7">
+                        <AvatarFallback className="text-xs font-semibold">
+                          {initials || "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="hidden text-left 2xl:block">
+                        <span className="block max-w-36 truncate text-xs font-semibold leading-tight">
+                          {name}
+                        </span>
+                        <span className="block text-[11px] text-muted-foreground">{roleLabel}</span>
                       </span>
-                      <span className="block text-[11px] text-muted-foreground">{roleLabel}</span>
-                    </span>
-                  </button>
-                </DropdownMenuTrigger>
+                    </button>
+                  </DropdownMenuTrigger>
+                </NameTip>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel className="font-normal">
+                    <p className="truncate text-sm font-semibold">{name}</p>
+                    <p className="truncate text-xs text-muted-foreground">{user.email ?? ""}</p>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onSelect={() => void signOut()}>
+                    <LogOut /> Sair
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <NameTip label="Sair" side="bottom">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => void signOut()}
+                  aria-label="Sair"
+                >
+                  <LogOut className="size-4" />
+                </Button>
               </NameTip>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel className="font-normal">
-                  <p className="truncate text-sm font-semibold">{name}</p>
-                  <p className="truncate text-xs text-muted-foreground">{user.email ?? ""}</p>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={() => void signOut()}>
-                  <LogOut /> Sair
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <NameTip label="Sair" side="bottom">
-              <Button variant="ghost" size="icon" onClick={() => void signOut()} aria-label="Sair">
-                <LogOut className="size-4" />
-              </Button>
-            </NameTip>
-          </div>
-        </header>
-        <main className="flex-1 p-4 lg:p-6">{children}</main>
-      </div>
-      <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <SheetContent side="left" className="w-64 bg-sidebar p-0 text-sidebar-foreground">
-          <SheetTitle className="sr-only">Menu de navegação</SheetTitle>
-          <SidebarContent
-            collapsed={false}
-            role={me?.role ?? null}
-            onNavigate={() => setDrawerOpen(false)}
-          />
-        </SheetContent>
-      </Sheet>
-      <SearchCommand open={searchOpen} onOpenChange={setSearchOpen} />
+            </div>
+          </header>
+          <main className="flex-1 p-4 lg:p-6">{children}</main>
+        </div>
+        <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
+          <SheetContent side="left" className="w-64 bg-sidebar p-0 text-sidebar-foreground">
+            <SheetTitle className="sr-only">Menu de navegação</SheetTitle>
+            <SidebarContent
+              collapsed={false}
+              role={me?.role ?? null}
+              onNavigate={() => setDrawerOpen(false)}
+            />
+          </SheetContent>
+        </Sheet>
+        <SearchCommand open={searchOpen} onOpenChange={setSearchOpen} />
       </div>
     </TooltipProvider>
   );
