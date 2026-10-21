@@ -106,7 +106,12 @@ function Featured({ posts, onOpen }: { posts: NewsPost[]; onOpen: (p: NewsPost) 
   );
 }
 
-function Stat({ label, value, to, icon: Icon }: {
+function Stat({
+  label,
+  value,
+  to,
+  icon: Icon,
+}: {
   label: string;
   value: number | null | undefined;
   to: "/" | "/veiculos" | "/ordens-servico";
@@ -160,7 +165,11 @@ export function HomePage({ userId, userName }: { userId: string; userName: strin
 
   const list = (posts.data ?? []).filter((p) => p.published);
   const hour = Number(
-    new Date().toLocaleString("en-US", { hour: "numeric", hour12: false, timeZone: "America/Sao_Paulo" }),
+    new Date().toLocaleString("en-US", {
+      hour: "numeric",
+      hour12: false,
+      timeZone: "America/Sao_Paulo",
+    }),
   );
   const greet = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
 
@@ -188,17 +197,52 @@ export function HomePage({ userId, userName }: { userId: string; userName: strin
     ),
     resumo: (
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <Stat label="Agendamentos ativos" value={summary.data?.agenda} to="/" icon={CalendarClock} />
-        <Stat label="Veículos na frota" value={summary.data?.veiculos} to="/veiculos" icon={Truck} />
-        <Stat label="O.S. em aberto" value={summary.data?.os} to="/ordens-servico" icon={ClipboardList} />
+        <Stat
+          label="Agendamentos ativos"
+          value={summary.data?.agenda}
+          to="/"
+          icon={CalendarClock}
+        />
+        <Stat
+          label="Veículos na frota"
+          value={summary.data?.veiculos}
+          to="/veiculos"
+          icon={Truck}
+        />
+        <Stat
+          label="O.S. em aberto"
+          value={summary.data?.os}
+          to="/ordens-servico"
+          icon={ClipboardList}
+        />
       </div>
     ),
     atalhos: (
       <div className="flex flex-wrap gap-2">
-        <Button asChild variant="outline"><Link to="/"><CalendarClock className="size-4" />Agenda</Link></Button>
-        <Button asChild variant="outline"><Link to="/dashboard"><LayoutDashboard className="size-4" />Dashboard</Link></Button>
-        <Button asChild variant="outline"><Link to="/ordens-servico"><ClipboardList className="size-4" />Ordens de Serviço</Link></Button>
-        <Button asChild variant="outline"><Link to="/veiculos"><Truck className="size-4" />Veículos</Link></Button>
+        <Button asChild variant="outline">
+          <Link to="/">
+            <CalendarClock className="size-4" />
+            Agenda
+          </Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link to="/dashboard">
+            <LayoutDashboard className="size-4" />
+            Dashboard
+          </Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link to="/ordens-servico">
+            <ClipboardList className="size-4" />
+            Ordens de Serviço
+          </Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link to="/veiculos">
+            <Truck className="size-4" />
+            Veículos
+          </Link>
+        </Button>
       </div>
     ),
   };
@@ -213,7 +257,9 @@ export function HomePage({ userId, userName }: { userId: string; userName: strin
           <h1 className="text-3xl font-bold">
             {greet}, {userName.split(" ")[0]}
           </h1>
-          <p className="text-sm text-muted-foreground">Informações gerais e novidades da empresa.</p>
+          <p className="text-sm text-muted-foreground">
+            Informações gerais e novidades da empresa.
+          </p>
         </div>
         <div className="flex flex-wrap gap-2">
           {can("action.news_create") && (
@@ -264,8 +310,24 @@ export function HomePage({ userId, userName }: { userId: string; userName: strin
             <h2 className="text-lg font-semibold">{HOME_WIDGETS[key]}</h2>
             {editing && (
               <div className="ml-auto flex gap-1">
-                <Button size="sm" variant="ghost" disabled={i === 0} onClick={() => setOrder((o) => moveItem(o, i, i - 1))} aria-label="Subir painel">↑</Button>
-                <Button size="sm" variant="ghost" disabled={i === order.length - 1} onClick={() => setOrder((o) => moveItem(o, i, i + 1))} aria-label="Descer painel">↓</Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={i === 0}
+                  onClick={() => setOrder((o) => moveItem(o, i, i - 1))}
+                  aria-label="Subir painel"
+                >
+                  ↑
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={i === order.length - 1}
+                  onClick={() => setOrder((o) => moveItem(o, i, i + 1))}
+                  aria-label="Descer painel"
+                >
+                  ↓
+                </Button>
               </div>
             )}
           </div>

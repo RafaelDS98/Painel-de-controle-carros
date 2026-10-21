@@ -84,8 +84,9 @@ export function PermissionsPanel({ currentUserId }: { currentUserId: string }) {
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Marque para liberar e desmarque para bloquear. Já vem marcado o que o perfil libera por padrão;
-        o ponto azul indica uma exceção feita para aquela pessoa. Master sempre tem acesso total e você não altera a si mesmo.
+        Marque para liberar e desmarque para bloquear. Já vem marcado o que o perfil libera por
+        padrão; o ponto azul indica uma exceção feita para aquela pessoa. Master sempre tem acesso
+        total e você não altera a si mesmo.
       </p>
       <Input
         placeholder="Buscar usuário por nome ou e-mail"
@@ -102,7 +103,10 @@ export function PermissionsPanel({ currentUserId }: { currentUserId: string }) {
               <tr>
                 <th className="sticky left-0 bg-muted p-2">Usuário</th>
                 {PERMISSIONS.map((p) => (
-                  <th key={p.key} className="min-w-32 p-2 align-bottom text-xs font-medium">
+                  <th
+                    key={p.key}
+                    className="min-w-24 p-2 text-center align-bottom text-xs font-medium"
+                  >
                     <span className="block text-[10px] uppercase text-muted-foreground">
                       {p.group}
                     </span>
@@ -138,7 +142,11 @@ export function PermissionsPanel({ currentUserId }: { currentUserId: string }) {
                             disabled={locked || busy === k || !u.role}
                             onClick={() => {
                               const next = !on;
-                              void set(u.user_id, p.key, next === def ? "default" : next ? "yes" : "no");
+                              void set(
+                                u.user_id,
+                                p.key,
+                                next === def ? "default" : next ? "yes" : "no",
+                              );
                             }}
                             className={`relative inline-flex size-6 items-center justify-center rounded border-2 transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
                               on

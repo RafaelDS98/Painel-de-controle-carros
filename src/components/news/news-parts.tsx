@@ -114,9 +114,7 @@ export function NewsArticleDialog({
             <div className="whitespace-pre-wrap text-sm leading-relaxed">{post.body}</div>
             {post.related.length > 0 && (
               <div className="rounded-lg border bg-muted/40 p-3">
-                <p className="text-xs font-semibold uppercase text-muted-foreground">
-                  Veja também
-                </p>
+                <p className="text-xs font-semibold uppercase text-muted-foreground">Veja também</p>
                 <ul className="mt-1 list-disc pl-4 text-sm">
                   {post.related.map((r) => (
                     <li key={r}>{r}</li>

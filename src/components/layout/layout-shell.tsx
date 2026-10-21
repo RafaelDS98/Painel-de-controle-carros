@@ -145,7 +145,8 @@ function SidebarContent({
   const items = NAV.filter(
     (item) =>
       (!item.perm || (perms.data?.has(item.perm) ?? false)) &&
-      !item.hideFor?.includes(role ?? "") && (!item.onlyFor || item.onlyFor.includes(role ?? "")),
+      !item.hideFor?.includes(role ?? "") &&
+      (!item.onlyFor || item.onlyFor.includes(role ?? "")),
   );
   return (
     <>

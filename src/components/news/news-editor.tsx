@@ -180,11 +180,7 @@ export function NewsEditor({
           </div>
           <div className="grid gap-1">
             <Label>Chamadas relacionadas (uma por linha)</Label>
-            <Textarea
-              rows={2}
-              value={d.related}
-              onChange={(e) => set("related", e.target.value)}
-            />
+            <Textarea rows={2} value={d.related} onChange={(e) => set("related", e.target.value)} />
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-1">
