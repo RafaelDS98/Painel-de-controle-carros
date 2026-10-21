@@ -347,6 +347,7 @@ function SidebarContent({
                 setExpanded(item.label);
                 onNavigate();
               }}
+              aria-label={item.label}
               aria-current={active ? "page" : undefined}
               aria-expanded={kids.length ? open : undefined}
               className={cn(
