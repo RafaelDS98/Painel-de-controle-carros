@@ -576,7 +576,8 @@ export function LayoutShell({
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <TooltipProvider delayDuration={200}>
+      <div className="min-h-screen bg-background text-foreground">
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-30 hidden flex-col border-r bg-sidebar text-sidebar-foreground lg:flex",
@@ -592,15 +593,17 @@ export function LayoutShell({
       </aside>
       <div className={cn("flex min-h-screen flex-col", collapsed ? "lg:pl-16" : "lg:pl-60")}>
         <header className="sticky top-0 z-20 flex min-h-16 shrink-0 items-center gap-3 border-b bg-card px-4 py-2 lg:px-6">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="lg:hidden"
-            onClick={() => setDrawerOpen(true)}
-            aria-label="Abrir menu"
-          >
-            <Menu className="size-5" />
-          </Button>
+          <NameTip label="Abrir menu" side="bottom">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden"
+              onClick={() => setDrawerOpen(true)}
+              aria-label="Abrir menu"
+            >
+              <Menu className="size-5" />
+            </Button>
+          </NameTip>
           <Breadcrumb className="min-w-0 shrink">
             <BreadcrumbList className="flex-wrap">
               <BreadcrumbItem>
