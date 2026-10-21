@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import type { AppRole } from "@/components/maintenance-dashboard";
+import { useMyPermissions } from "@/lib/permissions";
 import { knownModules, landingPath, type ModuleKey } from "@/lib/modules";
 
 export type GateUser = {
@@ -17,13 +18,17 @@ export type GateCurrent = { id: string; name: string; role: AppRole; modules: Mo
 export function ProfileGate({
   user,
   module,
+  permission,
   children,
 }: {
   user: GateUser;
   module?: ModuleKey;
+  /** Permissão exigida para abrir a tela (conferida também no banco). */
+  permission?: string;
   children: (current: GateCurrent) => ReactNode;
 }) {
   const navigate = useNavigate();
+  const perms = useMyPermissions();
   const queryClient = useQueryClient();
   const profile = useQuery({
     queryKey: ["profile", user.id],
@@ -90,6 +95,26 @@ export function ProfileGate({
     );
   }
   const { modules } = profile.data;
+  if (permission && perms.isLoading)
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
+        Carregando…
+      </div>
+    );
+  if (permission && !perms.data?.has(permission))
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center bg-background px-4">
+        <div className="max-w-md rounded-lg border bg-card p-8 text-center">
+          <h1 className="text-xl font-semibold">Sem acesso</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Seu usuário não tem permissão para abrir esta tela. Fale com um usuário master.
+          </p>
+          <Button asChild className="mt-6">
+            <Link to="/home">Voltar para a Home</Link>
+          </Button>
+        </div>
+      </div>
+    );
   if (module && !modules.includes(module)) {
     const landing = landingPath(modules);
     if (module === "agenda" && landing) return <Navigate to={landing} replace />;

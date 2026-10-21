@@ -27,5 +27,5 @@ function Gate({ userId }: { userId: string }) {
 
 function Page() {
   const { user } = Route.useRouteContext();
-  return <ProfileGate user={user}>{(current) => <Gate userId={current.id} />}</ProfileGate>;
+  return <ProfileGate user={user} permission="module.noticias">{(current) => <Gate userId={current.id} />}</ProfileGate>;
 }
