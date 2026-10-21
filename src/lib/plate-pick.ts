@@ -22,11 +22,9 @@ export function plateSearchTerm(typed: string): string | null {
 }
 
 export function plateOptionSummary(o: PlateOption): string {
-  return [
-    `Prefixo: ${o.prefixo || "—"}`,
-    `Ano: ${o.ano ?? "—"}`,
-    `Mod.: ${o.modelo || "—"}`,
-  ].join(" | ");
+  return [`Prefixo: ${o.prefixo || "—"}`, `Ano: ${o.ano ?? "—"}`, `Mod.: ${o.modelo || "—"}`].join(
+    " | ",
+  );
 }
 
 /** Liga/desliga ids numa seleção, sem duplicar. */

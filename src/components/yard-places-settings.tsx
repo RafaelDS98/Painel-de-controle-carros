@@ -182,7 +182,11 @@ export function YardPlacesSettings({ onChanged }: { onChanged: () => void }) {
           disabled={busy || !groupId}
           onClick={() =>
             void run("Removidos do grupo", () =>
-              supabase.rpc("set_group_members_bulk", { _group_id: groupId, _ids: sel, _add: false }),
+              supabase.rpc("set_group_members_bulk", {
+                _group_id: groupId,
+                _ids: sel,
+                _add: false,
+              }),
             )
           }
         >

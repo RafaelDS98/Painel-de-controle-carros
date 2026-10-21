@@ -103,7 +103,12 @@ export function YardSettingsPanel({
 
   const SaveBar = ({ label = "Salvar" }: { label?: string }) => (
     <div className="flex justify-end">
-      <Button size="sm" className="gap-1.5" disabled={saving} onClick={() => void handleSaveSettings()}>
+      <Button
+        size="sm"
+        className="gap-1.5"
+        disabled={saving}
+        onClick={() => void handleSaveSettings()}
+      >
         {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
         {saving ? "Salvando…" : label}
       </Button>
@@ -115,9 +120,7 @@ export function YardSettingsPanel({
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Configurações do Pátio</DialogTitle>
-          <DialogDescription>
-            Escolha a aba e salve cada uma separadamente.
-          </DialogDescription>
+          <DialogDescription>Escolha a aba e salve cada uma separadamente.</DialogDescription>
         </DialogHeader>
 
         <Tabs defaultValue="locais">
@@ -135,236 +138,247 @@ export function YardSettingsPanel({
             <YardGroupsSettings />
           </TabsContent>
           <TabsContent value="avisos" className="space-y-6 pt-3">
-          {/* Timer semafórico */}
-          <section className="space-y-3">
-            <h3 className="text-sm font-semibold border-b pb-1">Timer Semafórico</h3>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1">
-                <Label className="text-xs">Verde até (horas)</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  step={0.5}
-                  value={draft.timer_green_hours}
-                  onChange={(e) =>
-                    setDraft((d) => ({ ...d, timer_green_hours: Number(e.target.value) || 0 }))
-                  }
-                />
+            {/* Timer semafórico */}
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold border-b pb-1">Timer Semafórico</h3>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <Label className="text-xs">Verde até (horas)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    value={draft.timer_green_hours}
+                    onChange={(e) =>
+                      setDraft((d) => ({ ...d, timer_green_hours: Number(e.target.value) || 0 }))
+                    }
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Amarelo até (horas)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    value={draft.timer_yellow_hours}
+                    onChange={(e) =>
+                      setDraft((d) => ({ ...d, timer_yellow_hours: Number(e.target.value) || 0 }))
+                    }
+                  />
+                </div>
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Amarelo até (horas)</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  step={0.5}
-                  value={draft.timer_yellow_hours}
-                  onChange={(e) =>
-                    setDraft((d) => ({ ...d, timer_yellow_hours: Number(e.target.value) || 0 }))
-                  }
-                />
-              </div>
-            </div>
-            <p className="text-[11px] text-muted-foreground">Vermelho = acima do limite amarelo.</p>
-          </section>
-
+              <p className="text-[11px] text-muted-foreground">
+                Vermelho = acima do limite amarelo.
+              </p>
+            </section>
           </TabsContent>
           <TabsContent value="checkin" className="space-y-4 pt-3">
-          {/* Check-in */}
-          <section className="space-y-3">
-            <h3 className="text-sm font-semibold border-b pb-1">Check-in / Check-out</h3>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox
-                  checked={draft.check_in_required}
-                  onCheckedChange={(v) => setDraft((d) => ({ ...d, check_in_required: !!v }))}
+            {/* Check-in */}
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold border-b pb-1">Check-in / Check-out</h3>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={draft.check_in_required}
+                    onCheckedChange={(v) => setDraft((d) => ({ ...d, check_in_required: !!v }))}
+                  />
+                  Entrada obrigatória
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={draft.check_out_required}
+                    onCheckedChange={(v) => setDraft((d) => ({ ...d, check_out_required: !!v }))}
+                  />
+                  Saída obrigatória
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={draft.photo_capture_enabled}
+                    onCheckedChange={(v) => setDraft((d) => ({ ...d, photo_capture_enabled: !!v }))}
+                  />
+                  Permitir tirar foto
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={draft.photo_upload_enabled}
+                    onCheckedChange={(v) => setDraft((d) => ({ ...d, photo_upload_enabled: !!v }))}
+                  />
+                  Permitir inserir arquivo
+                </label>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Tamanho máximo da foto (MB)</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={draft.photo_max_mb}
+                  onChange={(e) =>
+                    setDraft((d) => ({ ...d, photo_max_mb: Number(e.target.value) || 10 }))
+                  }
+                  className="w-24"
                 />
-                Entrada obrigatória
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox
-                  checked={draft.check_out_required}
-                  onCheckedChange={(v) => setDraft((d) => ({ ...d, check_out_required: !!v }))}
-                />
-                Saída obrigatória
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox
-                  checked={draft.photo_capture_enabled}
-                  onCheckedChange={(v) => setDraft((d) => ({ ...d, photo_capture_enabled: !!v }))}
-                />
-                Permitir tirar foto
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox
-                  checked={draft.photo_upload_enabled}
-                  onCheckedChange={(v) => setDraft((d) => ({ ...d, photo_upload_enabled: !!v }))}
-                />
-                Permitir inserir arquivo
-              </label>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Tamanho máximo da foto (MB)</Label>
-              <Input
-                type="number"
-                min={1}
-                max={50}
-                value={draft.photo_max_mb}
-                onChange={(e) =>
-                  setDraft((d) => ({ ...d, photo_max_mb: Number(e.target.value) || 10 }))
-                }
-                className="w-24"
-              />
-            </div>
-            <p className="text-[11px] text-muted-foreground">Somente o Master altera estas regras.</p>
-            <SaveBar />
-          </section>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Somente o Master altera estas regras.
+              </p>
+              <SaveBar />
+            </section>
           </TabsContent>
           <TabsContent value="avisos" className="space-y-6 pt-3">
-          {/* Notificações */}
-          <section className="space-y-3">
-            <h3 className="text-sm font-semibold border-b pb-1">Notificações</h3>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox
-                  checked={draft.notification_sound_enabled}
-                  onCheckedChange={(v) =>
-                    setDraft((d) => ({ ...d, notification_sound_enabled: !!v }))
-                  }
-                />
-                Som de alerta
-              </label>
-              <div className="space-y-1">
-                <Label className="text-xs">Intervalo de atualização (segundos)</Label>
-                <Input
-                  type="number"
-                  min={15}
-                  max={300}
-                  value={draft.polling_seconds}
-                  onChange={(e) =>
-                    setDraft((d) => ({ ...d, polling_seconds: Number(e.target.value) || 30 }))
-                  }
-                  className="w-24"
-                />
+            {/* Notificações */}
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold border-b pb-1">Notificações</h3>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={draft.notification_sound_enabled}
+                    onCheckedChange={(v) =>
+                      setDraft((d) => ({ ...d, notification_sound_enabled: !!v }))
+                    }
+                  />
+                  Som de alerta
+                </label>
+                <div className="space-y-1">
+                  <Label className="text-xs">Intervalo de atualização (segundos)</Label>
+                  <Input
+                    type="number"
+                    min={15}
+                    max={300}
+                    value={draft.polling_seconds}
+                    onChange={(e) =>
+                      setDraft((d) => ({ ...d, polling_seconds: Number(e.target.value) || 30 }))
+                    }
+                    className="w-24"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label
+                    className="text-xs"
+                    title="Tempo que o aviso pequeno no canto da tela fica visível (4000 = 4 segundos)"
+                  >
+                    Duração do aviso na tela (segundos)
+                  </Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={15}
+                    step={0.5}
+                    value={draft.toast_duration_ms / 1000}
+                    onChange={(e) =>
+                      setDraft((d) => ({
+                        ...d,
+                        toast_duration_ms: Math.round((Number(e.target.value) || 4) * 1000),
+                      }))
+                    }
+                    className="w-28"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Destaque novidade (minutos)</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={60}
+                    value={draft.new_highlight_minutes}
+                    onChange={(e) =>
+                      setDraft((d) => ({
+                        ...d,
+                        new_highlight_minutes: Number(e.target.value) || 5,
+                      }))
+                    }
+                    className="w-24"
+                  />
+                </div>
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs" title="Tempo que o aviso pequeno no canto da tela fica visível (4000 = 4 segundos)">Duração do aviso na tela (segundos)</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={15}
-                  step={0.5}
-                  value={draft.toast_duration_ms / 1000}
-                  onChange={(e) =>
-                    setDraft((d) => ({
-                      ...d,
-                      toast_duration_ms: Math.round((Number(e.target.value) || 4) * 1000),
-                    }))
-                  }
-                  className="w-28"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Destaque novidade (minutos)</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={60}
-                  value={draft.new_highlight_minutes}
-                  onChange={(e) =>
-                    setDraft((d) => ({ ...d, new_highlight_minutes: Number(e.target.value) || 5 }))
-                  }
-                  className="w-24"
-                />
-              </div>
-            </div>
-          </section>
-          <SaveBar />
+            </section>
+            <SaveBar />
           </TabsContent>
           <TabsContent value="oficina" className="space-y-6 pt-3">
-          {/* Campos editáveis pela oficina */}
-          <section className="space-y-3">
-            <h3 className="text-sm font-semibold border-b pb-1">Campos editáveis pela Oficina</h3>
-            <p className="text-[11px] text-muted-foreground">
-              Marque quais campos o perfil Oficina pode alterar no modal de detalhes.
-            </p>
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {Object.entries(YARD_EDITABLE_FIELD_LABELS).map(([key, label]) => (
-                <label key={key} className="flex items-center gap-2 text-sm">
-                  <Checkbox
-                    checked={draft.editable_fields.includes(key)}
-                    onCheckedChange={() => toggleField(key)}
-                  />
-                  {label}
-                </label>
-              ))}
-            </div>
-            <SaveBar label="Salvar campos" />
-          </section>
+            {/* Campos editáveis pela oficina */}
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold border-b pb-1">Campos editáveis pela Oficina</h3>
+              <p className="text-[11px] text-muted-foreground">
+                Marque quais campos o perfil Oficina pode alterar no modal de detalhes.
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {Object.entries(YARD_EDITABLE_FIELD_LABELS).map(([key, label]) => (
+                  <label key={key} className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={draft.editable_fields.includes(key)}
+                      onCheckedChange={() => toggleField(key)}
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+              <SaveBar label="Salvar campos" />
+            </section>
 
-          {/* Statuses por tela */}
-          <section className="space-y-3">
-            <h3 className="text-sm font-semibold border-b pb-1">Statuses por Tela</h3>
-            <p className="text-[11px] text-muted-foreground">
-              Configure quais statuses aparecem no Pátio e em Externos.
-            </p>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left text-xs text-muted-foreground">
-                    <th className="px-3 py-2">Status</th>
-                    <th className="px-3 py-2 text-center">Mostrar no Pátio</th>
-                    <th className="px-3 py-2 text-center">Mostrar Externo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {statuses.map((s) => (
-                    <tr key={s.id} className="border-b">
-                      <td className="px-3 py-2 font-medium">{s.label}</td>
-                      <td className="px-3 py-2 text-center">
-                        <Checkbox
-                          checked={!!statusDrafts[s.label]?.show_in_yard}
-                          onCheckedChange={(v) =>
-                            setStatusDrafts((prev) => ({
-                              ...prev,
-                              [s.label]: {
-                                ...prev[s.label],
-                                show_in_yard: !!v,
-                                show_external: prev[s.label]?.show_external ?? false,
-                              },
-                            }))
-                          }
-                        />
-                      </td>
-                      <td className="px-3 py-2 text-center">
-                        <Checkbox
-                          checked={!!statusDrafts[s.label]?.show_external}
-                          onCheckedChange={(v) =>
-                            setStatusDrafts((prev) => ({
-                              ...prev,
-                              [s.label]: {
-                                ...prev[s.label],
-                                show_external: !!v,
-                                show_in_yard: prev[s.label]?.show_in_yard ?? false,
-                              },
-                            }))
-                          }
-                        />
-                      </td>
+            {/* Statuses por tela */}
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold border-b pb-1">Statuses por Tela</h3>
+              <p className="text-[11px] text-muted-foreground">
+                Configure quais statuses aparecem no Pátio e em Externos.
+              </p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left text-xs text-muted-foreground">
+                      <th className="px-3 py-2">Status</th>
+                      <th className="px-3 py-2 text-center">Mostrar no Pátio</th>
+                      <th className="px-3 py-2 text-center">Mostrar Externo</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={saving}
-              onClick={() => void handleSaveStatuses()}
-            >
-              {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-              Salvar statuses por tela
-            </Button>
-          </section>
+                  </thead>
+                  <tbody>
+                    {statuses.map((s) => (
+                      <tr key={s.id} className="border-b">
+                        <td className="px-3 py-2 font-medium">{s.label}</td>
+                        <td className="px-3 py-2 text-center">
+                          <Checkbox
+                            checked={!!statusDrafts[s.label]?.show_in_yard}
+                            onCheckedChange={(v) =>
+                              setStatusDrafts((prev) => ({
+                                ...prev,
+                                [s.label]: {
+                                  ...prev[s.label],
+                                  show_in_yard: !!v,
+                                  show_external: prev[s.label]?.show_external ?? false,
+                                },
+                              }))
+                            }
+                          />
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          <Checkbox
+                            checked={!!statusDrafts[s.label]?.show_external}
+                            onCheckedChange={(v) =>
+                              setStatusDrafts((prev) => ({
+                                ...prev,
+                                [s.label]: {
+                                  ...prev[s.label],
+                                  show_external: !!v,
+                                  show_in_yard: prev[s.label]?.show_in_yard ?? false,
+                                },
+                              }))
+                            }
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={saving}
+                onClick={() => void handleSaveStatuses()}
+              >
+                {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+                Salvar statuses por tela
+              </Button>
+            </section>
           </TabsContent>
         </Tabs>
         <div className="flex justify-end border-t pt-4">

@@ -26,7 +26,9 @@ export const Route = createFileRoute("/_authenticated/")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  validateSearch: (s: Record<string, unknown>): { tab?: AgendaTab | undefined; acao?: string | undefined } => ({
+  validateSearch: (
+    s: Record<string, unknown>,
+  ): { tab?: AgendaTab | undefined; acao?: string | undefined } => ({
     tab: TABS.includes(s["tab"] as AgendaTab) ? (s["tab"] as AgendaTab) : undefined,
     acao: typeof s["acao"] === "string" ? s["acao"] : undefined,
   }),
@@ -170,7 +172,7 @@ function Index() {
   return (
     <>
       <div className={movements ? "hidden" : undefined}>
-        {(active === "oficina" || profile.data.role === "oficina") ? (
+        {active === "oficina" || profile.data.role === "oficina" ? (
           <WorkshopYard
             key="yard"
             currentUser={currentUser}
