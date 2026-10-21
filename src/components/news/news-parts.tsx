@@ -42,6 +42,23 @@ export function NewsVideo({ post }: { post: NewsPost }) {
   return null;
 }
 
+/** Tags pequenas que apenas classificam a notícia. */
+export function NewsTags({ tags, className }: { tags: string[]; className?: string }) {
+  if (!tags?.length) return null;
+  return (
+    <div className={cn("flex flex-wrap gap-1.5", className)}>
+      {tags.map((t) => (
+        <span
+          key={t}
+          className="rounded-full border bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground"
+        >
+          #{t}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 /** Item no estilo de portal: imagem à esquerda, chapéu, manchete, linha fina, relacionadas e tempo. */
 export function NewsListItem({ post, onOpen }: { post: NewsPost; onOpen: () => void }) {
   return (
@@ -62,13 +79,7 @@ export function NewsListItem({ post, onOpen }: { post: NewsPost; onOpen: () => v
           </h3>
         </button>
         {post.subtitle && <p className="mt-1 text-sm text-foreground/80">{post.subtitle}</p>}
-        {post.related.length > 0 && (
-          <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-primary marker:text-muted-foreground">
-            {post.related.map((r) => (
-              <li key={r}>{r}</li>
-            ))}
-          </ul>
-        )}
+        <NewsTags tags={post.related} className="mt-2" />
         <p className="mt-2 text-xs text-muted-foreground">
           {relativeTime(post.published_at)} — Em {post.category || "Geral"}
           {!post.published && " · Rascunho"}
@@ -87,10 +98,10 @@ export function NewsArticleDialog({
 }) {
   return (
     <Dialog open={!!post} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+      <DialogContent className="flex max-h-[90vh] max-w-3xl flex-col gap-4 overflow-y-auto">
         {post && (
           <>
-            <DialogHeader>
+            <DialogHeader className="shrink-0 pr-6 text-left">
               {post.kicker && (
                 <p className="text-sm font-medium text-muted-foreground">{post.kicker}</p>
               )}
@@ -104,24 +115,17 @@ export function NewsArticleDialog({
                 })}{" "}
                 — Em {post.category || "Geral"}
               </p>
+              <NewsTags tags={post.related} />
             </DialogHeader>
             {post.image_path && (
-              <div className="overflow-hidden rounded-lg">
-                <NewsImage post={post} />
+              <div className="shrink-0 overflow-hidden rounded-lg bg-muted">
+                <NewsImage post={post} className="max-h-[60vh] object-contain" />
               </div>
             )}
-            <NewsVideo post={post} />
-            <div className="whitespace-pre-wrap text-sm leading-relaxed">{post.body}</div>
-            {post.related.length > 0 && (
-              <div className="rounded-lg border bg-muted/40 p-3">
-                <p className="text-xs font-semibold uppercase text-muted-foreground">Veja também</p>
-                <ul className="mt-1 list-disc pl-4 text-sm">
-                  {post.related.map((r) => (
-                    <li key={r}>{r}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            <div className="shrink-0">
+              <NewsVideo post={post} />
+            </div>
+            <div className="shrink-0 whitespace-pre-wrap text-sm leading-relaxed">{post.body}</div>
           </>
         )}
       </DialogContent>
