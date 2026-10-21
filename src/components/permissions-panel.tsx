@@ -80,8 +80,7 @@ export function PermissionsPanel({ currentUserId }: { currentUserId: string }) {
       </p>
     );
 
-  const selected =
-    (users.data ?? []).find((u) => u.user_id === selectedId) ?? list[0] ?? null;
+  const selected = (users.data ?? []).find((u) => u.user_id === selectedId) ?? list[0] ?? null;
   const locked = !selected || selected.role === "master" || selected.user_id === currentUserId;
 
   function Box({ perm, label }: { perm: string; label?: string }) {

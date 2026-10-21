@@ -1,3 +1,4 @@
+import { DateInput } from "@/components/date-input";
 import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -205,11 +206,11 @@ export function OsConsultaPanel({ onOpenPlate }: { onOpenPlate?: (plate: string)
           </div>
           <div>
             <Label>Aberta de</Label>
-            <Input type="date" value={draft.data_inicial} onChange={set("data_inicial")} />
+            <DateInput value={draft.data_inicial} onChange={set("data_inicial")} />
           </div>
           <div>
             <Label>até</Label>
-            <Input type="date" value={draft.data_final} onChange={set("data_final")} />
+            <DateInput value={draft.data_final} onChange={set("data_final")} />
           </div>
           <div>
             <Label>Loja</Label>

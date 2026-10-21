@@ -1,4 +1,5 @@
 # Regras de src/components
+
 - A ficha de agendamento compartilha os campos da criação manual e envia somente colunas alteradas no UPDATE — mantém o trigger de permissões e o histórico como fonte das regras.
 - A edição em lote usa o UUID exportado, compara cada campo com a linha atual do banco e usa o mesmo UPDATE da ficha — evita duplicação e preserva as travas e o histórico.
 - Atalhos de período usam datas de São Paulo; a grade mostra só a semana atual do intervalo — evita misturar semanas.
@@ -11,3 +12,4 @@
 - Sidebar expanded links and collapsed popovers share the same permission-filtered children; Consultas is one item active for both internal tabs — prevents divergent navigation and forbidden shortcuts.
 - Icon-only controls carry their own name: `NameTip` (Radix Tooltip) wraps collapsed sidebar items and topbar icon buttons, and each keeps its `aria-label`; items with sub-screens show the name in the popover header instead of a tooltip — keeps the icon rail readable by mouse, touch and screen reader.
 - SearchableSelect uses a modal Popover so its portaled list accepts wheel and touch scrolling inside modal dialogs without unlocking the background.
+- Campos de data usam `DateInput` (exibe dd/mm/aaaa, valor segue aaaa-mm-dd) — nunca `<Input type="date">`, cujo formato depende do navegador.

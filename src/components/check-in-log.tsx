@@ -1,3 +1,4 @@
+import { DateInput } from "@/components/date-input";
 import { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
@@ -106,13 +107,8 @@ export function CheckInLog() {
             setPage(1);
           }}
         />
-        <Input
-          className="w-40"
-          type="date"
-          value={from}
-          onChange={(e) => setFrom(e.target.value)}
-        />
-        <Input className="w-40" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+        <DateInput className="w-40" value={from} onChange={(e) => setFrom(e.target.value)} />
+        <DateInput className="w-40" value={to} onChange={(e) => setTo(e.target.value)} />
         <select className={sel} value={type} onChange={(e) => setType(e.target.value)}>
           <option value="">Entrada e saída</option>
           <option value="entrada">Entrada</option>

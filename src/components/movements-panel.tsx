@@ -1,3 +1,4 @@
+import { DateInput } from "@/components/date-input";
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronRight, Download, Search, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -185,15 +186,13 @@ export function MovementsPanel({
               aria-label="Placa"
             />
           </label>
-          <Input
-            type="date"
+          <DateInput
             aria-label="Período de"
             value={f.from}
             onChange={(e) => set("from", e.target.value)}
             className="w-40"
           />
-          <Input
-            type="date"
+          <DateInput
             aria-label="Período até"
             value={f.to}
             onChange={(e) => set("to", e.target.value)}

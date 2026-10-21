@@ -11,14 +11,21 @@ interface YardKpisProps {
   onStatusFilter: (status: string | null) => void;
 }
 
-export function YardKpis({ patioItems, yardStatuses, activeStatusFilter, onStatusFilter }: YardKpisProps) {
+export function YardKpis({
+  patioItems,
+  yardStatuses,
+  activeStatusFilter,
+  onStatusFilter,
+}: YardKpisProps) {
   const total = patioItems.length;
 
-  const statusCounts = yardStatuses.map((s) => ({
-    label: s.label,
-    count: patioItems.filter((item) => item.status === s.label).length,
-    colorToken: s.color_token,
-  })).filter((s) => s.count > 0);
+  const statusCounts = yardStatuses
+    .map((s) => ({
+      label: s.label,
+      count: patioItems.filter((item) => item.status === s.label).length,
+      colorToken: s.color_token,
+    }))
+    .filter((s) => s.count > 0);
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">

@@ -1,3 +1,4 @@
+import { DateInput } from "@/components/date-input";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, ArrowRight, Download } from "lucide-react";
@@ -172,8 +173,7 @@ export function HistoryLogPage() {
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
         <label className="text-xs text-muted-foreground">
           De
-          <Input
-            type="date"
+          <DateInput
             value={from}
             onChange={(e) => {
               setFrom(e.target.value);
@@ -183,8 +183,7 @@ export function HistoryLogPage() {
         </label>
         <label className="text-xs text-muted-foreground">
           Até
-          <Input
-            type="date"
+          <DateInput
             value={to}
             onChange={(e) => {
               setTo(e.target.value);

@@ -95,9 +95,7 @@ export function CheckInSheet({
         if (uploadError) {
           toast.error(`Falha no upload da foto: ${uploadError.message}`);
         } else {
-          const { data: urlData } = supabase.storage
-            .from("check-in-photos")
-            .getPublicUrl(path);
+          const { data: urlData } = supabase.storage.from("check-in-photos").getPublicUrl(path);
           photoUrl = urlData?.publicUrl ?? null;
         }
       }
@@ -169,8 +167,7 @@ export function CheckInSheet({
       <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
         <SheetHeader>
           <SheetTitle>
-            {isEntrada ? "Registrar entrada" : "Registrar saída"} —{" "}
-            {appointment?.plate || "—"}
+            {isEntrada ? "Registrar entrada" : "Registrar saída"} — {appointment?.plate || "—"}
           </SheetTitle>
           <SheetDescription>
             {isEntrada
@@ -216,9 +213,7 @@ export function CheckInSheet({
 
             {/* Observação */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">
-                Observação{required ? " *" : ""}
-              </label>
+              <label className="text-sm font-medium">Observação{required ? " *" : ""}</label>
               <Textarea
                 value={note}
                 onChange={(e) => setNote(e.target.value.slice(0, 500))}
@@ -226,17 +221,13 @@ export function CheckInSheet({
                 rows={3}
                 maxLength={500}
               />
-              <p className="text-right text-[11px] text-muted-foreground">
-                {note.length}/500
-              </p>
+              <p className="text-right text-[11px] text-muted-foreground">{note.length}/500</p>
             </div>
 
             {/* Foto */}
             {photoEnabled && (
               <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  Foto{required ? " *" : ""}
-                </label>
+                <label className="text-sm font-medium">Foto{required ? " *" : ""}</label>
                 {photoPreview ? (
                   <div className="relative">
                     <img
@@ -303,23 +294,17 @@ export function CheckInSheet({
 
             {/* Ações */}
             <div className="flex gap-2 border-t pt-4">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => handleOpenChange(false)}
-              >
+              <Button variant="outline" className="flex-1" onClick={() => handleOpenChange(false)}>
                 Cancelar
               </Button>
               <Button
                 className="flex-1 gap-1.5"
-                disabled={saving || (required && !note.trim()) || (required && photoEnabled && !photoFile)}
+                disabled={
+                  saving || (required && !note.trim()) || (required && photoEnabled && !photoFile)
+                }
                 onClick={() => void handleSave()}
               >
-                {saving ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Save className="size-4" />
-                )}
+                {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
                 {saving ? "Salvando…" : "Salvar"}
               </Button>
             </div>

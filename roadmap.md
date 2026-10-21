@@ -97,4 +97,4 @@
 
 ## Revisão visual (2026-10-21)
 - [x] Topbar enxuta (atalhos só ícone abaixo de 1280px; extras da Agenda em "Mais"), cabeçalho duplicado do Pátio removido, abas de módulo só no celular, filtros da Agenda em grade e recolhidos no celular, grade semanal com dias vazios estreitos, contraste do modo escuro (--primary, --link), destaque da Home em largura total.
-- [ ] Pendente: cor "Recebido" (verde-limão) é configurada em Configurações > Situações; filtros recolhíveis em Veículos; datas dd/mm/aaaa (campo nativo segue idioma do navegador).
+- [ ] Pendente: cor "Recebido" (verde-limão) é configurada em Configurações > Situações; (concluídos: filtros recolhíveis em Veículos e datas dd/mm/aaaa via DateInput).
