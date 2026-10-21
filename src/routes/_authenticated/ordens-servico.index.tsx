@@ -30,11 +30,36 @@ function Page() {
     <ProfileGate user={user}>
       {(me) => (
         <>
-          <div className="mx-auto flex max-w-[1400px] flex-wrap gap-2 px-5 pt-6 lg:px-8" aria-label="Módulos">
-            {me.modules.includes("agenda") && <Button variant="outline" asChild><Link to="/" search={{ tab: "agenda" }}>Agenda</Link></Button>}
-            {me.modules.includes("oficina") && <Button variant="outline" asChild><Link to="/" search={{ tab: "oficina" }}>Oficina</Link></Button>}
-            {(permissions.has("module.veiculos") || permissions.has("module.os")) && <Button variant="outline" asChild><Link to="/" search={consultasSearch(permissions)}>Consultas</Link></Button>}
-            <Button asChild><Link to="/ordens-servico" aria-current="page">Ordens de Serviço</Link></Button>
+          <div
+            className="mx-auto flex max-w-[1400px] flex-wrap gap-2 px-5 pt-6 lg:px-8"
+            aria-label="Módulos"
+          >
+            {me.modules.includes("agenda") && (
+              <Button variant="outline" asChild>
+                <Link to="/" search={{ tab: "agenda" }}>
+                  Agenda
+                </Link>
+              </Button>
+            )}
+            {me.modules.includes("oficina") && (
+              <Button variant="outline" asChild>
+                <Link to="/" search={{ tab: "oficina" }}>
+                  Oficina
+                </Link>
+              </Button>
+            )}
+            {(permissions.has("module.veiculos") || permissions.has("module.os")) && (
+              <Button variant="outline" asChild>
+                <Link to="/" search={consultasSearch(permissions)}>
+                  Consultas
+                </Link>
+              </Button>
+            )}
+            <Button asChild>
+              <Link to="/ordens-servico" aria-current="page">
+                Ordens de Serviço
+              </Link>
+            </Button>
           </div>
           <OsListPage canCreate={me.role !== "oficina"} />
         </>
