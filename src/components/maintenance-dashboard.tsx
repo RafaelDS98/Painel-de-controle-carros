@@ -2036,7 +2036,7 @@ export function MaintenanceDashboard({
           <Button
             variant="outline"
             size="sm"
-            className="mt-2 h-8 w-full justify-center gap-1 px-2 text-xs text-foreground"
+            className="mt-2 h-8 w-full min-w-0 justify-center gap-1 truncate px-2 text-xs text-foreground"
             onClick={() => setSelected(item)}
           >
             Abrir agendamento
@@ -2059,10 +2059,41 @@ export function MaintenanceDashboard({
     <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
       {topbarSlot
         ? createPortal(
-            <div className="flex items-center gap-1">
-              <Button variant="ghost" size="sm" onClick={() => setAccountOpen(true)}>
-                <UserCircle /> Minha conta
-              </Button>
+            <>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" aria-label="Mais opções da agenda">
+                    <MoreHorizontal /> <span className="hidden xl:inline">Mais</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => setAccountOpen(true)}>
+                    <UserCircle /> Minha conta
+                  </DropdownMenuItem>
+                  {!workshopMode && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/historicos">
+                        <History /> Históricos
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  {currentUser.role === "gerente" && (
+                    <DropdownMenuItem onSelect={() => setListsOpen(true)}>
+                      <ListChecks /> Listas
+                    </DropdownMenuItem>
+                  )}
+                  {currentUser.role === "master" && !workshopMode && (
+                    <DropdownMenuItem onSelect={() => setTrashOpen(true)}>
+                      <Trash2 /> Lixeira
+                    </DropdownMenuItem>
+                  )}
+                  {canCreate && (
+                    <DropdownMenuItem onSelect={() => inputRef.current?.click()}>
+                      <Upload /> Importar agenda
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
               <MyAccountDialog
                 open={accountOpen}
                 onOpenChange={setAccountOpen}
@@ -2075,28 +2106,6 @@ export function MaintenanceDashboard({
                   })
                 }
               />
-              {!workshopMode && (
-                <Button asChild variant="ghost" size="sm">
-                  <Link to="/historicos">
-                    <History /> Históricos
-                  </Link>
-                </Button>
-              )}
-              {currentUser.role === "gerente" && (
-                <Button variant="ghost" size="sm" onClick={() => setListsOpen(true)}>
-                  <ListChecks /> Listas
-                </Button>
-              )}
-              {currentUser.role === "master" && !workshopMode && (
-                <Button variant="ghost" size="sm" onClick={() => setTrashOpen(true)}>
-                  <Trash2 /> Lixeira
-                </Button>
-              )}
-              {canCreate && (
-                <Button variant="ghost" size="sm" onClick={() => inputRef.current?.click()}>
-                  <Upload /> Importar agenda
-                </Button>
-              )}
               <input
                 ref={inputRef}
                 type="file"
@@ -2104,16 +2113,16 @@ export function MaintenanceDashboard({
                 className="hidden"
                 onChange={(event) => importFile(event.target.files?.[0])}
               />
-            </div>,
+            </>,
             topbarSlot,
           )
         : null}
 
-      <main className="mx-auto max-w-[1600px] space-y-6 px-5 py-6 lg:px-8">
+      <main className="mx-auto max-w-[1600px] space-y-5 px-4 py-5 sm:px-5 lg:px-8">
         {tabs}
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="mb-1 text-xs font-semibold uppercase text-accent-foreground">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="min-w-0">
+            <p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">
               Operação semanal
             </p>
             <h1 className="text-2xl font-bold lg:text-3xl">
@@ -2125,24 +2134,31 @@ export function MaintenanceDashboard({
                 : "Acompanhamento da frota, oficinas e serviços programados."}
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border bg-card px-3 py-2 text-xs">
+            <div>
+              <p className="text-muted-foreground">Período carregado</p>
+              <p className="text-sm font-semibold">{loadedPeriod}</p>
+            </div>
             {canRefresh && (
-              <div className="flex items-center gap-2 rounded-md border bg-card px-3 py-2">
-                <div className="text-right">
-                  <p className="text-xs text-muted-foreground">Última atualização</p>
-                  <p className="text-sm font-semibold">
-                    {lastSglocAt
-                      ? new Date(lastSglocAt).toLocaleString("pt-BR", {
-                          timeZone: "America/Sao_Paulo",
-                          day: "2-digit",
-                          month: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
-                      : "—"}
-                  </p>
-                </div>
+              <div>
+                <p className="text-muted-foreground">Última atualização SGLOC</p>
+                <p className="text-sm font-semibold">
+                  {lastSglocAt
+                    ? new Date(lastSglocAt).toLocaleString("pt-BR", {
+                        timeZone: "America/Sao_Paulo",
+                        day: "2-digit",
+                        month: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : "—"}
+                </p>
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              {canRefresh && (
                 <Button
+                  size="sm"
                   onClick={() => void refreshFromSgloc()}
                   disabled={refreshing}
                   aria-busy={refreshing}
@@ -2150,18 +2166,15 @@ export function MaintenanceDashboard({
                   <RefreshCw className={cn(refreshing && "animate-spin")} />
                   {refreshing ? "Atualizando…" : "Atualizar do SGLOC"}
                 </Button>
-              </div>
-            )}
-            <Button
-              variant="outline"
-              onClick={() => void loadAppointments()}
-              aria-label="Recarregar agenda"
-            >
-              <RotateCcw /> Recarregar
-            </Button>
-            <div className="rounded-md border bg-card px-4 py-2 text-right">
-              <p className="text-xs text-muted-foreground">Período carregado</p>
-              <p className="text-sm font-semibold">{loadedPeriod}</p>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void loadAppointments()}
+                aria-label="Recarregar agenda"
+              >
+                <RotateCcw /> Recarregar
+              </Button>
             </div>
           </div>
         </div>
@@ -2548,7 +2561,18 @@ export function MaintenanceDashboard({
                 </Button>
               </div>
             </div>
-            <div className="grid min-w-0 gap-3 md:grid-cols-3 xl:grid-cols-6">
+            <div
+              className="grid min-w-0 gap-3 md:grid-cols-3 xl:[grid-template-columns:var(--week-cols)]"
+              style={
+                {
+                  "--week-cols": days
+                    .map((_, i) =>
+                      (week.days[i]?.length ?? 0) > 0 ? "minmax(0,3fr)" : "minmax(6.5rem,1fr)",
+                    )
+                    .join(" "),
+                } as React.CSSProperties
+              }
+            >
               {days.map((day, index) => {
                 const rows = [...(week.days[index] ?? [])].sort((a, b) =>
                   comparePriority(a, b, today, completion),
