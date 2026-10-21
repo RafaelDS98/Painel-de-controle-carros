@@ -12,7 +12,7 @@ Reorganizar a janela em abas, como em "Configurações da Agenda":
   - Caixinha em cada linha + "marcar todos os filtrados" e ações em lote: **Marcar como pátio próprio**, **Marcar como oficina externa**, **Adicionar ao grupo…**, **Remover do grupo…**.
   - Permite **vários pátios próprios** (hoje só um). Botão "Novo local".
 - **Grupos**: lista de grupos com quantidade de locais, editar/renomear/desativar (seleção dos locais com a mesma busca e caixinhas).
-- **Check-in/Check-out**: obrigatoriedade, foto e tamanho máximo.
+- **Check-in/Check-out**: obrigatoriedade configurável pelo Master, foto e tamanho máximo.
 - **Notificações e tempos**: timer, som, intervalo, "Duração do aviso na tela (segundos)".
 - **Oficina e status**: campos editáveis pela Oficina e status por tela.
 - Um botão Salvar por aba, com aviso de alterações não salvas.
