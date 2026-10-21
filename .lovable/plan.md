@@ -21,6 +21,7 @@ Reorganizar a janela em abas, como em "Configurações da Agenda":
 - Atalhos "Novo agendamento", "Nova O.S.", "Configurações" e o novo "Entrada/Saída" ficam sempre na barra superior, em todas as telas (respeitando as permissões de cada usuário), em vez de aparecerem só na Agenda.
 - Barra mais comprida e maior, sem rolagem lateral, com os atalhos ocupando o espaço vazio ao lado do caminho da página e alinhados de forma organizada.
 - "Configurações" abre as configurações da tela atual (Agenda, Pátio etc.).
+- Busca vira só o ícone da lupa, liberando espaço para os atalhos; ao clicar (ou Ctrl+K) abre uma barra para digitar a pesquisa.
 
 ## 4. Subtelas no menu lateral
 - Ao clicar num item do menu que tem subtelas, ele abre e mostra as opções logo abaixo, com recuo (ex.: Agenda de Manutenção → Agenda, Oficina/Pátio, Consultas, Ordens de Serviço; Históricos → Geral, Check-ins; Configurações por módulo).
