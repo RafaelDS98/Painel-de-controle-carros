@@ -1,3 +1,4 @@
+import { DateInput } from "@/components/date-input";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -2342,8 +2343,7 @@ export function MaintenanceDashboard({
                 mobileFilters ? "flex" : "hidden sm:flex",
               )}
             >
-              <Input
-                type="date"
+              <DateInput
                 aria-label="Data inicial"
                 value={startDate}
                 onChange={(e) => {
@@ -2356,8 +2356,7 @@ export function MaintenanceDashboard({
               <span aria-hidden="true" className="shrink-0 px-1 text-xs text-muted-foreground">
                 até
               </span>
-              <Input
-                type="date"
+              <DateInput
                 aria-label="Data final"
                 value={endDate}
                 onChange={(e) => {

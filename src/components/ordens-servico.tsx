@@ -1,3 +1,4 @@
+import { DateInput } from "@/components/date-input";
 import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -371,7 +372,7 @@ export function OsNewPage({ appointmentId }: { appointmentId?: string | undefine
         </div>
         <div>
           <Label>Previsão de conclusão</Label>
-          <Input type="date" value={f.previsao_conclusao} onChange={set("previsao_conclusao")} />
+          <DateInput value={f.previsao_conclusao} onChange={set("previsao_conclusao")} />
         </div>
         <div>
           <Label>O.S. externa</Label>

@@ -1,3 +1,4 @@
+import { DateInput } from "@/components/date-input";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -288,8 +289,7 @@ export function YardDetailModal({
                     )}
                   </label>
                   {canEditField("current_deadline", settings) ? (
-                    <Input
-                      type="date"
+                    <DateInput
                       value={draft["current_deadline"]}
                       onChange={(e) =>
                         setDraft((d) => ({ ...d, current_deadline: e.target.value }))
