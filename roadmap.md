@@ -98,3 +98,11 @@
 ## Revisão visual (2026-10-21)
 - [x] Topbar enxuta (atalhos só ícone abaixo de 1280px; extras da Agenda em "Mais"), cabeçalho duplicado do Pátio removido, abas de módulo só no celular, filtros da Agenda em grade e recolhidos no celular, grade semanal com dias vazios estreitos, contraste do modo escuro (--primary, --link), destaque da Home em largura total.
 - [ ] Pendente: cor "Recebido" (verde-limão) é configurada em Configurações > Situações; (concluídos: filtros recolhíveis em Veículos e datas dd/mm/aaaa via DateInput).
+
+## Tela da oficina (2026-10-21)
+- [x] Aba "Em atendimento agora" (Chegando / Em execução / Prontos), "Dar entrada", modo telão; Master configura colunas, nomes e campos do cartão.
+- [x] Aviso imediato de encaminhamento (Realtime) com placa e quem enviou.
+- [x] Pátio: filtro Hoje/Semana/Mês/Personalizado e ordem mais novo↔mais antigo/placa (salva por usuário).
+- [x] Consultas → O.S.: corrigido erro do perfil Oficina, mostra todas ao abrir, ordem escolhida pelo usuário.
+- [x] Oficina consulta O.S. por padrão; telas de O.S./Notícias conferem permissão ao abrir; atalhos da Home filtrados.
+- [x] Notícias publicadas visíveis para a Oficina.

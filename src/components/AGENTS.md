@@ -13,3 +13,5 @@
 - Icon-only controls carry their own name: `NameTip` (Radix Tooltip) wraps collapsed sidebar items and topbar icon buttons, and each keeps its `aria-label`; items with sub-screens show the name in the popover header instead of a tooltip — keeps the icon rail readable by mouse, touch and screen reader.
 - SearchableSelect uses a modal Popover so its portaled list accepts wheel and touch scrolling inside modal dialogs without unlocking the background.
 - Campos de data usam `DateInput` (exibe dd/mm/aaaa, valor segue aaaa-mm-dd) — nunca `<Input type="date">`, cujo formato depende do navegador.
+- Tela principal da oficina (src/components/yard-board.tsx + regras puras em src/lib/yard-board.ts): Chegando = encaminhado sem check-in; demais colunas por `status_options.yard_column` (main/ready/yard/hidden); nomes de colunas e campos do cartão em `yard_settings.board_config` (Master); Realtime em appointments recarrega o Pátio — a oficina vê chegadas na hora.
+- Telas protegidas por permissão usam `ProfileGate permission="..."` (confere get_my_permissions) além do filtro do menu/atalhos — link direto sem permissão mostra "Sem acesso".
