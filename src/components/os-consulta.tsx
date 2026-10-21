@@ -92,14 +92,19 @@ export function OsConsultaPanel({ onOpenPlate }: { onOpenPlate?: (plate: string)
   });
   const [draft, setDraft] = useState<Draft>(EMPTY);
   const [more, setMore] = useState(false);
-  const [filters, setFilters] = useState<Record<string, string> | null>(null);
+  const [order, setOrderState] = useState<"desc" | "asc">(() =>
+    typeof window !== "undefined" && localStorage.getItem("os-consulta-order") === "asc"
+      ? "asc"
+      : "desc",
+  );
+  const [filters, setFilters] = useState<Record<string, string> | null>({});
   const [page, setPage] = useState(1);
   const list = useQuery({
-    queryKey: ["os-consulta", filters, page],
+    queryKey: ["os-consulta", filters, page, order],
     enabled: filters !== null,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("search_ordens_servico", {
-        _filters: filters ?? {},
+        _filters: { ...(filters ?? {}), order },
         _page: page,
         _page_size: PAGE,
       });
@@ -124,7 +129,7 @@ export function OsConsultaPanel({ onOpenPlate }: { onOpenPlate?: (plate: string)
   };
   const clear = () => {
     setDraft(EMPTY);
-    setFilters(null);
+    setFilters({});
     setPage(1);
   };
   const total = list.data?.total ?? 0;
@@ -132,7 +137,7 @@ export function OsConsultaPanel({ onOpenPlate }: { onOpenPlate?: (plate: string)
 
   async function exportXlsx() {
     const { data, error } = await supabase.rpc("search_ordens_servico", {
-      _filters: filters ?? {},
+      _filters: { ...(filters ?? {}), order },
       _page: 1,
       _page_size: 5000,
     });
@@ -363,6 +368,20 @@ export function OsConsultaPanel({ onOpenPlate }: { onOpenPlate?: (plate: string)
           <Button type="button" variant="ghost" onClick={() => setMore((m) => !m)}>
             {more ? "Menos filtros" : "Mais filtros"}
           </Button>
+          <select
+            aria-label="Ordem"
+            className="ml-auto h-10 rounded-md border border-input bg-background px-3 text-sm"
+            value={order}
+            onChange={(e) => {
+              const v = e.target.value === "asc" ? "asc" : "desc";
+              setOrderState(v);
+              localStorage.setItem("os-consulta-order", v);
+              setPage(1);
+            }}
+          >
+            <option value="desc">Mais recente → mais antiga</option>
+            <option value="asc">Mais antiga → mais recente</option>
+          </select>
         </div>
       </form>
 
