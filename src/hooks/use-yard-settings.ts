@@ -25,6 +25,7 @@ export function useYardSettings() {
           toast_duration_ms: data.toast_duration_ms || 4000,
           new_highlight_minutes: data.new_highlight_minutes || 5,
           editable_fields: Array.isArray(data.editable_fields) ? data.editable_fields as string[] : DEFAULT_YARD_SETTINGS.editable_fields,
+          board_config: data.board_config ?? {},
         });
       }
       setLoading(false);
@@ -47,6 +48,7 @@ export function useYardSettings() {
     if (patch.toast_duration_ms !== undefined) dbPatch["toast_duration_ms"] = patch.toast_duration_ms;
     if (patch.new_highlight_minutes !== undefined) dbPatch["new_highlight_minutes"] = patch.new_highlight_minutes;
     if (patch.editable_fields !== undefined) dbPatch["editable_fields"] = patch.editable_fields;
+    if (patch.board_config !== undefined) dbPatch["board_config"] = patch.board_config;
     dbPatch["updated_at"] = new Date().toISOString();
     dbPatch["updated_by"] = userId;
     const { error } = await (supabase as any).from("yard_settings").update(dbPatch).eq("id", 1);
