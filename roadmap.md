@@ -94,3 +94,7 @@
 - Migrações em drizzle/migrations já estão aplicadas; nunca reaplicar nem reescrever. `0026_yard_oficina.sql` é duplicada e NUNCA deve ser executada.
 - Pendências que dependem do Rafael: escolher pátios próprios, lojas das O.S. importadas, limpeza da linha "1146 VEÍCULOS"/"MITISHUBISH", teste real de encaminhamento com conta Atendimento, tarefa agendada do SGLOC (sem mecanismo aprovado), envio real ao SGLOC.
 - Validar sempre: `bunx tsgo --noEmit`, `bunx vitest run`, `bun run lint`.
+
+## Revisão visual (2026-10-21)
+- [x] Topbar enxuta (atalhos só ícone abaixo de 1280px; extras da Agenda em "Mais"), cabeçalho duplicado do Pátio removido, abas de módulo só no celular, filtros da Agenda em grade e recolhidos no celular, grade semanal com dias vazios estreitos, contraste do modo escuro (--primary, --link), destaque da Home em largura total.
+- [ ] Pendente: cor "Recebido" (verde-limão) é configurada em Configurações > Situações; filtros recolhíveis em Veículos; datas dd/mm/aaaa (campo nativo segue idioma do navegador).
