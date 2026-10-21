@@ -63,6 +63,7 @@ import { cn } from "@/lib/utils";
 import { useMyPermissions } from "@/lib/permissions";
 import { QuickCheckInButton } from "@/components/quick-check-in";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { canSeeNavigation, consultasSearch, isNavigationChildActive } from "./sidebar-navigation";
 import phoenixAsset from "@/assets/logo-anpexc-marca.png.asset.json";
 
