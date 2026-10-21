@@ -618,6 +618,87 @@ export type Database = {
           },
         ]
       }
+      home_layout: {
+        Row: {
+          id: boolean
+          updated_at: string
+          updated_by: string | null
+          widgets: Json
+        }
+        Insert: {
+          id?: boolean
+          updated_at?: string
+          updated_by?: string | null
+          widgets?: Json
+        }
+        Update: {
+          id?: boolean
+          updated_at?: string
+          updated_by?: string | null
+          widgets?: Json
+        }
+        Relationships: []
+      }
+      news_posts: {
+        Row: {
+          body: string
+          category: string
+          created_at: string
+          created_by: string | null
+          featured: boolean
+          id: string
+          image_path: string | null
+          kicker: string
+          published: boolean
+          published_at: string
+          related: string[]
+          sort_order: number
+          subtitle: string
+          title: string
+          updated_at: string
+          video_path: string | null
+          video_url: string | null
+        }
+        Insert: {
+          body?: string
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          featured?: boolean
+          id?: string
+          image_path?: string | null
+          kicker?: string
+          published?: boolean
+          published_at?: string
+          related?: string[]
+          sort_order?: number
+          subtitle?: string
+          title: string
+          updated_at?: string
+          video_path?: string | null
+          video_url?: string | null
+        }
+        Update: {
+          body?: string
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          featured?: boolean
+          id?: string
+          image_path?: string | null
+          kicker?: string
+          published?: boolean
+          published_at?: string
+          related?: string[]
+          sort_order?: number
+          subtitle?: string
+          title?: string
+          updated_at?: string
+          video_path?: string | null
+          video_url?: string | null
+        }
+        Relationships: []
+      }
       ordens_servico: {
         Row: {
           appointment_id: string | null
