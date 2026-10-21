@@ -19,7 +19,7 @@ Reorganizar a janela em abas, como em "Configurações da Agenda":
 
 ## 3. Barra superior fixa e mais alta em todas as telas
 - Atalhos "Novo agendamento", "Nova O.S.", "Configurações" e o novo "Entrada/Saída" ficam sempre na barra superior, em todas as telas (respeitando as permissões de cada usuário), em vez de aparecerem só na Agenda.
-- Barra mais alta, sem rolagem lateral, com os atalhos ocupando o espaço vazio ao lado do caminho da página e alinhados de forma organizada.
+- Barra mais comprida e maior, sem rolagem lateral, com os atalhos ocupando o espaço vazio ao lado do caminho da página e alinhados de forma organizada.
 - "Configurações" abre as configurações da tela atual (Agenda, Pátio etc.).
 
 ## 4. Subtelas no menu lateral
