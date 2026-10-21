@@ -1,7 +1,7 @@
 # Tela da oficina: carros enviados em destaque, pátio organizado e correções
 
 ## O que já foi conferido
-- O carro **OZW1234** foi encaminhado às 15:39 para **ARRAIS FUNILARIA**, que está marcada como pátio próprio. Ele está gravado, mas sem situação. Hoje o Pátio mostra os carros mais antigos primeiro. Por isso o carro novo fica no fim de uma lista de 93 cartões e parece que não chegou.
+- O carro **OZW1234** foi encaminhado às 15:39 para **ARRAIS FUNILARIA**, que está marcada como pátio próprio. Ele está gravado, mas sem situação. Hoje o Pátio mostra os carros mais antigos primeiro, sem opção de troca. Vai passar a ter a escolha "Mais antigo → mais novo" ou "Mais novo → mais antigo", e a escolha fica salva para cada usuário. Por isso o carro novo fica no fim de uma lista de 93 cartões e parece que não chegou.
 - Consultas → O.S. dá erro para o perfil Oficina. As notícias não aparecem para esse perfil. O atalho "Ordens de Serviço" na Home abre mesmo para quem não tem acesso. A causa exata de cada um ainda não foi confirmada e será o primeiro passo.
 
 ## 1. Tela principal da oficina (pensada para o telão)
