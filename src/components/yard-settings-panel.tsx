@@ -58,10 +58,6 @@ export function YardSettingsPanel({
       ]),
     ),
   );
-  const [ownYardWorkshop, setOwnYardWorkshop] = useState(
-    () => workshops.find((w) => w.isOwnYard)?.name ?? "",
-  );
-
   // Sync draft when settings prop changes
   useState(() => {
     setDraft(settings);
@@ -101,30 +97,6 @@ export function YardSettingsPanel({
     setSaving(false);
   }
 
-  async function handleSaveOwnYard() {
-    setSaving(true);
-    const chosen = workshops.find((w) => w.name === ownYardWorkshop);
-    const { data, error: lookupError } = chosen
-      ? await supabase.from("workshops").select("id").eq("name", chosen.name).single()
-      : { data: null, error: null };
-    if (lookupError) {
-      toast.error("Não foi possível localizar o pátio.");
-      setSaving(false);
-      return;
-    }
-    const { error } = await supabase.rpc("set_own_yard", {
-      _workshop_id: data?.id ?? (null as unknown as string),
-    });
-    if (error) {
-      toast.error(error.message);
-      setSaving(false);
-      return;
-    }
-    toast.success("Pátio próprio atualizado.");
-    onStatusesUpdated();
-    setSaving(false);
-  }
-
   function toggleField(field: string) {
     setDraft((prev) => ({
       ...prev,
@@ -144,7 +116,21 @@ export function YardSettingsPanel({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <Tabs defaultValue="locais">
+          <TabsList className="flex h-auto flex-wrap justify-start">
+            <TabsTrigger value="locais">Locais</TabsTrigger>
+            <TabsTrigger value="grupos">Grupos</TabsTrigger>
+            <TabsTrigger value="checkin">Check-in/Check-out</TabsTrigger>
+            <TabsTrigger value="avisos">Avisos e tempos</TabsTrigger>
+            <TabsTrigger value="oficina">Oficina e status</TabsTrigger>
+          </TabsList>
+          <TabsContent value="locais" className="pt-3">
+            <YardPlacesSettings onChanged={onStatusesUpdated} />
+          </TabsContent>
+          <TabsContent value="grupos" className="pt-3">
+            <YardGroupsSettings />
+          </TabsContent>
+          <TabsContent value="avisos" className="space-y-6 pt-3">
           {/* Timer semafórico */}
           <section className="space-y-3">
             <h3 className="text-sm font-semibold border-b pb-1">Timer Semafórico</h3>
@@ -177,6 +163,8 @@ export function YardSettingsPanel({
             <p className="text-[11px] text-muted-foreground">Vermelho = acima do limite amarelo.</p>
           </section>
 
+          </TabsContent>
+          <TabsContent value="checkin" className="space-y-4 pt-3">
           {/* Check-in */}
           <section className="space-y-3">
             <h3 className="text-sm font-semibold border-b pb-1">Check-in / Check-out</h3>
@@ -225,6 +213,12 @@ export function YardSettingsPanel({
             </div>
           </section>
 
+            <p className="text-[11px] text-muted-foreground">Somente o Master altera estas regras.</p>
+            <SaveBar />
+          </section>
+          </TabsContent>
+          <TabsContent value="avisos-2" className="hidden">
+          <section>
           {/* Notificações */}
           <section className="space-y-3">
             <h3 className="text-sm font-semibold border-b pb-1">Notificações</h3>
@@ -298,38 +292,6 @@ export function YardSettingsPanel({
                 </label>
               ))}
             </div>
-          </section>
-
-          <YardGroupsSettings />
-
-          {/* Pátio próprio */}
-          <section className="space-y-3">
-            <h3 className="text-sm font-semibold border-b pb-1">Pátio Próprio</h3>
-            <p className="text-[11px] text-muted-foreground">
-              Selecione qual oficina é o pátio próprio da ANPEXC.
-            </p>
-            <Select value={ownYardWorkshop} onValueChange={setOwnYardWorkshop}>
-              <SelectTrigger className="w-full sm:w-72">
-                <SelectValue placeholder="Selecionar oficina..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">Nenhum (todos são externos)</SelectItem>
-                {workshops.map((w) => (
-                  <SelectItem key={w.name} value={w.name}>
-                    {w.name} {w.isOwnYard && "(atual)"}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={saving}
-              onClick={() => void handleSaveOwnYard()}
-            >
-              {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-              Salvar pátio próprio
-            </Button>
           </section>
 
           {/* Statuses por tela */}
