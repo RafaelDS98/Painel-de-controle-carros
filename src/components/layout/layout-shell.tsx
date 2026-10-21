@@ -12,6 +12,8 @@ import {
   FileText,
   HelpCircle,
   History,
+  Home,
+  ShieldCheck,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -62,11 +64,25 @@ const ROLE_LABELS: Record<string, string> = {
   atendimento: "Atendimento",
 };
 
-type NavItem = { to: string; label: string; icon: LucideIcon; exact?: boolean; hideFor?: string[] };
+type NavItem = {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  exact?: boolean;
+  hideFor?: string[];
+  onlyFor?: string[];
+};
 
 const NAV: NavItem[] = [
+  { to: "/", label: "Home", icon: Home, exact: true },
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/", label: "Agenda de Manutenção", icon: CalendarClock, exact: true },
+  {
+    to: "/usuarios/permissoes",
+    label: "Usuários · Permissões",
+    icon: ShieldCheck,
+    onlyFor: ["master"],
+  },
   { to: "/ordens-servico", label: "Ordens de Serviço", icon: ClipboardList },
   { to: "/historicos", label: "Históricos", icon: History, hideFor: ["oficina"] },
   { to: "/veiculos", label: "Veículos", icon: Truck },
@@ -87,6 +103,8 @@ const SECTION_LABELS: Record<string, string> = {
   "/historicos": "Históricos",
   "/veiculo": "Veículo",
   "/veiculos": "Veículos",
+  "/usuarios": "Usuários",
+  "/usuarios/permissoes": "Permissões",
 };
 
 function useCrumbs(): { label: string; to?: string }[] {
@@ -117,7 +135,10 @@ function SidebarContent({
   onToggleCollapse?: () => void;
 }) {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const items = NAV.filter((item) => !item.hideFor?.includes(role ?? ""));
+  const items = NAV.filter(
+    (item) =>
+      !item.hideFor?.includes(role ?? "") && (!item.onlyFor || item.onlyFor.includes(role ?? "")),
+  );
   return (
     <>
       <div
@@ -126,20 +147,28 @@ function SidebarContent({
           collapsed && "justify-center px-0",
         )}
       >
-        <img src={phoenixAsset.url} alt="ANPEXC" className="size-9 shrink-0 object-contain" />
-        {!collapsed && (
-          <div className="min-w-0">
-            <p className="text-base font-bold leading-tight">ANPEXC</p>
-            <p className="truncate text-[11px] text-muted-foreground">Gestão de Frota</p>
-          </div>
-        )}
+        <Link
+          to="/"
+          onClick={onNavigate}
+          title="Ir para a tela inicial"
+          aria-label="ANPEXC — voltar para a tela inicial"
+          className="flex min-w-0 items-center gap-2 rounded-md hover:opacity-80"
+        >
+          <img src={phoenixAsset.url} alt="" className="size-9 shrink-0 object-contain" />
+          {!collapsed && (
+            <div className="min-w-0">
+              <p className="text-base font-bold leading-tight">ANPEXC</p>
+              <p className="truncate text-[11px] text-muted-foreground">Gestão de Frota</p>
+            </div>
+          )}
+        </Link>
       </div>
       <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-3" aria-label="Navegação principal">
         {items.map((item) => {
           const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
           return (
             <Link
-              key={item.to}
+              key={item.label}
               to={item.to}
               onClick={onNavigate}
               title={item.label}
@@ -229,7 +258,7 @@ function SearchCommand({
         <CommandGroup heading="Páginas">
           {NAV.map((item) => (
             <CommandItem
-              key={item.to}
+              key={item.label}
               value={item.label}
               onSelect={() => {
                 onOpenChange(false);

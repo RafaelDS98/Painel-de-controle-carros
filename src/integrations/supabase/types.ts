@@ -1616,6 +1616,30 @@ export type Database = {
         }
         Relationships: []
       }
+      user_permissions: {
+        Row: {
+          allowed: boolean
+          permission: string
+          updated_at: string
+          updated_by: string | null
+          user_id: string
+        }
+        Insert: {
+          allowed: boolean
+          permission: string
+          updated_at?: string
+          updated_by?: string | null
+          user_id: string
+        }
+        Update: {
+          allowed?: boolean
+          permission?: string
+          updated_at?: string
+          updated_by?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -2036,6 +2060,7 @@ export type Database = {
       }
       get_my_edit_limit: { Args: never; Returns: number }
       get_my_modules: { Args: never; Returns: string[] }
+      get_my_permissions: { Args: never; Returns: string[] }
       get_my_sgloc_status: {
         Args: never
         Returns: {
@@ -2046,6 +2071,10 @@ export type Database = {
       }
       has_access: { Args: { _user_id: string }; Returns: boolean }
       has_module: { Args: { _module: string; _uid: string }; Returns: boolean }
+      has_permission: {
+        Args: { _perm: string; _uid: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2171,6 +2200,10 @@ export type Database = {
         Returns: Json
       }
       os_update: { Args: { _changes: Json; _os_id: string }; Returns: Json }
+      permission_default: {
+        Args: { _perm: string; _uid: string }
+        Returns: boolean
+      }
       record_workshop_movement: {
         Args: { _appointment: string; _os: string; _workshop: string }
         Returns: undefined

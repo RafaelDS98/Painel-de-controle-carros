@@ -31,6 +31,7 @@ import type { TablesUpdate } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { ForwardWorkshop } from "@/components/forward-workshop";
+import { useCan } from "@/lib/permissions";
 import { formatDuration, elapsedSince } from "@/lib/yard-utils";
 import { toast } from "sonner";
 import { statusColorProps, type StatusOption } from "@/lib/agenda-config";
@@ -72,6 +73,7 @@ export function YardDetailModal({
   onPlateClick,
 }: YardDetailModalProps) {
   const [draft, setDraft] = useState<Record<string, string>>({});
+  const canForward = useCan("action.forward_workshop");
   const [saving, setSaving] = useState(false);
   const [checkInRecords, setCheckInRecords] = useState<CheckInRecord[]>([]);
   const [loadingRecords, setLoadingRecords] = useState(false);
@@ -442,7 +444,7 @@ export function YardDetailModal({
 
               {/* Check-in / Check-out actions */}
               <div className="flex flex-wrap gap-2 border-t pt-3">
-                {currentUserRole !== "oficina" && (
+                {canForward && (
                   <ForwardWorkshop
                     appointmentId={appointment.dbId}
                     onDone={() => {

@@ -76,3 +76,5 @@
 - [ ] Pátio próprio: selecionar qual local da lista pertence à empresa — aguardando identificação do Rafael (botão Definir pátio próprio).
 - [ ] Encaminhamento: confirmar com um agendamento real escolhido pelo Rafael — não foi alterado destino de carros nem criada O.S. fictícia nesta validação.
 - [ ] Filtros de frota sem dados (reserva, tipo, ano emplacamento e status operacional): aguardando base complementar; controles indisponíveis quando faltam dados.
+
+- [x] Permissões por usuário (abas e ações) em Usuários · Permissões; encaminhamento liberado para Atendimento; logo e Home voltam ao início.

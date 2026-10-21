@@ -1,3 +1,4 @@
+import { useCan } from "@/lib/permissions";
 import { useRef, useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -5,13 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SearchableSelect } from "@/components/searchable-select";
-import {
-  fleetFields,
-  fleetValue,
-  matchesFleet,
-  importFleetRow,
-  canCreateVehicle,
-} from "@/lib/fleet";
+import { fleetFields, fleetValue, matchesFleet, importFleetRow } from "@/lib/fleet";
 import { fixSheetRange } from "@/lib/sheet-range";
 import { guardFormula } from "@/lib/agenda-safety";
 import { normalizePlate } from "@/lib/normalize";
@@ -35,7 +30,8 @@ async function fetchFleet() {
   }
   return all;
 }
-export function FleetPanel({ role }: { role: string }) {
+export function FleetPanel(_props: { role: string }) {
+  const canManage = useCan("action.manage_vehicles");
   const qc = useQueryClient();
   const query = useQuery({ queryKey: ["fleet"], queryFn: fetchFleet });
   const input = useRef<HTMLInputElement>(null);
@@ -180,7 +176,7 @@ export function FleetPanel({ role }: { role: string }) {
             <Download />
             Excel
           </Button>
-          {canCreateVehicle(role) && (
+          {canManage && (
             <>
               <Button variant="outline" onClick={() => input.current?.click()} disabled={busy}>
                 <Upload />
