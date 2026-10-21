@@ -332,8 +332,8 @@ function SidebarContent({
                 className={cn(
                   "flex min-h-9 items-center rounded-md px-2 text-[13px] transition-colors",
                   kidActive
-                    ? "bg-accent font-semibold text-accent-foreground"
-                    : "text-foreground hover:bg-accent",
+                    ? "bg-sidebar-accent font-semibold text-sidebar-accent-foreground"
+                    : "text-foreground hover:bg-sidebar-accent/50",
                 )}
               >
                 {c.label}
@@ -396,7 +396,7 @@ function SidebarContent({
               title={`${item.label} — em breve`}
               aria-disabled
               className={cn(
-                "flex min-h-10 cursor-default select-none items-center gap-3 rounded-md px-3 text-sm text-muted-foreground/50",
+                "flex min-h-10 cursor-default select-none items-center gap-3 rounded-md px-3 text-sm text-muted-foreground/70",
                 collapsed && "justify-center px-0",
               )}
             >
@@ -411,7 +411,7 @@ function SidebarContent({
           <span
             title="Central de Ajuda — em breve"
             aria-disabled
-            className="flex min-h-10 cursor-default select-none items-center gap-3 rounded-md px-3 text-sm text-muted-foreground/50"
+            className="flex min-h-10 cursor-default select-none items-center gap-3 rounded-md px-3 text-sm text-muted-foreground/70"
           >
             <HelpCircle className="size-4 shrink-0" />
             {!collapsed && <span>Central de Ajuda</span>}
