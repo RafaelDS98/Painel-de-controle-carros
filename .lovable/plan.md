@@ -22,7 +22,12 @@ Reorganizar a janela em abas, como em "Configurações da Agenda":
 - Barra mais alta, sem rolagem lateral, com os atalhos ocupando o espaço vazio ao lado do caminho da página e alinhados de forma organizada.
 - "Configurações" abre as configurações da tela atual (Agenda, Pátio etc.).
 
-## 4. Documentação para continuar em nova sessão
+## 4. Subtelas no menu lateral
+- Ao clicar num item do menu que tem subtelas, ele abre e mostra as opções logo abaixo, com recuo (ex.: Agenda de Manutenção → Agenda, Oficina/Pátio, Consultas, Ordens de Serviço; Históricos → Geral, Check-ins; Configurações por módulo).
+- A subtela aberta fica destacada e o grupo continua aberto ao navegar; com o menu recolhido, as subtelas aparecem ao passar o mouse no ícone.
+- As abas no topo da página continuam funcionando, ligadas às mesmas subtelas.
+
+## 5. Documentação para continuar em nova sessão
 - **AGENTS.md**: regras novas (seleção de placa só do cadastro; vários pátios próprios via função em lote; configurações do pátio em abas) e resumo de onde fica cada módulo.
 - **roadmap.md**: marcar o concluído, listar pendências com o motivo (ex.: ID SGLOC da loja 11, filtro de categoria, agendamento automático do SGLOC, testes reais de encaminhamento/O.S. por Atendimento) e uma seção "Como continuar" com o estado atual e o que nunca reaplicar (ex.: 0026_yard_oficina.sql).
 
