@@ -8,12 +8,46 @@ export const PERMISSIONS = [
   { key: "module.historicos", group: "Abas", label: "Históricos" },
   { key: "module.os", group: "Abas", label: "Ordens de Serviço" },
   { key: "module.veiculos", group: "Abas", label: "Veículos" },
+  { key: "module.noticias", group: "Abas", label: "Notícias (gerenciar)" },
   { key: "action.forward_workshop", group: "Ações", label: "Encaminhar veículo para oficina" },
   { key: "action.create_os", group: "Ações", label: "Criar ordem de serviço" },
   { key: "action.manage_vehicles", group: "Ações", label: "Cadastrar/editar veículos" },
+  { key: "action.news_create", group: "Notícias", label: "Publicar notícia" },
+  { key: "action.news_edit", group: "Notícias", label: "Editar notícia" },
+  { key: "action.news_delete", group: "Notícias", label: "Excluir notícia" },
+  { key: "action.home_layout", group: "Notícias", label: "Organizar painéis da Home" },
 ] as const;
 
 export type PermissionKey = (typeof PERMISSIONS)[number]["key"];
+
+/** Espelho de permission_default() no banco: o que cada perfil tem sem exceção. */
+export function permissionDefault(role: string | null | undefined, key: string): boolean {
+  if (!role) return false;
+  if (role === "master") return true;
+  const oficina = role === "oficina";
+  switch (key) {
+    case "module.agenda":
+    case "module.historicos":
+    case "module.os":
+      return !oficina;
+    case "module.oficina":
+      return oficina;
+    case "module.veiculos":
+      return true;
+    case "action.forward_workshop":
+    case "action.create_os":
+      return role === "gerente" || role === "atendimento";
+    case "action.manage_vehicles":
+    case "module.noticias":
+    case "action.news_create":
+    case "action.news_edit":
+    case "action.news_delete":
+    case "action.home_layout":
+      return role === "gerente";
+    default:
+      return false;
+  }
+}
 
 export function useMyPermissions() {
   return useQuery({
