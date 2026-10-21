@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { ForwardWorkshop } from "@/components/forward-workshop";
+import { useCan } from "@/lib/permissions";
 import { AppointmentHistory } from "@/components/edit-history";
 import { Link } from "@tanstack/react-router";
 import { AdvancedFilterDrawer, type SavedView } from "@/components/advanced-filter-drawer";
@@ -607,6 +608,7 @@ export function MaintenanceDashboard({
   // Módulo Oficina: mesma tela da Agenda, sem criar/importar/lote/excluir/configurar.
   const workshopMode = mode === "oficina" || currentUser.role === "oficina";
   const canCreate = !workshopMode;
+  const canForward = useCan("action.forward_workshop");
   const [myLimit, setMyLimit] = useState(1);
   useEffect(() => {
     void supabase.rpc("get_my_edit_limit").then(({ data }) => {
@@ -3432,7 +3434,7 @@ export function MaintenanceDashboard({
                     <History /> Ver movimentações desta placa
                   </Button>
                 )}
-                {canCreate && !workshopMode && (
+                {canForward && (
                   <ForwardWorkshop
                     appointmentId={selected.dbId}
                     onDone={() => {

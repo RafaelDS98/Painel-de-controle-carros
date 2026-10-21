@@ -18,6 +18,7 @@ import { Route as AuthenticatedVeiculosRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedOrdensServicoIndexRouteImport } from './routes/_authenticated/ordens-servico.index'
 import { Route as AuthenticatedOrdensServicoIdRouteImport } from './routes/_authenticated/ordens-servico.$id'
 import { Route as AuthenticatedOrdensServicoNovaRouteImport } from './routes/_authenticated/ordens-servico.nova'
+import { Route as AuthenticatedUsuariosPermissoesRouteImport } from './routes/_authenticated/usuarios.permissoes'
 import { Route as AuthenticatedVeiculoPlateRouteImport } from './routes/_authenticated/veiculo.$plate'
 import { Route as ApiPublicHooksSglocSyncRouteImport } from './routes/api/public/hooks/sgloc-sync'
 
@@ -68,6 +69,12 @@ const AuthenticatedOrdensServicoNovaRoute =
     path: '/ordens-servico/nova',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedUsuariosPermissoesRoute =
+  AuthenticatedUsuariosPermissoesRouteImport.update({
+    id: '/usuarios/permissoes',
+    path: '/usuarios/permissoes',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedVeiculoPlateRoute =
   AuthenticatedVeiculoPlateRouteImport.update({
     id: '/veiculo/$plate',
@@ -88,6 +95,7 @@ export interface FileRoutesByFullPath {
   '/veiculos': typeof AuthenticatedVeiculosRoute
   '/ordens-servico/$id': typeof AuthenticatedOrdensServicoIdRoute
   '/ordens-servico/nova': typeof AuthenticatedOrdensServicoNovaRoute
+  '/usuarios/permissoes': typeof AuthenticatedUsuariosPermissoesRoute
   '/veiculo/$plate': typeof AuthenticatedVeiculoPlateRoute
   '/ordens-servico/': typeof AuthenticatedOrdensServicoIndexRoute
   '/api/public/hooks/sgloc-sync': typeof ApiPublicHooksSglocSyncRoute
@@ -100,6 +108,7 @@ export interface FileRoutesByTo {
   '/': typeof AuthenticatedIndexRoute
   '/ordens-servico/$id': typeof AuthenticatedOrdensServicoIdRoute
   '/ordens-servico/nova': typeof AuthenticatedOrdensServicoNovaRoute
+  '/usuarios/permissoes': typeof AuthenticatedUsuariosPermissoesRoute
   '/veiculo/$plate': typeof AuthenticatedVeiculoPlateRoute
   '/ordens-servico': typeof AuthenticatedOrdensServicoIndexRoute
   '/api/public/hooks/sgloc-sync': typeof ApiPublicHooksSglocSyncRoute
@@ -114,6 +123,7 @@ export interface FileRoutesById {
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/ordens-servico/$id': typeof AuthenticatedOrdensServicoIdRoute
   '/_authenticated/ordens-servico/nova': typeof AuthenticatedOrdensServicoNovaRoute
+  '/_authenticated/usuarios/permissoes': typeof AuthenticatedUsuariosPermissoesRoute
   '/_authenticated/veiculo/$plate': typeof AuthenticatedVeiculoPlateRoute
   '/_authenticated/ordens-servico/': typeof AuthenticatedOrdensServicoIndexRoute
   '/api/public/hooks/sgloc-sync': typeof ApiPublicHooksSglocSyncRoute
@@ -128,6 +138,7 @@ export interface FileRouteTypes {
     | '/veiculos'
     | '/ordens-servico/$id'
     | '/ordens-servico/nova'
+    | '/usuarios/permissoes'
     | '/veiculo/$plate'
     | '/ordens-servico/'
     | '/api/public/hooks/sgloc-sync'
@@ -140,6 +151,7 @@ export interface FileRouteTypes {
     | '/'
     | '/ordens-servico/$id'
     | '/ordens-servico/nova'
+    | '/usuarios/permissoes'
     | '/veiculo/$plate'
     | '/ordens-servico'
     | '/api/public/hooks/sgloc-sync'
@@ -153,6 +165,7 @@ export interface FileRouteTypes {
     | '/_authenticated/'
     | '/_authenticated/ordens-servico/$id'
     | '/_authenticated/ordens-servico/nova'
+    | '/_authenticated/usuarios/permissoes'
     | '/_authenticated/veiculo/$plate'
     | '/_authenticated/ordens-servico/'
     | '/api/public/hooks/sgloc-sync'
@@ -229,6 +242,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOrdensServicoNovaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/usuarios/permissoes': {
+      id: '/_authenticated/usuarios/permissoes'
+      path: '/usuarios/permissoes'
+      fullPath: '/usuarios/permissoes'
+      preLoaderRoute: typeof AuthenticatedUsuariosPermissoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/veiculo/$plate': {
       id: '/_authenticated/veiculo/$plate'
       path: '/veiculo/$plate'
@@ -253,6 +273,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedOrdensServicoIdRoute: typeof AuthenticatedOrdensServicoIdRoute
   AuthenticatedOrdensServicoNovaRoute: typeof AuthenticatedOrdensServicoNovaRoute
+  AuthenticatedUsuariosPermissoesRoute: typeof AuthenticatedUsuariosPermissoesRoute
   AuthenticatedVeiculoPlateRoute: typeof AuthenticatedVeiculoPlateRoute
   AuthenticatedOrdensServicoIndexRoute: typeof AuthenticatedOrdensServicoIndexRoute
 }
@@ -264,6 +285,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedOrdensServicoIdRoute: AuthenticatedOrdensServicoIdRoute,
   AuthenticatedOrdensServicoNovaRoute: AuthenticatedOrdensServicoNovaRoute,
+  AuthenticatedUsuariosPermissoesRoute: AuthenticatedUsuariosPermissoesRoute,
   AuthenticatedVeiculoPlateRoute: AuthenticatedVeiculoPlateRoute,
   AuthenticatedOrdensServicoIndexRoute: AuthenticatedOrdensServicoIndexRoute,
 }

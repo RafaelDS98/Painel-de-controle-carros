@@ -1,3 +1,4 @@
+import { useCan } from "@/lib/permissions";
 import { useRef, useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,6 +37,7 @@ async function fetchFleet() {
   return all;
 }
 export function FleetPanel({ role }: { role: string }) {
+  const canManage = useCan("action.manage_vehicles");
   const qc = useQueryClient();
   const query = useQuery({ queryKey: ["fleet"], queryFn: fetchFleet });
   const input = useRef<HTMLInputElement>(null);
@@ -180,7 +182,7 @@ export function FleetPanel({ role }: { role: string }) {
             <Download />
             Excel
           </Button>
-          {canCreateVehicle(role) && (
+          {(canManage || canCreateVehicle(role)) && (
             <>
               <Button variant="outline" onClick={() => input.current?.click()} disabled={busy}>
                 <Upload />
