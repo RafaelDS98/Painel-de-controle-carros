@@ -77,7 +77,12 @@ const NAV: NavItem[] = [
   { to: "/", label: "Home", icon: Home, exact: true },
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/", label: "Agenda de Manutenção", icon: CalendarClock, exact: true },
-  { to: "/usuarios/permissoes", label: "Usuários · Permissões", icon: ShieldCheck, onlyFor: ["master"] },
+  {
+    to: "/usuarios/permissoes",
+    label: "Usuários · Permissões",
+    icon: ShieldCheck,
+    onlyFor: ["master"],
+  },
   { to: "/ordens-servico", label: "Ordens de Serviço", icon: ClipboardList },
   { to: "/historicos", label: "Históricos", icon: History, hideFor: ["oficina"] },
   { to: "/veiculos", label: "Veículos", icon: Truck },

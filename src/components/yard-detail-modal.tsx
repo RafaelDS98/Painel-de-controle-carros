@@ -73,6 +73,7 @@ export function YardDetailModal({
   onPlateClick,
 }: YardDetailModalProps) {
   const [draft, setDraft] = useState<Record<string, string>>({});
+  const canForward = useCan("action.forward_workshop");
   const [saving, setSaving] = useState(false);
   const [checkInRecords, setCheckInRecords] = useState<CheckInRecord[]>([]);
   const [loadingRecords, setLoadingRecords] = useState(false);

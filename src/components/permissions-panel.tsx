@@ -52,7 +52,11 @@ export function PermissionsPanel({ currentUserId }: { currentUserId: string }) {
     setBusy(`${userId}|${perm}`);
     const res =
       value === "default"
-        ? await supabase.from("user_permissions").delete().eq("user_id", userId).eq("permission", perm)
+        ? await supabase
+            .from("user_permissions")
+            .delete()
+            .eq("user_id", userId)
+            .eq("permission", perm)
         : await supabase.from("user_permissions").upsert({
             user_id: userId,
             permission: perm,

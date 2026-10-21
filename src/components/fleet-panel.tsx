@@ -182,7 +182,7 @@ export function FleetPanel({ role }: { role: string }) {
             <Download />
             Excel
           </Button>
-          {(canManage || canCreateVehicle(role)) && (
+          {canManage && (
             <>
               <Button variant="outline" onClick={() => input.current?.click()} disabled={busy}>
                 <Upload />

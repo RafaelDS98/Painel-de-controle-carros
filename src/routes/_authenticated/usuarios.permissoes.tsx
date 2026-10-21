@@ -6,9 +6,15 @@ export const Route = createFileRoute("/_authenticated/usuarios/permissoes")({
   head: () => ({
     meta: [
       { title: "Permissões de usuários | ANPEXC" },
-      { name: "description", content: "Controle de abas e ações liberadas por usuário no painel ANPEXC." },
+      {
+        name: "description",
+        content: "Controle de abas e ações liberadas por usuário no painel ANPEXC.",
+      },
       { property: "og:title", content: "Permissões de usuários | ANPEXC" },
-      { property: "og:description", content: "Controle de abas e ações liberadas por usuário no painel ANPEXC." },
+      {
+        property: "og:description",
+        content: "Controle de abas e ações liberadas por usuário no painel ANPEXC.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
