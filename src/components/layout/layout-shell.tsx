@@ -388,40 +388,52 @@ function SidebarContent({
           </p>
         )}
         {SOON.map((item) => (
-          <span
-            key={item.label}
-            title="Em breve"
-            aria-disabled
-            className={cn(
-              "flex min-h-10 cursor-default select-none items-center gap-3 rounded-md px-3 text-sm text-muted-foreground/50",
-              collapsed && "justify-center px-0",
-            )}
-          >
-            <item.icon className="size-4 shrink-0" />
-            {!collapsed && <span className="truncate">{item.label}</span>}
-          </span>
+          <NameTip key={item.label} label={`${item.label} — em breve`}>
+            <span
+              title={`${item.label} — em breve`}
+              aria-disabled
+              className={cn(
+                "flex min-h-10 cursor-default select-none items-center gap-3 rounded-md px-3 text-sm text-muted-foreground/50",
+                collapsed && "justify-center px-0",
+              )}
+            >
+              <item.icon className="size-4 shrink-0" />
+              {!collapsed && <span className="truncate">{item.label}</span>}
+            </span>
+          </NameTip>
         ))}
       </nav>
       <div className="space-y-1 border-t px-2 py-3">
-        <span
-          title="Em breve"
-          aria-disabled
-          className="flex min-h-10 cursor-default select-none items-center gap-3 rounded-md px-3 text-sm text-muted-foreground/50"
-        >
-          <HelpCircle className="size-4 shrink-0" />
-          {!collapsed && <span>Central de Ajuda</span>}
-        </span>
-        {onToggleCollapse && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onToggleCollapse}
-            className="w-full justify-start gap-3 text-muted-foreground"
-            aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
+        <NameTip label="Central de Ajuda — em breve">
+          <span
+            title="Central de Ajuda — em breve"
+            aria-disabled
+            className="flex min-h-10 cursor-default select-none items-center gap-3 rounded-md px-3 text-sm text-muted-foreground/50"
           >
-            {collapsed ? <ChevronsRight className="size-4" /> : <ChevronsLeft className="size-4" />}
-            {!collapsed && "Recolher menu"}
-          </Button>
+            <HelpCircle className="size-4 shrink-0" />
+            {!collapsed && <span>Central de Ajuda</span>}
+          </span>
+        </NameTip>
+        {onToggleCollapse && (
+          <NameTip label={collapsed ? "Expandir menu" : "Recolher menu"}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onToggleCollapse}
+              className={cn(
+                "w-full gap-3 text-muted-foreground",
+                collapsed ? "justify-center px-0" : "justify-start",
+              )}
+              aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
+            >
+              {collapsed ? (
+                <ChevronsRight className="size-4" />
+              ) : (
+                <ChevronsLeft className="size-4" />
+              )}
+              {!collapsed && "Recolher menu"}
+            </Button>
+          </NameTip>
         )}
       </div>
     </>
