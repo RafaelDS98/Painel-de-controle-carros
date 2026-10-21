@@ -51,6 +51,7 @@ import type { Tables } from "@/integrations/supabase/types";
 import { useYardGroups } from "@/components/yard-groups-settings";
 import { itemsInGroup } from "@/lib/yard-groups";
 import { YardBoard } from "@/components/yard-board";
+import { WORK_TYPES, workType } from "@/lib/yard-board";
 import { DateInput } from "@/components/date-input";
 import {
   buildBoard,
@@ -127,6 +128,7 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [workshopFilter, setWorkshopFilter] = useState("");
   const [brandFilter, setBrandFilter] = useState("");
+  const [serviceFilter, setServiceFilter] = useState("");
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [checkInTarget, setCheckInTarget] = useState<{
     item: YardAppointment;
@@ -359,14 +361,15 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
         .filter((item) => !workshopFilter || item.workshop === workshopFilter)
         .filter(
           (item) => !brandFilter || item.brand.toLowerCase().includes(brandFilter.toLowerCase()),
-        ),
+        )
+        .filter((item) => !serviceFilter || workType(item.issue) === serviceFilter),
       sort,
     );
   }
 
   const filteredPatio = useMemo(
     () => applyFilters(patio),
-    [patio, search, statusFilter, workshopFilter, brandFilter, now, sort, period, custom],
+    [patio, search, statusFilter, workshopFilter, brandFilter, serviceFilter, now, sort, period, custom],
   );
   const filteredExternal = useMemo(() => {
     const result = new Map<string, YardAppointment[]>();
@@ -381,6 +384,7 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
     statusFilter,
     workshopFilter,
     brandFilter,
+    serviceFilter,
     now,
     sort,
     period,
@@ -628,7 +632,20 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
                   </option>
                 ))}
               </select>
-              {(statusFilter || workshopFilter || brandFilter) && (
+              <select
+                value={serviceFilter}
+                onChange={(e) => setServiceFilter(e.target.value)}
+                className="rounded-md border bg-background px-3 py-2 text-sm"
+                aria-label="Tipo de serviço"
+              >
+                <option value="">Todos os serviços</option>
+                {WORK_TYPES.map((w) => (
+                  <option key={w} value={w}>
+                    {w}
+                  </option>
+                ))}
+              </select>
+              {(statusFilter || workshopFilter || brandFilter || serviceFilter) && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -636,6 +653,7 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
                     setStatusFilter(null);
                     setWorkshopFilter("");
                     setBrandFilter("");
+                    setServiceFilter("");
                   }}
                 >
                   <X className="size-3" /> Limpar filtros
@@ -645,7 +663,7 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
           )}
 
           {/* Active filter chips */}
-          {(search || statusFilter || workshopFilter || brandFilter) && (
+          {(search || statusFilter || workshopFilter || brandFilter || serviceFilter) && (
             <div className="flex flex-wrap items-center gap-1.5 text-xs">
               <span className="font-medium text-muted-foreground">Filtros:</span>
               {search && (
@@ -668,6 +686,14 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
                 <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5">
                   Oficina: {workshopFilter}
                   <button onClick={() => setWorkshopFilter("")}>
+                    <X className="size-3" />
+                  </button>
+                </span>
+              )}
+              {serviceFilter && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5">
+                  Serviço: {serviceFilter}
+                  <button onClick={() => setServiceFilter("")}>
                     <X className="size-3" />
                   </button>
                 </span>
