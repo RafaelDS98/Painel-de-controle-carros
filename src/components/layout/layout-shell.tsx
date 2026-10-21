@@ -755,6 +755,7 @@ export function LayoutShell({
         </SheetContent>
       </Sheet>
       <SearchCommand open={searchOpen} onOpenChange={setSearchOpen} />
-    </div>
+      </div>
+    </TooltipProvider>
   );
 }
