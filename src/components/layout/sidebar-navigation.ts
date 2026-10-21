@@ -23,8 +23,8 @@ export function isNavigationChildActive(
 ): boolean {
   if (pathname !== target) return false;
   if (!childSearch) return true;
-  if (childSearch.tab === "consultas" || childSearch.tab === "consultas-os") {
-    return search.tab === "consultas" || search.tab === "consultas-os";
+  if (childSearch["tab"] === "consultas" || childSearch["tab"] === "consultas-os") {
+    return search["tab"] === "consultas" || search["tab"] === "consultas-os";
   }
   return (
     Object.entries(childSearch).every(([key, value]) => search[key] === value) ||

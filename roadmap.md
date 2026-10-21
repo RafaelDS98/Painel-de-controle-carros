@@ -84,7 +84,8 @@
 - [x] Menu lateral com subtelas (Agenda, Oficina/Pátio, Consultas, O.S.; Históricos → Alterações/Check-ins).
 - [x] Menu recolhido: lista flutuante das subtelas ao passar o mouse ou clicar, filtrada pelas permissões existentes.
 - [x] Consultas unificada no menu; Veículos/O.S. continuam alternáveis dentro da tela, com destaque do mesmo item lateral.
-- [ ] Documento de continuidade atualizado após os ajustes de navegação solicitados em 21/10/2026.
+- [x] Documento de continuidade v2 atualizado após os ajustes de navegação solicitados em 21/10/2026.
+- [x] O.S.: botões Agenda/Oficina/Consultas/Ordens de Serviço mantidos no topo da tela conforme o print.
 
 ## Como continuar (para uma sessão nova)
 - Ler AGENTS.md (raiz e subpastas) antes de mexer; regras de negócio ficam no banco (triggers/funções), a tela só espelha.
