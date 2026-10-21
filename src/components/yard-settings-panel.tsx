@@ -211,14 +211,11 @@ export function YardSettingsPanel({
                 className="w-24"
               />
             </div>
-          </section>
-
             <p className="text-[11px] text-muted-foreground">Somente o Master altera estas regras.</p>
             <SaveBar />
           </section>
           </TabsContent>
-          <TabsContent value="avisos-2" className="hidden">
-          <section>
+          <TabsContent value="avisos" className="space-y-6 pt-3">
           {/* Notificações */}
           <section className="space-y-3">
             <h3 className="text-sm font-semibold border-b pb-1">Notificações</h3>
@@ -274,7 +271,9 @@ export function YardSettingsPanel({
               </div>
             </div>
           </section>
-
+          <SaveBar />
+          </TabsContent>
+          <TabsContent value="oficina" className="space-y-6 pt-3">
           {/* Campos editáveis pela oficina */}
           <section className="space-y-3">
             <h3 className="text-sm font-semibold border-b pb-1">Campos editáveis pela Oficina</h3>
@@ -292,6 +291,7 @@ export function YardSettingsPanel({
                 </label>
               ))}
             </div>
+            <SaveBar label="Salvar campos" />
           </section>
 
           {/* Statuses por tela */}
@@ -358,17 +358,12 @@ export function YardSettingsPanel({
               Salvar statuses por tela
             </Button>
           </section>
-
-          {/* Botão salvar configurações gerais */}
-          <div className="flex justify-end gap-2 border-t pt-4">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Fechar
-            </Button>
-            <Button className="gap-1.5" disabled={saving} onClick={() => void handleSaveSettings()}>
-              {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-              {saving ? "Salvando…" : "Salvar configurações"}
-            </Button>
-          </div>
+          </TabsContent>
+        </Tabs>
+        <div className="flex justify-end border-t pt-4">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Fechar
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
