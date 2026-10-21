@@ -82,7 +82,9 @@
 - [x] Configurações do Pátio em abas; tabela de Locais com seleção múltipla para marcar pátio próprio/oficina externa e incluir/remover de grupos em lote; aviso em segundos.
 - [x] Barra superior fixa e maior com atalhos globais; busca só pela lupa (abre a barra ao clicar ou Ctrl+K).
 - [x] Menu lateral com subtelas (Agenda, Oficina/Pátio, Consultas, O.S.; Históricos → Alterações/Check-ins).
-- [ ] Menu recolhido: subtelas aparecem só com o menu aberto (sem lista flutuante ao passar o mouse).
+- [x] Menu recolhido: lista flutuante das subtelas ao passar o mouse ou clicar, filtrada pelas permissões existentes.
+- [x] Consultas unificada no menu; Veículos/O.S. continuam alternáveis dentro da tela, com destaque do mesmo item lateral.
+- [ ] Documento de continuidade atualizado após os ajustes de navegação solicitados em 21/10/2026.
 
 ## Como continuar (para uma sessão nova)
 - Ler AGENTS.md (raiz e subpastas) antes de mexer; regras de negócio ficam no banco (triggers/funções), a tela só espelha.
