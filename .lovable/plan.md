@@ -27,7 +27,7 @@ Quais situações ficam em cada coluna será configurado pelo Master em **Config
 - Os cartões ficam agrupados por situação, com contagem em cada grupo.
 
 ## 4. Correções
-- **Consultas → O.S.:** corrigir o erro de carregamento. Com todos os campos vazios, a busca mostra todas as O.S., da mais recente para a mais antiga, com paginação.
+- **Consultas → O.S.:** corrigir o erro de carregamento. Com todos os campos vazios, a busca mostra todas as O.S., da mais recente para a mais antiga (padrão). Cada usuário pode inverter para "da mais antiga para a mais recente", e a escolha fica salva, com paginação.
 - **Perfil Oficina:** passa a ter acesso à consulta e à abertura de O.S. por padrão. O Master continua podendo bloquear em Permissões.
 - **Acesso por página:** cada tela confere a permissão ao abrir, e não só no menu. Atalhos na Home, na barra superior e links diretos sem permissão mostram "Sem acesso" e não abrem a tela.
 - **Notícias para a Oficina:** descobrir por que não aparecem (pode ser falta de notícias publicadas ou a regra de leitura) e garantir que todos os perfis vejam as notícias publicadas.
