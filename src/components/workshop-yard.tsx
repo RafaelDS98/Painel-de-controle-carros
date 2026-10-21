@@ -43,7 +43,6 @@ import { useYardNotifications } from "@/hooks/use-yard-notifications";
 import {
   splitYardAndExternal,
   matchesYardSearch,
-  sortByTimerDesc,
   type YardAppointment,
   type YardSettings,
   type WorkshopInfo,
@@ -51,6 +50,17 @@ import {
 import type { Tables } from "@/integrations/supabase/types";
 import { useYardGroups } from "@/components/yard-groups-settings";
 import { itemsInGroup } from "@/lib/yard-groups";
+import { YardBoard } from "@/components/yard-board";
+import { DateInput } from "@/components/date-input";
+import {
+  buildBoard,
+  inPeriod,
+  parseBoardConfig,
+  sortYard,
+  type YardColumn,
+  type YardSort,
+} from "@/lib/yard-board";
+import type { PeriodPreset } from "@/lib/agenda-period";
 
 type AppointmentRow = Tables<"appointments">;
 
@@ -129,7 +139,21 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
     if (a === "config" && currentUser.role === "master") setSettingsOpen(true);
   });
   const [completionStatus, setCompletionStatus] = useState("");
-  const [locationTab, setLocationTab] = useState<string>("patio");
+  const [locationTab, setLocationTab] = useState<string>("principal");
+  const sortKey = `yard-sort:${currentUser.id}`;
+  const [sort, setSortState] = useState<YardSort>("newest");
+  useEffect(() => {
+    const saved = localStorage.getItem(sortKey);
+    if (saved === "newest" || saved === "oldest" || saved === "plate") setSortState(saved);
+  }, [sortKey]);
+  const setSort = (v: YardSort) => {
+    setSortState(v);
+    localStorage.setItem(sortKey, v);
+  };
+  const [period, setPeriod] = useState<PeriodPreset | "all">("all");
+  const [custom, setCustom] = useState({ start: "", end: "" });
+  const [senders, setSenders] = useState<Record<string, string>>({});
+  const seenForward = useRef<Map<string, string> | null>(null);
   const yardGroups = useYardGroups();
   const [forwardId, setForwardId] = useState("");
   const [stays, setStays] = useState<Record<string, string>>({});
@@ -230,6 +254,24 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
         Object.fromEntries((stayResult.data ?? []).map((s) => [s.appointment_id, s.entered_at])),
       );
       setAppointments(rows);
+      const senderIds = [
+        ...new Set(
+          (apptResult.data ?? [])
+            .filter((r) => r.forwarded_at && !r.check_in_at && r.forwarded_by)
+            .map((r) => r.forwarded_by as string),
+        ),
+      ];
+      if (senderIds.length) {
+        const prof = await supabase.from("profiles").select("id, full_name").in("id", senderIds);
+        const names = new Map((prof.data ?? []).map((p) => [p.id, p.full_name ?? ""]));
+        setSenders(
+          Object.fromEntries(
+            (apptResult.data ?? [])
+              .filter((r) => r.forwarded_by && names.get(r.forwarded_by))
+              .map((r) => [r.id, names.get(r.forwarded_by as string) as string]),
+          ),
+        );
+      }
       setStatuses((statusResult.data ?? []) as StatusOption[]);
       setWorkshops(
         (workshopResult.data ?? []).map((w) => ({
@@ -249,6 +291,22 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
       setLoading(false);
     }
   }
+
+  // Aviso imediato quando um agendamento muda (ex.: encaminhamento)
+  useEffect(() => {
+    let timer: number | undefined;
+    const channel = supabase
+      .channel("yard-appointments")
+      .on("postgres_changes", { event: "*", schema: "public", table: "appointments" }, () => {
+        window.clearTimeout(timer);
+        timer = window.setTimeout(() => void loadData(), 500);
+      })
+      .subscribe();
+    return () => {
+      window.clearTimeout(timer);
+      void supabase.removeChannel(channel);
+    };
+  }, []);
 
   useEffect(() => {
     void loadData();
@@ -274,21 +332,38 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
     [appointments, workshops, statuses],
   );
 
+  // Toast "Novo veículo" quando chega um encaminhamento
+  useEffect(() => {
+    const current = new Map(
+      appointments.filter((a) => a.forwardedAt).map((a) => [a.dbId, a.forwardedAt as string]),
+    );
+    const prev = seenForward.current;
+    seenForward.current = current;
+    if (!prev) return;
+    for (const a of appointments)
+      if (a.forwardedAt && prev.get(a.dbId) !== a.forwardedAt)
+        toast.info(
+          `Novo veículo: ${a.plate}${senders[a.dbId] ? ` enviado por ${senders[a.dbId]}` : ""}`,
+          { duration: Math.max(settings.toast_duration_ms, 8000) },
+        );
+  }, [appointments]);
+
   // Apply filters
   function applyFilters(items: YardAppointment[]): YardAppointment[] {
-    return items
+    return sortYard(items
+      .filter((item) => inPeriod(item, period, custom))
       .filter((item) => matchesYardSearch(item, search))
       .filter((item) => !statusFilter || item.status === statusFilter)
       .filter((item) => !workshopFilter || item.workshop === workshopFilter)
       .filter(
         (item) => !brandFilter || item.brand.toLowerCase().includes(brandFilter.toLowerCase()),
       )
-      .sort((a, b) => sortByTimerDesc(a, b, now));
+      , sort);
   }
 
   const filteredPatio = useMemo(
     () => applyFilters(patio),
-    [patio, search, statusFilter, workshopFilter, brandFilter, now],
+    [patio, search, statusFilter, workshopFilter, brandFilter, now, sort, period, custom],
   );
   const filteredExternal = useMemo(() => {
     const result = new Map<string, YardAppointment[]>();
@@ -297,9 +372,26 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
       if (filtered.length > 0) result.set(ws, filtered);
     }
     return result;
-  }, [externalByWorkshop, search, statusFilter, workshopFilter, brandFilter, now]);
+  }, [externalByWorkshop, search, statusFilter, workshopFilter, brandFilter, now, sort, period, custom]);
 
   const yardStatuses = statuses;
+  const boardConfig = useMemo(() => parseBoardConfig(settings.board_config), [settings.board_config]);
+  const board = useMemo(() => {
+    const colOf = (status: string): YardColumn =>
+      (statuses.find((s) => s.label === status)?.yard_column as YardColumn | undefined) ?? "main";
+    const items = patio
+      .filter((item) => matchesYardSearch(item, search))
+      .map((item) => ({ ...item, forwardedAt: item.forwardedAt ?? stays[item.dbId] ?? null }));
+    const b = buildBoard(
+      items.map((i) => ({ ...i, forwardedAt: appointments.find((a) => a.dbId === i.dbId)?.forwardedAt ?? null })),
+      colOf,
+    );
+    return {
+      arriving: sortYard(b.arriving, sort, true),
+      working: sortYard(b.working, sort, true),
+      ready: sortYard(b.ready, sort, true),
+    };
+  }, [patio, statuses, search, sort, stays, appointments]);
   const uniqueBrands = useMemo(
     () => [...new Set(appointments.map((a) => a.brand).filter(Boolean))].sort(),
     [appointments],
@@ -439,6 +531,50 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
               <ChevronDown className={cn("size-3 transition", advancedOpen && "rotate-180")} />
             </Button>
           </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {(
+              [
+                ["all", "Todos"],
+                ["today", "Hoje"],
+                ["week", "Esta semana"],
+                ["month", "Este mês"],
+                ["custom", "Personalizado"],
+              ] as const
+            ).map(([v, label]) => (
+              <Button
+                key={v}
+                size="sm"
+                variant={period === v ? "default" : "outline"}
+                onClick={() => setPeriod(v)}
+              >
+                {label}
+              </Button>
+            ))}
+            {period === "custom" && (
+              <>
+                <DateInput
+                  aria-label="Data inicial"
+                  value={custom.start}
+                  onChange={(v) => setCustom((c) => ({ ...c, start: v }))}
+                />
+                <DateInput
+                  aria-label="Data final"
+                  value={custom.end}
+                  onChange={(v) => setCustom((c) => ({ ...c, end: v }))}
+                />
+              </>
+            )}
+            <select
+              aria-label="Ordenar"
+              value={sort}
+              onChange={(e) => setSort(e.target.value as YardSort)}
+              className="ml-auto rounded-md border bg-background px-3 py-2 text-sm"
+            >
+              <option value="newest">Mais novo → mais antigo</option>
+              <option value="oldest">Mais antigo → mais novo</option>
+              <option value="plate">Placa (A–Z)</option>
+            </select>
+          </div>
 
           {/* Advanced filters */}
           {advancedOpen && (
@@ -549,11 +685,24 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
         <div className="flex flex-wrap gap-2" role="tablist" aria-label="Local de atendimento">
           <Button
             role="tab"
+            aria-selected={locationTab === "principal"}
+            variant={locationTab === "principal" ? "default" : "outline"}
+            onClick={() => setLocationTab("principal")}
+          >
+            Em atendimento agora · {loadError ? "Indisponível" : board.arriving.length + board.working.length + board.ready.length}
+            {board.arriving.length > 0 && (
+              <span className="ml-1 rounded-full bg-destructive px-1.5 text-xs text-destructive-foreground">
+                {board.arriving.length} chegando
+              </span>
+            )}
+          </Button>
+          <Button
+            role="tab"
             aria-selected={locationTab === "patio"}
             variant={locationTab === "patio" ? "default" : "outline"}
             onClick={() => setLocationTab("patio")}
           >
-            Pátio próprio · {loadError ? "Indisponível" : filteredPatio.length}
+            Pátio · {loadError ? "Indisponível" : filteredPatio.length}
           </Button>
           <Button
             role="tab"
@@ -584,6 +733,17 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
               </Button>
             ))}
         </div>
+        {!loadError && locationTab === "principal" && (
+          <YardBoard
+            board={board}
+            config={boardConfig}
+            now={now}
+            senders={senders}
+            highlight={new Set(board.arriving.map((i) => i.dbId))}
+            onCheckIn={(i) => setCheckInTarget({ item: i, type: "entrada" })}
+            onDetails={setDetailTarget}
+          />
+        )}
         {!loadError && locationTab === "patio" && (
           <YardKpis
             patioItems={filteredPatio}
