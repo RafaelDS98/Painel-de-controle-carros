@@ -21,8 +21,8 @@ export const Route = createFileRoute("/_authenticated/historicos")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  validateSearch: (s: Record<string, unknown>): { aba?: "geral" | "checkins" } => ({
-    aba: s.aba === "checkins" ? "checkins" : s.aba === "geral" ? "geral" : undefined,
+  validateSearch: (s: Record<string, unknown>): { aba?: "geral" | "checkins" | undefined } => ({
+    aba: s["aba"] === "checkins" ? "checkins" : s["aba"] === "geral" ? "geral" : undefined,
   }),
   component: Page,
 });

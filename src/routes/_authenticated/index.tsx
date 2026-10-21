@@ -26,9 +26,9 @@ export const Route = createFileRoute("/_authenticated/")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  validateSearch: (s: Record<string, unknown>): { tab?: AgendaTab; acao?: string } => ({
-    tab: TABS.includes(s.tab as AgendaTab) ? (s.tab as AgendaTab) : undefined,
-    acao: typeof s.acao === "string" ? s.acao : undefined,
+  validateSearch: (s: Record<string, unknown>): { tab?: AgendaTab | undefined; acao?: string | undefined } => ({
+    tab: TABS.includes(s["tab"] as AgendaTab) ? (s["tab"] as AgendaTab) : undefined,
+    acao: typeof s["acao"] === "string" ? s["acao"] : undefined,
   }),
   component: Index,
 });
