@@ -11,7 +11,6 @@ import {
   fleetValue,
   matchesFleet,
   importFleetRow,
-  canCreateVehicle,
 } from "@/lib/fleet";
 import { fixSheetRange } from "@/lib/sheet-range";
 import { guardFormula } from "@/lib/agenda-safety";
@@ -36,7 +35,7 @@ async function fetchFleet() {
   }
   return all;
 }
-export function FleetPanel({ role }: { role: string }) {
+export function FleetPanel(_props: { role: string }) {
   const canManage = useCan("action.manage_vehicles");
   const qc = useQueryClient();
   const query = useQuery({ queryKey: ["fleet"], queryFn: fetchFleet });
