@@ -26,7 +26,7 @@ export function SearchableSelect({
   onChange,
   className,
 }: {
-  className?: string;
+  className?: string | undefined;
   label: string;
   value: string;
   options: string[];
