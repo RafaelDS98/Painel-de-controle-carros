@@ -228,12 +228,12 @@ export function HomePage({ userId, userName }: { userId: string; userName: strin
     atalhos: (
       <div className="flex flex-wrap gap-2">
         {can("module.agenda") && (
-        <Button asChild variant="outline">
-          <Link to="/">
-            <CalendarClock className="size-4" />
-            Agenda
-          </Link>
-        </Button>
+          <Button asChild variant="outline">
+            <Link to="/">
+              <CalendarClock className="size-4" />
+              Agenda
+            </Link>
+          </Button>
         )}
         <Button asChild variant="outline">
           <Link to="/dashboard">
@@ -242,20 +242,20 @@ export function HomePage({ userId, userName }: { userId: string; userName: strin
           </Link>
         </Button>
         {can("module.os") && (
-        <Button asChild variant="outline">
-          <Link to="/ordens-servico">
-            <ClipboardList className="size-4" />
-            Ordens de Serviço
-          </Link>
-        </Button>
+          <Button asChild variant="outline">
+            <Link to="/ordens-servico">
+              <ClipboardList className="size-4" />
+              Ordens de Serviço
+            </Link>
+          </Button>
         )}
         {can("module.veiculos") && (
-        <Button asChild variant="outline">
-          <Link to="/veiculos">
-            <Truck className="size-4" />
-            Veículos
-          </Link>
-        </Button>
+          <Button asChild variant="outline">
+            <Link to="/veiculos">
+              <Truck className="size-4" />
+              Veículos
+            </Link>
+          </Button>
         )}
       </div>
     ),
@@ -280,7 +280,6 @@ export function HomePage({ userId, userName }: { userId: string; userName: strin
             <Button onClick={() => setEditor(true)}>
               <Plus className="size-4" /> Nova notícia
             </Button>
-        )}
           )}
           {can("action.home_layout") &&
             (editing ? (
@@ -288,7 +287,6 @@ export function HomePage({ userId, userName }: { userId: string; userName: strin
                 <Button variant="outline" onClick={() => setEditing(false)}>
                   <X className="size-4" /> Cancelar
                 </Button>
-        )}
                 <Button onClick={() => void saveLayout()}>
                   <Save className="size-4" /> Salvar organização
                 </Button>
