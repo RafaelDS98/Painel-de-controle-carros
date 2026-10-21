@@ -22,7 +22,7 @@ function Page() {
   const { user } = Route.useRouteContext();
   const { agendamento } = Route.useSearch();
   return (
-    <ProfileGate user={user}>
+    <ProfileGate user={user} permission="action.create_os">
       {(me) =>
         me.role === "oficina" ? (
           <p className="p-8 text-center text-sm text-muted-foreground">

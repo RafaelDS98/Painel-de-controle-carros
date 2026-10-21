@@ -14,6 +14,7 @@ export interface YardSettings {
   toast_duration_ms: number;
   new_highlight_minutes: number;
   editable_fields: string[];
+  board_config?: unknown;
 }
 
 export const DEFAULT_YARD_SETTINGS: YardSettings = {

@@ -28,8 +28,9 @@ export function permissionDefault(role: string | null | undefined, key: string):
   switch (key) {
     case "module.agenda":
     case "module.historicos":
-    case "module.os":
       return !oficina;
+    case "module.os":
+      return true;
     case "module.oficina":
       return oficina;
     case "module.veiculos":

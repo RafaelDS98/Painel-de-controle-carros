@@ -27,7 +27,7 @@ function Page() {
   const { user } = Route.useRouteContext();
   const { data: permissions = new Set<string>() } = useMyPermissions();
   return (
-    <ProfileGate user={user}>
+    <ProfileGate user={user} permission="module.os">
       {(me) => (
         <>
           <div
