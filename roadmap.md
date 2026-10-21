@@ -87,7 +87,7 @@
 - [x] Documento de continuidade v2 atualizado após os ajustes de navegação solicitados em 21/10/2026.
 - [x] O.S.: botões Agenda/Oficina/Consultas/Ordens de Serviço mantidos no topo da tela conforme o print.
 - [x] Menu recolhido: nome da opção exibido ao passar o mouse (Dashboard, Usuários · Permissões, Notícias, Veículos, "em breve", recolher/expandir) e na barra superior (lupa, tema, notificações, usuário, sair).
-- [ ] Corrigir e verificar rolagem com a roda do mouse nas listas da janela Encaminhar para oficina.
+- [x] Corrigir rolagem com a roda do mouse nas listas da janela Encaminhar para oficina; Tipo de O.S. e Centro de custo verificados com sessão Master, sem salvar encaminhamento.
 
 ## Como continuar (para uma sessão nova)
 - Ler AGENTS.md (raiz e subpastas) antes de mexer; regras de negócio ficam no banco (triggers/funções), a tela só espelha.
