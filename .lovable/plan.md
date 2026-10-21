@@ -17,7 +17,12 @@ Reorganizar a janela em abas, como em "Configurações da Agenda":
 - **Oficina e status**: campos editáveis pela Oficina e status por tela.
 - Um botão Salvar por aba, com aviso de alterações não salvas.
 
-## 3. Documentação para continuar em nova sessão
+## 3. Barra superior fixa e mais alta em todas as telas
+- Atalhos "Novo agendamento", "Nova O.S.", "Configurações" e o novo "Entrada/Saída" ficam sempre na barra superior, em todas as telas (respeitando as permissões de cada usuário), em vez de aparecerem só na Agenda.
+- Barra mais alta, sem rolagem lateral, com os atalhos ocupando o espaço vazio ao lado do caminho da página e alinhados de forma organizada.
+- "Configurações" abre as configurações da tela atual (Agenda, Pátio etc.).
+
+## 4. Documentação para continuar em nova sessão
 - **AGENTS.md**: regras novas (seleção de placa só do cadastro; vários pátios próprios via função em lote; configurações do pátio em abas) e resumo de onde fica cada módulo.
 - **roadmap.md**: marcar o concluído, listar pendências com o motivo (ex.: ID SGLOC da loja 11, filtro de categoria, agendamento automático do SGLOC, testes reais de encaminhamento/O.S. por Atendimento) e uma seção "Como continuar" com o estado atual e o que nunca reaplicar (ex.: 0026_yard_oficina.sql).
 
