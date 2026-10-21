@@ -5,14 +5,7 @@ import type { YardAppointment } from "@/lib/yard-utils";
 export type YardColumn = "main" | "ready" | "yard" | "hidden";
 export type BoardColumnKey = "arriving" | "working" | "ready";
 export type CardField =
-  | "model"
-  | "store"
-  | "contact"
-  | "issue"
-  | "note"
-  | "operator"
-  | "deadline"
-  | "workshop";
+  "model" | "store" | "contact" | "issue" | "note" | "operator" | "deadline" | "workshop";
 
 export interface BoardConfig {
   columns: Record<BoardColumnKey, { label: string; visible: boolean }>;

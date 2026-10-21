@@ -116,7 +116,10 @@ export function YardBoard({
                     <button
                       type="button"
                       onClick={() => onDetails(item)}
-                      className={cn("font-mono font-bold hover:underline", tv ? "text-3xl" : "text-lg")}
+                      className={cn(
+                        "font-mono font-bold hover:underline",
+                        tv ? "text-3xl" : "text-lg",
+                      )}
                     >
                       {item.plate}
                     </button>

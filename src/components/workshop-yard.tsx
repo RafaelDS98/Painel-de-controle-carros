@@ -350,15 +350,17 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
 
   // Apply filters
   function applyFilters(items: YardAppointment[]): YardAppointment[] {
-    return sortYard(items
-      .filter((item) => inPeriod(item, period, custom))
-      .filter((item) => matchesYardSearch(item, search))
-      .filter((item) => !statusFilter || item.status === statusFilter)
-      .filter((item) => !workshopFilter || item.workshop === workshopFilter)
-      .filter(
-        (item) => !brandFilter || item.brand.toLowerCase().includes(brandFilter.toLowerCase()),
-      )
-      , sort);
+    return sortYard(
+      items
+        .filter((item) => inPeriod(item, period, custom))
+        .filter((item) => matchesYardSearch(item, search))
+        .filter((item) => !statusFilter || item.status === statusFilter)
+        .filter((item) => !workshopFilter || item.workshop === workshopFilter)
+        .filter(
+          (item) => !brandFilter || item.brand.toLowerCase().includes(brandFilter.toLowerCase()),
+        ),
+      sort,
+    );
   }
 
   const filteredPatio = useMemo(
@@ -372,18 +374,28 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
       if (filtered.length > 0) result.set(ws, filtered);
     }
     return result;
-  }, [externalByWorkshop, search, statusFilter, workshopFilter, brandFilter, now, sort, period, custom]);
+  }, [
+    externalByWorkshop,
+    search,
+    statusFilter,
+    workshopFilter,
+    brandFilter,
+    now,
+    sort,
+    period,
+    custom,
+  ]);
 
   const yardStatuses = statuses;
-  const boardConfig = useMemo(() => parseBoardConfig(settings.board_config), [settings.board_config]);
+  const boardConfig = useMemo(
+    () => parseBoardConfig(settings.board_config),
+    [settings.board_config],
+  );
   const board = useMemo(() => {
     const colOf = (status: string): YardColumn =>
       (statuses.find((s) => s.label === status)?.yard_column as YardColumn | undefined) ?? "main";
-    const items = patio
-      .filter((item) => matchesYardSearch(item, search))
-      .map((item) => ({ ...item, forwardedAt: item.forwardedAt ?? stays[item.dbId] ?? null }));
     const b = buildBoard(
-      items.map((i) => ({ ...i, forwardedAt: appointments.find((a) => a.dbId === i.dbId)?.forwardedAt ?? null })),
+      patio.filter((item) => matchesYardSearch(item, search)),
       colOf,
     );
     return {
@@ -391,7 +403,7 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
       working: sortYard(b.working, sort, true),
       ready: sortYard(b.ready, sort, true),
     };
-  }, [patio, statuses, search, sort, stays, appointments]);
+  }, [patio, statuses, search, sort]);
   const uniqueBrands = useMemo(
     () => [...new Set(appointments.map((a) => a.brand).filter(Boolean))].sort(),
     [appointments],
@@ -555,12 +567,12 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
                 <DateInput
                   aria-label="Data inicial"
                   value={custom.start}
-                  onChange={(v) => setCustom((c) => ({ ...c, start: v }))}
+                  onChange={(e) => setCustom((c) => ({ ...c, start: e.target.value }))}
                 />
                 <DateInput
                   aria-label="Data final"
                   value={custom.end}
-                  onChange={(v) => setCustom((c) => ({ ...c, end: v }))}
+                  onChange={(e) => setCustom((c) => ({ ...c, end: e.target.value }))}
                 />
               </>
             )}
@@ -689,7 +701,10 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
             variant={locationTab === "principal" ? "default" : "outline"}
             onClick={() => setLocationTab("principal")}
           >
-            Em atendimento agora · {loadError ? "Indisponível" : board.arriving.length + board.working.length + board.ready.length}
+            Em atendimento agora ·{" "}
+            {loadError
+              ? "Indisponível"
+              : board.arriving.length + board.working.length + board.ready.length}
             {board.arriving.length > 0 && (
               <span className="ml-1 rounded-full bg-destructive px-1.5 text-xs text-destructive-foreground">
                 {board.arriving.length} chegando

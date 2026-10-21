@@ -17,11 +17,17 @@ const car = (p: Partial<YardAppointment>): YardAppointment =>
 
 describe("tela principal da oficina", () => {
   it("encaminhado sem entrada vai para Chegando", () => {
-    const b = buildBoard([car({ plate: "OZW1234", forwardedAt: "2026-10-21T18:39:00Z" })], () => "main");
+    const b = buildBoard(
+      [car({ plate: "OZW1234", forwardedAt: "2026-10-21T18:39:00Z" })],
+      () => "main",
+    );
     expect(b.arriving.map((c) => c.plate)).toEqual(["OZW1234"]);
   });
   it("situação marcada como Pátio sai da tela principal", () => {
-    const b = buildBoard([car({ status: "Aguardando peças", checkInAt: "2026-10-20T10:00:00Z" })], () => "yard");
+    const b = buildBoard(
+      [car({ status: "Aguardando peças", checkInAt: "2026-10-20T10:00:00Z" })],
+      () => "yard",
+    );
     expect(b.working.length + b.ready.length + b.arriving.length).toBe(0);
   });
   it("situação Pronto vai para a coluna de prontos", () => {
@@ -41,10 +47,14 @@ describe("tela principal da oficina", () => {
   });
   it("Hoje usa o dia de São Paulo", () => {
     const c = car({ forwardedAt: "2026-10-22T01:00:00Z" }); // 21/10 22h em SP
-    expect(inPeriod(c, "today", { start: "", end: "" }, new Date("2026-10-21T15:00:00Z"))).toBe(true);
+    expect(inPeriod(c, "today", { start: "", end: "" }, new Date("2026-10-21T15:00:00Z"))).toBe(
+      true,
+    );
   });
   it("Master renomeia coluna; nome vazio volta ao padrão", () => {
-    const cfg = parseBoardConfig({ columns: { arriving: { label: "Novos" }, ready: { label: " " } } });
+    const cfg = parseBoardConfig({
+      columns: { arriving: { label: "Novos" }, ready: { label: " " } },
+    });
     expect(cfg.columns.arriving.label).toBe("Novos");
     expect(cfg.columns.ready.label).toBe("Prontos / aguardando retirada");
   });
