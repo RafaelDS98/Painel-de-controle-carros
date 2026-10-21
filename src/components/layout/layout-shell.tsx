@@ -338,41 +338,44 @@ function SidebarContent({
               </Link>
             );
           });
+          const link = (
+            <Link
+              to={item.to}
+              onClick={() => {
+                setExpanded(item.label);
+                onNavigate();
+              }}
+              aria-current={active ? "page" : undefined}
+              aria-expanded={kids.length ? open : undefined}
+              className={cn(
+                "flex min-h-10 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors",
+                collapsed && "justify-center px-0",
+                active
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                  : "text-sidebar-foreground/75 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
+              )}
+            >
+              <item.icon className={cn("size-4 shrink-0", active && "text-primary")} />
+              {!collapsed && <span className="flex-1 truncate">{item.label}</span>}
+              {!collapsed && kids.length > 0 && (
+                <ChevronDown
+                  className={cn("size-3.5 shrink-0 transition-transform", !open && "-rotate-90")}
+                />
+              )}
+            </Link>
+          );
           return (
             <div key={item.label}>
-              {collapsed && kids.length > 0 ? (
-                <CollapsedSubmenu item={item} active={active}>
-                  {childLinks}
-                </CollapsedSubmenu>
+              {collapsed ? (
+                kids.length > 0 ? (
+                  <CollapsedSubmenu item={item} active={active}>
+                    {childLinks}
+                  </CollapsedSubmenu>
+                ) : (
+                  <NameTip label={item.label}>{link}</NameTip>
+                )
               ) : (
-                <Link
-                  to={item.to}
-                  onClick={() => {
-                    setExpanded(item.label);
-                    onNavigate();
-                  }}
-                  title={item.label}
-                  aria-current={active ? "page" : undefined}
-                  aria-expanded={kids.length ? open : undefined}
-                  className={cn(
-                    "flex min-h-10 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors",
-                    collapsed && "justify-center px-0",
-                    active
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                      : "text-sidebar-foreground/75 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
-                  )}
-                >
-                  <item.icon className={cn("size-4 shrink-0", active && "text-primary")} />
-                  {!collapsed && <span className="flex-1 truncate">{item.label}</span>}
-                  {!collapsed && kids.length > 0 && (
-                    <ChevronDown
-                      className={cn(
-                        "size-3.5 shrink-0 transition-transform",
-                        !open && "-rotate-90",
-                      )}
-                    />
-                  )}
-                </Link>
+                link
               )}
               {open && <div className="ml-5 mt-1 space-y-0.5 border-l pl-3">{childLinks}</div>}
             </div>
