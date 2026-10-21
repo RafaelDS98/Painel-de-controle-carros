@@ -337,6 +337,7 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
     const current = new Map(
       appointments.filter((a) => a.forwardedAt).map((a) => [a.dbId, a.forwardedAt as string]),
     );
+    if (!appointments.length) return;
     const prev = seenForward.current;
     seenForward.current = current;
     if (!prev) return;
