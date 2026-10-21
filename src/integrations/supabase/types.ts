@@ -1642,6 +1642,7 @@ export type Database = {
           show_in_yard: boolean
           sort_order: number
           updated_at: string
+          yard_column: string
         }
         Insert: {
           color_token: string
@@ -1653,6 +1654,7 @@ export type Database = {
           show_in_yard?: boolean
           sort_order?: number
           updated_at?: string
+          yard_column?: string
         }
         Update: {
           color_token?: string
@@ -1664,6 +1666,7 @@ export type Database = {
           show_in_yard?: boolean
           sort_order?: number
           updated_at?: string
+          yard_column?: string
         }
         Relationships: []
       }
@@ -2040,6 +2043,7 @@ export type Database = {
       }
       yard_settings: {
         Row: {
+          board_config: Json
           check_in_required: boolean | null
           check_out_required: boolean | null
           editable_fields: Json | null
@@ -2057,6 +2061,7 @@ export type Database = {
           updated_by: string | null
         }
         Insert: {
+          board_config?: Json
           check_in_required?: boolean | null
           check_out_required?: boolean | null
           editable_fields?: Json | null
@@ -2074,6 +2079,7 @@ export type Database = {
           updated_by?: string | null
         }
         Update: {
+          board_config?: Json
           check_in_required?: boolean | null
           check_out_required?: boolean | null
           editable_fields?: Json | null
@@ -2152,6 +2158,7 @@ export type Database = {
       }
       has_access: { Args: { _user_id: string }; Returns: boolean }
       has_module: { Args: { _module: string; _uid: string }; Returns: boolean }
+      has_os_read: { Args: { _uid: string }; Returns: boolean }
       has_permission: {
         Args: { _perm: string; _uid: string }
         Returns: boolean
