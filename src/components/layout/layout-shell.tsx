@@ -13,6 +13,7 @@ import {
   HelpCircle,
   History,
   Home,
+  Newspaper,
   ShieldCheck,
   LayoutDashboard,
   LogOut,
@@ -55,6 +56,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useTheme } from "@/hooks/use-theme";
 import { cn } from "@/lib/utils";
+import { useMyPermissions } from "@/lib/permissions";
 import phoenixAsset from "@/assets/logo-anpexc-marca.png.asset.json";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -71,10 +73,11 @@ type NavItem = {
   exact?: boolean;
   hideFor?: string[];
   onlyFor?: string[];
+  perm?: string;
 };
 
 const NAV: NavItem[] = [
-  { to: "/", label: "Home", icon: Home, exact: true },
+  { to: "/home", label: "Home", icon: Home, exact: true },
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/", label: "Agenda de Manutenção", icon: CalendarClock, exact: true },
   {
@@ -83,6 +86,7 @@ const NAV: NavItem[] = [
     icon: ShieldCheck,
     onlyFor: ["master"],
   },
+  { to: "/noticias", label: "Notícias", icon: Newspaper, perm: "module.noticias" },
   { to: "/ordens-servico", label: "Ordens de Serviço", icon: ClipboardList },
   { to: "/historicos", label: "Históricos", icon: History, hideFor: ["oficina"] },
   { to: "/veiculos", label: "Veículos", icon: Truck },
@@ -98,6 +102,8 @@ const SOON: { label: string; icon: LucideIcon }[] = [
 
 const SECTION_LABELS: Record<string, string> = {
   "/dashboard": "Dashboard",
+  "/home": "Home",
+  "/noticias": "Notícias",
   "/ordens-servico": "Ordens de Serviço",
   "/ordens-servico/nova": "Nova O.S.",
   "/historicos": "Históricos",
@@ -135,9 +141,12 @@ function SidebarContent({
   onToggleCollapse?: () => void;
 }) {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const perms = useMyPermissions();
   const items = NAV.filter(
     (item) =>
-      !item.hideFor?.includes(role ?? "") && (!item.onlyFor || item.onlyFor.includes(role ?? "")),
+      (!item.perm || (perms.data?.has(item.perm) ?? false)) &&
+      !item.hideFor?.includes(role ?? "") &&
+      (!item.onlyFor || item.onlyFor.includes(role ?? "")),
   );
   return (
     <>
@@ -148,7 +157,7 @@ function SidebarContent({
         )}
       >
         <Link
-          to="/"
+          to="/home"
           onClick={onNavigate}
           title="Ir para a tela inicial"
           aria-label="ANPEXC — voltar para a tela inicial"

@@ -36,7 +36,7 @@ function AuthPage() {
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
-      if (data.user) navigate({ to: "/", replace: true });
+      if (data.user) navigate({ to: "/home", replace: true });
     });
   }, [navigate]);
 
@@ -47,7 +47,7 @@ function AuthPage() {
     if (mode === "login") {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setMessage("E-mail ou senha inválidos.");
-      else navigate({ to: "/", replace: true });
+      else navigate({ to: "/home", replace: true });
     } else {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -55,7 +55,7 @@ function AuthPage() {
         options: { emailRedirectTo: window.location.origin, data: { full_name: fullName } },
       });
       if (error) setMessage(error.message);
-      else if (data.session) navigate({ to: "/", replace: true });
+      else if (data.session) navigate({ to: "/home", replace: true });
       else setMessage("Cadastro realizado. Confira seu e-mail para confirmar a conta.");
     }
     setLoading(false);
