@@ -14,6 +14,8 @@ import { Save, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { YardGroupsSettings } from "@/components/yard-groups-settings";
 import { YardPlacesSettings } from "@/components/yard-places-settings";
+import { BoardConfigEditor } from "@/components/board-config-editor";
+import { parseBoardConfig } from "@/lib/yard-board";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import type { YardSettings, WorkshopInfo } from "@/lib/yard-utils";
@@ -44,12 +46,16 @@ export function YardSettingsPanel({
   const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState<YardSettings>(settings);
   const [statusDrafts, setStatusDrafts] = useState<
-    Record<string, { show_in_yard: boolean; show_external: boolean }>
+    Record<string, { show_in_yard: boolean; show_external: boolean; yard_column?: string }>
   >(() =>
     Object.fromEntries(
       statuses.map((s) => [
         s.label,
-        { show_in_yard: !!s.show_in_yard, show_external: !!s.show_external },
+        {
+          show_in_yard: !!s.show_in_yard,
+          show_external: !!s.show_external,
+          yard_column: s.yard_column ?? "main",
+        },
       ]),
     ),
   );
@@ -75,10 +81,18 @@ export function YardSettingsPanel({
     for (const status of statuses) {
       const d = statusDrafts[status.label];
       if (!d) continue;
-      if (d.show_in_yard !== !!status.show_in_yard || d.show_external !== !!status.show_external) {
+      if (
+        d.show_in_yard !== !!status.show_in_yard ||
+        d.show_external !== !!status.show_external ||
+        (d.yard_column ?? "main") !== (status.yard_column ?? "main")
+      ) {
         const { error } = await supabase
           .from("status_options")
-          .update({ show_in_yard: d.show_in_yard, show_external: d.show_external })
+          .update({
+            show_in_yard: d.show_in_yard,
+            show_external: d.show_external,
+            yard_column: d.yard_column ?? "main",
+          })
           .eq("id", status.id);
         if (error) allOk = false;
       }
@@ -295,6 +309,11 @@ export function YardSettingsPanel({
             <SaveBar />
           </TabsContent>
           <TabsContent value="oficina" className="space-y-6 pt-3">
+            <BoardConfigEditor
+              value={parseBoardConfig(draft.board_config)}
+              onChange={(cfg) => setDraft((prev) => ({ ...prev, board_config: cfg }))}
+            />
+            <SaveBar label="Salvar tela principal" />
             {/* Campos editáveis pela oficina */}
             <section className="space-y-3">
               <h3 className="text-sm font-semibold border-b pb-1">Campos editáveis pela Oficina</h3>
@@ -328,6 +347,7 @@ export function YardSettingsPanel({
                       <th className="px-3 py-2">Status</th>
                       <th className="px-3 py-2 text-center">Mostrar no Pátio</th>
                       <th className="px-3 py-2 text-center">Mostrar Externo</th>
+                      <th className="px-3 py-2">Tela principal da oficina</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -363,6 +383,28 @@ export function YardSettingsPanel({
                               }))
                             }
                           />
+                        </td>
+                        <td className="px-3 py-2">
+                          <select
+                            aria-label={`Onde aparece ${s.label}`}
+                            className="rounded-md border bg-background px-2 py-1 text-sm"
+                            value={statusDrafts[s.label]?.yard_column ?? "main"}
+                            onChange={(e) =>
+                              setStatusDrafts((prev) => ({
+                                ...prev,
+                                [s.label]: {
+                                  show_in_yard: prev[s.label]?.show_in_yard ?? false,
+                                  show_external: prev[s.label]?.show_external ?? false,
+                                  yard_column: e.target.value,
+                                },
+                              }))
+                            }
+                          >
+                            <option value="main">Principal (em execução)</option>
+                            <option value="ready">Principal (prontos)</option>
+                            <option value="yard">Só na aba Pátio</option>
+                            <option value="hidden">Oculto</option>
+                          </select>
                         </td>
                       </tr>
                     ))}
