@@ -2087,21 +2087,6 @@ export function MaintenanceDashboard({
                   <ListChecks /> Listas
                 </Button>
               )}
-              {canCreate && (
-                <Button variant="ghost" size="sm" onClick={() => setNewOpen(true)}>
-                  <Plus /> Novo agendamento
-                </Button>
-              )}
-              {canCreate && (
-                <Button variant="outline" size="sm" asChild>
-                  <Link to="/ordens-servico/nova">Nova O.S.</Link>
-                </Button>
-              )}
-              {currentUser.role === "master" && !workshopMode && (
-                <Button variant="ghost" size="sm" onClick={() => setSettingsOpen(true)}>
-                  <Settings /> Configurações
-                </Button>
-              )}
               {currentUser.role === "master" && !workshopMode && (
                 <Button variant="ghost" size="sm" onClick={() => setTrashOpen(true)}>
                   <Trash2 /> Lixeira
