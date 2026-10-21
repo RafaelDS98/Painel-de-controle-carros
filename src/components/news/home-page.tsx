@@ -109,14 +109,21 @@ function Stat({
   value,
   to,
   icon: Icon,
+  enabled = true,
 }: {
+  enabled?: boolean;
   label: string;
   value: number | null | undefined;
   to: "/" | "/veiculos" | "/ordens-servico";
   icon: typeof Truck;
 }) {
   return (
-    <Link to={to} className="rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50">
+    <Link
+      to={to}
+      disabled={!enabled}
+      aria-disabled={!enabled}
+      className={`rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50 ${enabled ? "" : "pointer-events-none opacity-60"}`}
+    >
       <Icon className="size-5 text-primary" />
       <p className="mt-2 text-2xl font-bold">{value ?? "—"}</p>
       <p className="text-xs text-muted-foreground">{label}</p>
@@ -199,48 +206,57 @@ export function HomePage({ userId, userName }: { userId: string; userName: strin
           label="Agendamentos ativos"
           value={summary.data?.agenda}
           to="/"
+          enabled={can("module.agenda")}
           icon={CalendarClock}
         />
         <Stat
           label="Veículos na frota"
           value={summary.data?.veiculos}
           to="/veiculos"
+          enabled={can("module.veiculos")}
           icon={Truck}
         />
         <Stat
           label="O.S. em aberto"
           value={summary.data?.os}
           to="/ordens-servico"
+          enabled={can("module.os")}
           icon={ClipboardList}
         />
       </div>
     ),
     atalhos: (
       <div className="flex flex-wrap gap-2">
+        {can("module.agenda") && (
         <Button asChild variant="outline">
           <Link to="/">
             <CalendarClock className="size-4" />
             Agenda
           </Link>
         </Button>
+        )}
         <Button asChild variant="outline">
           <Link to="/dashboard">
             <LayoutDashboard className="size-4" />
             Dashboard
           </Link>
         </Button>
+        {can("module.os") && (
         <Button asChild variant="outline">
           <Link to="/ordens-servico">
             <ClipboardList className="size-4" />
             Ordens de Serviço
           </Link>
         </Button>
+        )}
+        {can("module.veiculos") && (
         <Button asChild variant="outline">
           <Link to="/veiculos">
             <Truck className="size-4" />
             Veículos
           </Link>
         </Button>
+        )}
       </div>
     ),
   };
@@ -264,6 +280,7 @@ export function HomePage({ userId, userName }: { userId: string; userName: strin
             <Button onClick={() => setEditor(true)}>
               <Plus className="size-4" /> Nova notícia
             </Button>
+        )}
           )}
           {can("action.home_layout") &&
             (editing ? (
@@ -271,6 +288,7 @@ export function HomePage({ userId, userName }: { userId: string; userName: strin
                 <Button variant="outline" onClick={() => setEditing(false)}>
                   <X className="size-4" /> Cancelar
                 </Button>
+        )}
                 <Button onClick={() => void saveLayout()}>
                   <Save className="size-4" /> Salvar organização
                 </Button>

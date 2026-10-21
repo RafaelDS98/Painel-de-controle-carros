@@ -22,5 +22,9 @@ export const Route = createFileRoute("/_authenticated/ordens-servico/$id")({
 function Page() {
   const { user } = Route.useRouteContext();
   const { id } = Route.useParams();
-  return <ProfileGate user={user} permission="module.os">{() => <OsDetailPage id={id} />}</ProfileGate>;
+  return (
+    <ProfileGate user={user} permission="module.os">
+      {() => <OsDetailPage id={id} />}
+    </ProfileGate>
+  );
 }

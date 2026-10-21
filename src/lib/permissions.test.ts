@@ -16,3 +16,11 @@ describe("permissões padrão por perfil", () => {
     expect(permissionDefault(null, "module.veiculos")).toBe(false);
   });
 });
+
+import { permissionDefault as pd } from "./permissions";
+describe("O.S. para a Oficina", () => {
+  it("perfil Oficina consulta O.S. por padrão, mas não cria", () => {
+    expect(pd("oficina", "module.os")).toBe(true);
+    expect(pd("oficina", "action.create_os")).toBe(false);
+  });
+});
