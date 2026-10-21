@@ -661,30 +661,38 @@ export function LayoutShell({
             <div id="topbar-actions" className="flex flex-wrap items-center gap-1" />
           </div>
           <div className="ml-auto flex shrink-0 items-center gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSearchOpen(true)}
-              className="size-9 p-0 text-foreground"
-              aria-label="Buscar (Ctrl+K)"
-              title="Buscar (Ctrl+K)"
+            <NameTip label="Buscar (Ctrl+K)" side="bottom">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSearchOpen(true)}
+                className="size-9 p-0 text-foreground"
+                aria-label="Buscar (Ctrl+K)"
+              >
+                <Search className="size-4" />
+              </Button>
+            </NameTip>
+            <NameTip
+              label={dark ? "Mudar para tema claro" : "Mudar para tema escuro"}
+              side="bottom"
             >
-              <Search className="size-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleTheme}
-              aria-label={dark ? "Mudar para tema claro" : "Mudar para tema escuro"}
-            >
-              {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
-            </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleTheme}
+                aria-label={dark ? "Mudar para tema claro" : "Mudar para tema escuro"}
+              >
+                {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+              </Button>
+            </NameTip>
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="Notificações">
-                  <Bell className="size-4" />
-                </Button>
-              </DropdownMenuTrigger>
+              <NameTip label="Notificações" side="bottom">
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" aria-label="Notificações">
+                    <Bell className="size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+              </NameTip>
               <DropdownMenuContent align="end" className="w-56">
                 <p className="px-2 py-1.5 text-sm text-muted-foreground">
                   Sem notificações no momento.
@@ -692,25 +700,27 @@ export function LayoutShell({
               </DropdownMenuContent>
             </DropdownMenu>
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="flex min-h-10 items-center gap-2 rounded-md px-2 text-left transition-colors hover:bg-accent"
-                  aria-label="Menu do usuário"
-                >
-                  <Avatar className="size-7">
-                    <AvatarFallback className="text-xs font-semibold">
-                      {initials || "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="hidden text-left 2xl:block">
-                    <span className="block max-w-36 truncate text-xs font-semibold leading-tight">
-                      {name}
+              <NameTip label="Menu do usuário" side="bottom">
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex min-h-10 items-center gap-2 rounded-md px-2 text-left transition-colors hover:bg-accent"
+                    aria-label="Menu do usuário"
+                  >
+                    <Avatar className="size-7">
+                      <AvatarFallback className="text-xs font-semibold">
+                        {initials || "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="hidden text-left 2xl:block">
+                      <span className="block max-w-36 truncate text-xs font-semibold leading-tight">
+                        {name}
+                      </span>
+                      <span className="block text-[11px] text-muted-foreground">{roleLabel}</span>
                     </span>
-                    <span className="block text-[11px] text-muted-foreground">{roleLabel}</span>
-                  </span>
-                </button>
-              </DropdownMenuTrigger>
+                  </button>
+                </DropdownMenuTrigger>
+              </NameTip>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel className="font-normal">
                   <p className="truncate text-sm font-semibold">{name}</p>
@@ -722,9 +732,11 @@ export function LayoutShell({
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button variant="ghost" size="icon" onClick={() => void signOut()} aria-label="Sair">
-              <LogOut className="size-4" />
-            </Button>
+            <NameTip label="Sair" side="bottom">
+              <Button variant="ghost" size="icon" onClick={() => void signOut()} aria-label="Sair">
+                <LogOut className="size-4" />
+              </Button>
+            </NameTip>
           </div>
         </header>
         <main className="flex-1 p-4 lg:p-6">{children}</main>
