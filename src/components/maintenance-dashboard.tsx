@@ -49,6 +49,7 @@ import { ForwardWorkshop } from "@/components/forward-workshop";
 import { useCan } from "@/lib/permissions";
 import { AppointmentHistory } from "@/components/edit-history";
 import { Link } from "@tanstack/react-router";
+import { usePageAction } from "@/hooks/use-page-action";
 import { AdvancedFilterDrawer, type SavedView } from "@/components/advanced-filter-drawer";
 import {
   activeAdvancedCount,
@@ -616,6 +617,10 @@ export function MaintenanceDashboard({
     });
   }, []);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  usePageAction((a) => {
+    if (a === "novo" && canCreate) setNewOpen(true);
+    if (a === "config" && currentUser.role === "master" && !workshopMode) setSettingsOpen(true);
+  });
   const [accountOpen, setAccountOpen] = useState(false);
   const queryClientForAccount = useQueryClient();
   const [statuses, setStatuses] = useState<StatusOption[]>([]);
