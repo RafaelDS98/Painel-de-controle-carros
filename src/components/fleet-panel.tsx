@@ -10,7 +10,7 @@ import { fleetFields, fleetValue, matchesFleet, importFleetRow } from "@/lib/fle
 import { fixSheetRange } from "@/lib/sheet-range";
 import { guardFormula } from "@/lib/agenda-safety";
 import { normalizePlate } from "@/lib/normalize";
-import { Plus, Search, RotateCcw, Upload, Download } from "lucide-react";
+import { Plus, Search, RotateCcw, Upload, Download, SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { VehicleCheckIn } from "@/components/vehicle-check-in";
 import { Link } from "@tanstack/react-router";
@@ -43,6 +43,8 @@ export function FleetPanel(_props: { role: string }) {
   const [detail, setDetail] = useState<Vehicle | null>(null);
   const [newOpen, setNewOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [mobileFilters, setMobileFilters] = useState(false);
+  const activeCount = Object.values(filters).filter(Boolean).length;
   const [summary, setSummary] = useState("");
   const [newRow, setNewRow] = useState({
     plate: "",
@@ -212,9 +214,32 @@ export function FleetPanel(_props: { role: string }) {
           e.preventDefault();
           setFilters(draft);
           setPage(1);
+          setMobileFilters(false);
         }}
       >
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+        <div className="flex gap-2 sm:hidden">
+          <Input
+            aria-label="Buscar placa"
+            placeholder="Buscar placa"
+            value={draft["plate"] ?? ""}
+            onChange={(e) => setDraft({ ...draft, plate: e.target.value })}
+          />
+          <Button type="submit" size="icon" aria-label="Pesquisar">
+            <Search />
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            aria-expanded={mobileFilters}
+            onClick={() => setMobileFilters((v) => !v)}
+          >
+            <SlidersHorizontal />
+            Filtros{activeCount ? ` (${activeCount})` : ""}
+          </Button>
+        </div>
+        <div
+          className={`${mobileFilters ? "grid" : "hidden"} gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5`}
+        >
           {Object.entries(fleetFields).map(([k, label]) => {
             const options = [
               ...new Set((query.data ?? []).map((v) => fleetValue(v, k)).filter(Boolean)),
@@ -244,7 +269,9 @@ export function FleetPanel(_props: { role: string }) {
             );
           })}
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+        <div
+          className={`${mobileFilters ? "flex" : "hidden"} flex-wrap items-center gap-3 sm:flex`}
+        >
           <label className="text-sm">
             Idade{" "}
             <select

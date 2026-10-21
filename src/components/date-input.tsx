@@ -32,7 +32,7 @@ export function DateInput({ value, onChange, className, disabled, id, ...rest }:
         aria-label={rest["aria-label"]}
         disabled={disabled}
         value={text}
-        className="w-full border-inherit bg-transparent pr-8"
+        className="w-full pr-8"
         onChange={(e) => {
           const t = maskBrDate(e.target.value);
           setText(t);

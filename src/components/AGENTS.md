@@ -1,4 +1,5 @@
 # Regras de src/components
+
 - A ficha de agendamento compartilha os campos da criação manual e envia somente colunas alteradas no UPDATE — mantém o trigger de permissões e o histórico como fonte das regras.
 - A edição em lote usa o UUID exportado, compara cada campo com a linha atual do banco e usa o mesmo UPDATE da ficha — evita duplicação e preserva as travas e o histórico.
 - Atalhos de período usam datas de São Paulo; a grade mostra só a semana atual do intervalo — evita misturar semanas.
