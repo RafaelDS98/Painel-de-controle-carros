@@ -39,3 +39,4 @@
 - Layout autenticado: shell `layout-shell.tsx` (sidebar colapsável + topbar com breadcrumb e busca Ctrl+K) via `_authenticated/route.tsx`; novas rotas entram na NAV/SECTION_LABELS do shell; módulos futuros em "Em breve".
 - Tema global: hook `use-theme.ts` (`.dark` no `<html>`, localStorage "theme", anti-flash em `__root.tsx`); gráficos leem `--chart-*` via `useChartColors`. Dashboard em `/dashboard`; Agenda é a home `/`.
 - `src/integrations` é gerado pela plataforma e fica fora do eslint; o resto segue `prettier`, de modo que `bun run lint` termine sem erros — formate antes de commitar.
+- Per-user permissions (tabs and actions) live in user_permissions, resolved by has_permission() with role defaults in permission_default(); master-only screen /usuarios/permissoes — lets the master grant exceptions without code changes.
