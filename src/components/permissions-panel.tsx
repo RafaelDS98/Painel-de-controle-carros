@@ -4,7 +4,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { PERMISSIONS } from "@/lib/permissions";
+import { Check } from "lucide-react";
+import { PERMISSIONS, permissionDefault } from "@/lib/permissions";
 
 const ROLE: Record<string, string> = {
   master: "Master",
@@ -83,8 +84,8 @@ export function PermissionsPanel({ currentUserId }: { currentUserId: string }) {
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        "Padrão" segue o perfil do usuário. Escolha "Permitir" ou "Bloquear" para abrir uma exceção
-        para alguém. Master sempre tem acesso total e você não altera a si mesmo.
+        Marque para liberar e desmarque para bloquear. Já vem marcado o que o perfil libera por padrão;
+        o ponto azul indica uma exceção feita para aquela pessoa. Master sempre tem acesso total e você não altera a si mesmo.
       </p>
       <Input
         placeholder="Buscar usuário por nome ou e-mail"
@@ -123,22 +124,33 @@ export function PermissionsPanel({ currentUserId }: { currentUserId: string }) {
                     </td>
                     {PERMISSIONS.map((p) => {
                       const k = `${u.user_id}|${p.key}`;
-                      const v = map.has(k) ? (map.get(k) ? "yes" : "no") : "default";
+                      const def = permissionDefault(u.role, p.key);
+                      const on = locked ? true : map.has(k) ? !!map.get(k) : def;
+                      const custom = !locked && map.has(k);
                       return (
-                        <td key={p.key} className="p-2">
-                          <select
+                        <td key={p.key} className="p-2 text-center">
+                          <button
+                            type="button"
+                            role="checkbox"
+                            aria-checked={on}
                             aria-label={`${p.label} — ${u.full_name || u.email}`}
+                            title={custom ? "Exceção individual" : "Padrão do perfil"}
                             disabled={locked || busy === k || !u.role}
-                            value={locked ? "yes" : v}
-                            onChange={(e) =>
-                              void set(u.user_id, p.key, e.target.value as "default" | "yes" | "no")
-                            }
-                            className="h-9 w-full rounded-md border bg-background px-2 text-foreground"
+                            onClick={() => {
+                              const next = !on;
+                              void set(u.user_id, p.key, next === def ? "default" : next ? "yes" : "no");
+                            }}
+                            className={`relative inline-flex size-6 items-center justify-center rounded border-2 transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                              on
+                                ? "border-success bg-success text-success-foreground"
+                                : "border-input bg-background hover:border-success"
+                            }`}
                           >
-                            <option value="default">Padrão</option>
-                            <option value="yes">Permitir</option>
-                            <option value="no">Bloquear</option>
-                          </select>
+                            {on && <Check className="size-4" strokeWidth={3} />}
+                            {custom && (
+                              <span className="absolute -right-1 -top-1 size-2 rounded-full bg-primary" />
+                            )}
+                          </button>
                         </td>
                       );
                     })}
