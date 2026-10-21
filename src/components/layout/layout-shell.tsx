@@ -497,7 +497,7 @@ export function LayoutShell({
               ))}
             </BreadcrumbList>
           </Breadcrumb>
-          <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
+          <div className="flex min-w-0 flex-1 items-center justify-end gap-1 whitespace-nowrap">
             {me?.role && me.role !== "oficina" && (
               <Button
                 variant="ghost"
@@ -574,7 +574,7 @@ export function LayoutShell({
                       {initials || "U"}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="hidden text-left sm:block">
+                  <span className="hidden text-left 2xl:block">
                     <span className="block max-w-36 truncate text-xs font-semibold leading-tight">
                       {name}
                     </span>
