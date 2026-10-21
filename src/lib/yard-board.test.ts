@@ -59,3 +59,15 @@ describe("tela principal da oficina", () => {
     expect(cfg.columns.ready.label).toBe("Prontos / aguardando retirada");
   });
 });
+
+import { workType } from "./yard-board";
+describe("workType", () => {
+  it("classifica serviços", () => {
+    expect(workType("Avaria na lateral dianteira")).toBe("Funilaria");
+    expect(workType("Pintura do capô")).toBe("Pintura");
+    expect(workType("pneu estourado")).toBe("Pneus");
+    expect(workType("Revisão de 40.000 km")).toBe("Revisão");
+    expect(workType("Bateria descarregada")).toBe("Elétrica");
+    expect(workType("vazamento de óleo")).toBe("Manutenção");
+  });
+});

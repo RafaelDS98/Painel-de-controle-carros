@@ -103,3 +103,28 @@ export function inPeriod(
   const range = preset === "custom" ? custom : periodRange(preset, saoPauloDate(now));
   return (!range.start || day >= range.start) && (!range.end || day <= range.end);
 }
+
+export const WORK_TYPES = [
+  "Funilaria",
+  "Pintura",
+  "Pneus",
+  "Elétrica",
+  "Revisão",
+  "Manutenção",
+] as const;
+export type WorkType = (typeof WORK_TYPES)[number];
+
+/** Tipo de serviço deduzido do texto do problema/serviço (sem acento, sem caixa). */
+export function workType(text: unknown): WorkType {
+  const t = String(text ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase();
+  if (/(FUNILAR|AMASSAD|AVARIA|LATARIA|PARA-?CHOQUE|COLIS|BATID|LATERAL)/.test(t)) return "Funilaria";
+  if (/(PINTUR|RISCO|ARRANH|POLIMENT|VERNIZ)/.test(t)) return "Pintura";
+  if (/(PNEU|ALINH|BALANCE|RODA)/.test(t)) return "Pneus";
+  if (/(ELETRIC|BATERIA|INJECAO|LAMPADA|FAROL|ALTERNADOR|PAINEL|MOTOR DE PARTIDA)/.test(t))
+    return "Elétrica";
+  if (/(REVIS|\d+\.?\d* ?KM|TROCA DE OLEO|PREVENTIV)/.test(t)) return "Revisão";
+  return "Manutenção";
+}
