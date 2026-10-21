@@ -65,7 +65,7 @@ function Featured({ posts, onOpen }: { posts: NewsPost[]; onOpen: (p: NewsPost) 
     return <p className="text-sm text-muted-foreground">Nenhuma notícia marcada como destaque.</p>;
   const [main, ...side] = list;
   return (
-    <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+    <div className={cn("grid gap-4", side.length > 0 && "lg:grid-cols-[2fr_1fr]")}>
       {main && (
         <button
           type="button"
