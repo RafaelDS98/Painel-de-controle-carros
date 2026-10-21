@@ -171,6 +171,24 @@ function useCrumbs(): { label: string; to?: string }[] {
   }, [pathname]);
 }
 
+/** Mostra o nome da opção ao passar o mouse (ou focar pelo teclado). */
+function NameTip({
+  label,
+  side = "right",
+  children,
+}: {
+  label: string;
+  side?: "right" | "bottom";
+  children: ReactNode;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent side={side}>{label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 function CollapsedSubmenu({
   item,
   active,
