@@ -40,3 +40,4 @@
 - Tema global: hook `use-theme.ts` (`.dark` no `<html>`, localStorage "theme", anti-flash em `__root.tsx`); gráficos leem `--chart-*` via `useChartColors`. Dashboard em `/dashboard`; Agenda é a home `/`.
 - `src/integrations` é gerado pela plataforma e fica fora do eslint; o resto segue `prettier`, de modo que `bun run lint` termine sem erros — formate antes de commitar.
 - Per-user permissions (tabs and actions) live in user_permissions, resolved by has_permission() with role defaults in permission_default(); master-only screen /usuarios/permissoes — lets the master grant exceptions without code changes.
+- Portal de notícias: news_posts + home_layout (ordem dos painéis compartilhada) com mídia no bucket privado "noticias" via links temporários; toda aba/ação nova entra em PERMISSIONS (src/lib/permissions.ts), permission_default() e get_my_permissions() juntas — o master libera sem código.
