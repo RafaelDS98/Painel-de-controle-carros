@@ -120,7 +120,8 @@ export function workType(text: unknown): WorkType {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toUpperCase();
-  if (/(FUNILAR|AMASSAD|AVARIA|LATARIA|PARA-?CHOQUE|COLIS|BATID|LATERAL)/.test(t)) return "Funilaria";
+  if (/(FUNILAR|AMASSAD|AVARIA|LATARIA|PARA-?CHOQUE|COLIS|BATID|LATERAL)/.test(t))
+    return "Funilaria";
   if (/(PINTUR|RISCO|ARRANH|POLIMENT|VERNIZ)/.test(t)) return "Pintura";
   if (/(PNEU|ALINH|BALANCE|RODA)/.test(t)) return "Pneus";
   if (/(ELETRIC|BATERIA|INJECAO|LAMPADA|FAROL|ALTERNADOR|PAINEL|MOTOR DE PARTIDA)/.test(t))

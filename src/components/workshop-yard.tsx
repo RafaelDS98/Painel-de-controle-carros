@@ -369,7 +369,18 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
 
   const filteredPatio = useMemo(
     () => applyFilters(patio),
-    [patio, search, statusFilter, workshopFilter, brandFilter, serviceFilter, now, sort, period, custom],
+    [
+      patio,
+      search,
+      statusFilter,
+      workshopFilter,
+      brandFilter,
+      serviceFilter,
+      now,
+      sort,
+      period,
+      custom,
+    ],
   );
   const filteredExternal = useMemo(() => {
     const result = new Map<string, YardAppointment[]>();
