@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -62,6 +62,8 @@ import { useTheme } from "@/hooks/use-theme";
 import { cn } from "@/lib/utils";
 import { useMyPermissions } from "@/lib/permissions";
 import { QuickCheckInButton } from "@/components/quick-check-in";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { canSeeNavigation, consultasSearch, isNavigationChildActive } from "./sidebar-navigation";
 import phoenixAsset from "@/assets/logo-anpexc-marca.png.asset.json";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -79,7 +81,14 @@ type NavItem = {
   hideFor?: string[];
   onlyFor?: string[];
   perm?: string;
-  children?: { label: string; search?: Record<string, string>; to?: string; hideFor?: string[] }[];
+  anyPerm?: string[];
+  children?: {
+    label: string;
+    search?: Record<string, string>;
+    to?: string;
+    perm?: string;
+    anyPerm?: string[];
+  }[];
 };
 
 const NAV: NavItem[] = [
@@ -90,12 +99,16 @@ const NAV: NavItem[] = [
     label: "Agenda de Manutenção",
     icon: CalendarClock,
     exact: true,
+    anyPerm: ["module.agenda", "module.oficina", "module.veiculos", "module.os"],
     children: [
-      { label: "Agenda", search: { tab: "agenda" }, hideFor: ["oficina"] },
-      { label: "Oficina / Pátio", search: { tab: "oficina" } },
-      { label: "Consultas · Veículos", search: { tab: "consultas" } },
-      { label: "Consultas · O.S.", search: { tab: "consultas-os" } },
-      { label: "Ordens de Serviço", to: "/ordens-servico" },
+      { label: "Agenda", search: { tab: "agenda" }, perm: "module.agenda" },
+      { label: "Oficina / Pátio", search: { tab: "oficina" }, perm: "module.oficina" },
+      {
+        label: "Consultas",
+        search: { tab: "consultas" },
+        anyPerm: ["module.veiculos", "module.os"],
+      },
+      { label: "Ordens de Serviço", to: "/ordens-servico", perm: "module.os" },
     ],
   },
   {
@@ -105,18 +118,19 @@ const NAV: NavItem[] = [
     onlyFor: ["master"],
   },
   { to: "/noticias", label: "Notícias", icon: Newspaper, perm: "module.noticias" },
-  { to: "/ordens-servico", label: "Ordens de Serviço", icon: ClipboardList },
+  { to: "/ordens-servico", label: "Ordens de Serviço", icon: ClipboardList, perm: "module.os" },
   {
     to: "/historicos",
     label: "Históricos",
     icon: History,
     hideFor: ["oficina"],
+    perm: "module.historicos",
     children: [
       { label: "Alterações", search: { aba: "geral" } },
       { label: "Check-ins", search: { aba: "checkins" } },
     ],
   },
-  { to: "/veiculos", label: "Veículos", icon: Truck },
+  { to: "/veiculos", label: "Veículos", icon: Truck, perm: "module.veiculos" },
 ];
 
 /** Módulos futuros — visíveis desabilitados até existirem. */
@@ -156,6 +170,72 @@ function useCrumbs(): { label: string; to?: string }[] {
   }, [pathname]);
 }
 
+function CollapsedSubmenu({
+  item,
+  active,
+  children,
+}: {
+  item: NavItem;
+  active: boolean;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function cancelClose() {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+  }
+  function scheduleClose() {
+    cancelClose();
+    timer.current = setTimeout(() => setOpen(false), 180);
+  }
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    [],
+  );
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="ghost"
+          aria-label={item.label}
+          className={cn(
+            "h-10 w-full px-0",
+            active && "bg-sidebar-accent text-sidebar-accent-foreground",
+          )}
+          onPointerEnter={(event) => {
+            if (event.pointerType === "mouse") {
+              cancelClose();
+              setOpen(true);
+            }
+          }}
+          onPointerLeave={scheduleClose}
+        >
+          <item.icon className={cn("size-4", active && "text-primary")} />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        side="right"
+        align="start"
+        sideOffset={8}
+        aria-label={`Subtelas de ${item.label}`}
+        className="w-60 max-h-[80vh] overflow-y-auto p-2"
+        onPointerEnter={cancelClose}
+        onPointerLeave={scheduleClose}
+        onOpenAutoFocus={(event) => event.preventDefault()}
+        onClick={(event) => {
+          if ((event.target as HTMLElement).closest("a")) setOpen(false);
+        }}
+      >
+        <p className="px-2 py-2 text-xs font-semibold text-muted-foreground">{item.label}</p>
+        {children}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function SidebarContent({
   collapsed,
   role,
@@ -173,9 +253,10 @@ function SidebarContent({
   });
   const [expanded, setExpanded] = useState<string | null>(null);
   const perms = useMyPermissions();
+  const permissions = perms.data ?? new Set<string>();
   const items = NAV.filter(
     (item) =>
-      (!item.perm || (perms.data?.has(item.perm) ?? false)) &&
+      canSeeNavigation(permissions, item.perm, item.anyPerm) &&
       !item.hideFor?.includes(role ?? "") &&
       (!item.onlyFor || item.onlyFor.includes(role ?? "")),
   );
@@ -206,63 +287,75 @@ function SidebarContent({
       <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-3" aria-label="Navegação principal">
         {items.map((item) => {
           const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
-          const kids = (item.children ?? []).filter((c) => !c.hideFor?.includes(role ?? ""));
+          const kids = (item.children ?? []).filter((c) =>
+            canSeeNavigation(permissions, c.perm, c.anyPerm),
+          );
           const open = !collapsed && kids.length > 0 && (active || expanded === item.label);
-          return (
-            <div key={item.label}>
+          const childLinks = kids.map((c, index) => {
+            const target = c.to ?? item.to;
+            const childSearch = c.label === "Consultas" ? consultasSearch(permissions) : c.search;
+            const kidActive = isNavigationChildActive(
+              pathname,
+              target,
+              search,
+              childSearch,
+              index === 0,
+            );
+            return (
               <Link
-                to={item.to}
-                onClick={() => {
-                  setExpanded(item.label);
-                  onNavigate();
-                }}
-                title={item.label}
-                aria-current={active ? "page" : undefined}
-                aria-expanded={kids.length ? open : undefined}
+                key={c.label}
+                to={target}
+                search={childSearch as never}
+                onClick={onNavigate}
+                aria-current={kidActive ? "page" : undefined}
                 className={cn(
-                  "flex min-h-10 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors",
-                  collapsed && "justify-center px-0",
-                  active
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground/75 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
+                  "flex min-h-9 items-center rounded-md px-2 text-[13px] transition-colors",
+                  kidActive
+                    ? "bg-accent font-semibold text-accent-foreground"
+                    : "text-foreground hover:bg-accent",
                 )}
               >
-                <item.icon className={cn("size-4 shrink-0", active && "text-primary")} />
-                {!collapsed && <span className="flex-1 truncate">{item.label}</span>}
-                {!collapsed && kids.length > 0 && (
-                  <ChevronDown
-                    className={cn("size-3.5 shrink-0 transition-transform", !open && "-rotate-90")}
-                  />
-                )}
+                {c.label}
               </Link>
-              {open && (
-                <div className="ml-5 mt-1 space-y-0.5 border-l pl-3">
-                  {kids.map((c) => {
-                    const target = c.to ?? item.to;
-                    const kidActive =
-                      pathname === target &&
-                      (!c.search ||
-                        Object.entries(c.search).every(([k, v]) => search[k] === v) ||
-                        (c === kids[0] && !Object.keys(c.search).some((k) => search[k])));
-                    return (
-                      <Link
-                        key={c.label}
-                        to={target}
-                        search={c.search as never}
-                        onClick={onNavigate}
-                        className={cn(
-                          "flex min-h-8 items-center rounded-md px-2 text-[13px] transition-colors",
-                          kidActive
-                            ? "font-semibold text-primary"
-                            : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
-                        )}
-                      >
-                        {c.label}
-                      </Link>
-                    );
-                  })}
-                </div>
+            );
+          });
+          return (
+            <div key={item.label}>
+              {collapsed && kids.length > 0 ? (
+                <CollapsedSubmenu item={item} active={active}>
+                  {childLinks}
+                </CollapsedSubmenu>
+              ) : (
+                <Link
+                  to={item.to}
+                  onClick={() => {
+                    setExpanded(item.label);
+                    onNavigate();
+                  }}
+                  title={item.label}
+                  aria-current={active ? "page" : undefined}
+                  aria-expanded={kids.length ? open : undefined}
+                  className={cn(
+                    "flex min-h-10 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors",
+                    collapsed && "justify-center px-0",
+                    active
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                      : "text-sidebar-foreground/75 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
+                  )}
+                >
+                  <item.icon className={cn("size-4 shrink-0", active && "text-primary")} />
+                  {!collapsed && <span className="flex-1 truncate">{item.label}</span>}
+                  {!collapsed && kids.length > 0 && (
+                    <ChevronDown
+                      className={cn(
+                        "size-3.5 shrink-0 transition-transform",
+                        !open && "-rotate-90",
+                      )}
+                    />
+                  )}
+                </Link>
               )}
+              {open && <div className="ml-5 mt-1 space-y-0.5 border-l pl-3">{childLinks}</div>}
             </div>
           );
         })}

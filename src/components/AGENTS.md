@@ -8,3 +8,4 @@
 - Componente de UI define a própria cor de texto pareada ao seu fundo (a variante `outline` do shadcn inclui `text-foreground`) — herdar cor de um contêiner colorido deixa o texto invisível em um dos temas.
 - Placa de entrada/saída avulsa só vem do cadastro de veículos: `PlateCombobox` + `QuickCheckInButton` na tela e trigger `validate_checkin_plate` no banco (avulso sem placa cadastrada é recusado) — evita veículos fantasmas.
 - Pátio próprio pode ser vários locais (`workshops.is_own_yard`); alterações em lote só por `set_own_yards` e `set_group_members_bulk` (Master conferido no banco); Configurações do Pátio ficam em abas (Locais, Grupos, Check-in, Avisos, Oficina e status), cada uma com seu Salvar.
+- Sidebar expanded links and collapsed popovers share the same permission-filtered children; Consultas is one item active for both internal tabs — prevents divergent navigation and forbidden shortcuts.
