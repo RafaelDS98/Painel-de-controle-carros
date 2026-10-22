@@ -9,7 +9,11 @@ export function isVistoriaSessionExpired(loginAt: number | null, now: number): b
 
 /** Quem tem algum outro módulo vê o botão "Voltar ao painel ANPEXC". */
 export function hasPanelAccess(perms: ReadonlySet<string>): boolean {
-  return ["module.agenda", "module.oficina", "module.os", "module.veiculos", "module.historicos"].some(
-    (p) => perms.has(p),
-  );
+  return [
+    "module.agenda",
+    "module.oficina",
+    "module.os",
+    "module.veiculos",
+    "module.historicos",
+  ].some((p) => perms.has(p));
 }

@@ -29,7 +29,11 @@ export function useChecklistConfig() {
     queryKey: ["inspection-config"],
     queryFn: async (): Promise<VGroup[]> => {
       const [g, f] = await Promise.all([
-        supabase.from("inspection_groups").select("id,name,tab,sort").eq("active", true).order("sort"),
+        supabase
+          .from("inspection_groups")
+          .select("id,name,tab,sort")
+          .eq("active", true)
+          .order("sort"),
         supabase
           .from("inspection_fields")
           .select("id,group_id,label,kind,required,sort")
@@ -44,7 +48,12 @@ export function useChecklistConfig() {
         tab: x.tab as VGroup["tab"],
         fields: f.data
           .filter((y) => y.group_id === x.id)
-          .map((y) => ({ id: y.id, label: y.label, kind: y.kind as FieldKind, required: y.required })),
+          .map((y) => ({
+            id: y.id,
+            label: y.label,
+            kind: y.kind as FieldKind,
+            required: y.required,
+          })),
       }));
     },
   });

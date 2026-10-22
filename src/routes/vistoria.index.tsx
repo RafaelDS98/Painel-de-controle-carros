@@ -62,9 +62,18 @@ function VistoriaHome() {
     },
   });
   function start(op?: string) {
-    if (draft && !confirm("Existe um rascunho neste aparelho. Começar uma nova vistoria descarta o rascunho. Continuar?")) return;
+    if (
+      draft &&
+      !confirm(
+        "Existe um rascunho neste aparelho. Começar uma nova vistoria descarta o rascunho. Continuar?",
+      )
+    )
+      return;
     localStorage.removeItem(DRAFT_KEY);
-    void navigate({ to: "/vistoria/nova", search: { placa: plate ?? undefined, op, rascunho: undefined } });
+    void navigate({
+      to: "/vistoria/nova",
+      search: { placa: plate ?? undefined, op, rascunho: undefined },
+    });
   }
   async function addToHome() {
     if (install) {
@@ -72,7 +81,9 @@ function VistoriaHome() {
       setInstall(null);
       return;
     }
-    toast.info("Abra o menu do navegador e toque em “Adicionar à tela inicial”.", { duration: 6000 });
+    toast.info("Abra o menu do navegador e toque em “Adicionar à tela inicial”.", {
+      duration: 6000,
+    });
   }
   return (
     <div className="mx-auto w-full max-w-xl space-y-5 p-4 sm:p-6">
@@ -89,7 +100,12 @@ function VistoriaHome() {
         </Button>
         <div className="grid grid-cols-2 gap-2">
           {ops.data?.slice(0, 4).map((o) => (
-            <Button key={o.id} variant="outline" className="h-12 whitespace-normal" onClick={() => start(o.name)}>
+            <Button
+              key={o.id}
+              variant="outline"
+              className="h-12 whitespace-normal"
+              onClick={() => start(o.name)}
+            >
               {o.name}
             </Button>
           ))}
@@ -103,7 +119,12 @@ function VistoriaHome() {
           <Button asChild variant="secondary" className="mt-2 h-12 w-full justify-start">
             <Link to="/vistoria/nova" search={{ placa: undefined, op: undefined, rascunho: 1 }}>
               {draft.plate ?? "Sem placa"} · salvo{" "}
-              {draft.savedAt ? new Date(draft.savedAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : ""}
+              {draft.savedAt
+                ? new Date(draft.savedAt).toLocaleString("pt-BR", {
+                    dateStyle: "short",
+                    timeStyle: "short",
+                  })
+                : ""}
               {typeof navigator !== "undefined" && !navigator.onLine && " · pendente de envio"}
             </Link>
           </Button>
@@ -119,10 +140,18 @@ function VistoriaHome() {
           <ul className="mt-2 divide-y text-sm">
             {today.data.map((i) => (
               <li key={i.id}>
-                <Link to="/vistoria/$id" params={{ id: i.id }} className="flex items-center gap-2 py-2">
-                  <span className="rounded border bg-white px-1.5 font-mono font-bold text-black">{i.plate}</span>
+                <Link
+                  to="/vistoria/$id"
+                  params={{ id: i.id }}
+                  className="flex items-center gap-2 py-2"
+                >
+                  <span className="rounded border bg-white px-1.5 font-mono font-bold text-black">
+                    {i.plate}
+                  </span>
                   <span className="flex-1 truncate">{i.operation_name}</span>
-                  <span className={i.damage_count ? "text-destructive" : "text-success"}>{i.damage_count} av.</span>
+                  <span className={i.damage_count ? "text-destructive" : "text-success"}>
+                    {i.damage_count} av.
+                  </span>
                 </Link>
               </li>
             ))}

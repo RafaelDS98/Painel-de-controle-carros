@@ -10,10 +10,10 @@ export interface InspectionField {
 }
 
 export interface AnswerDraft {
-  status?: CheckStatus;
-  value?: string;
-  photo?: string; // dataURL comprimida enquanto não enviada
-  note?: string;
+  status?: CheckStatus | undefined;
+  value?: string | undefined;
+  photo?: string | undefined; // dataURL comprimida enquanto não enviada
+  note?: string | undefined;
 }
 
 export const STATUS_LABEL: Record<CheckStatus, string> = {
@@ -40,13 +40,14 @@ export function missingRequired(
 
 /** Avaria = item marcado Ruim ou Atenção. */
 export function countDamages(answers: Record<string, AnswerDraft>): number {
-  return Object.values(answers).filter((a) => a.status === "ruim" || a.status === "atencao")
-    .length;
+  return Object.values(answers).filter((a) => a.status === "ruim" || a.status === "atencao").length;
 }
 
 export function progress(fields: InspectionField[], answers: Record<string, AnswerDraft>): number {
   if (!fields.length) return 0;
-  return Math.round((fields.filter((f) => isAnswered(f, answers[f.id])).length / fields.length) * 100);
+  return Math.round(
+    (fields.filter((f) => isAnswered(f, answers[f.id])).length / fields.length) * 100,
+  );
 }
 
 /** Itens com estado diferente entre duas vistorias (por rótulo), para achar avaria nova. */

@@ -38,7 +38,10 @@ export const Route = createFileRoute("/vistoria/nova")({
       { title: "Nova vistoria | ANPEXC Vistorias" },
       { name: "description", content: "Checklist, fotos e assinaturas da vistoria do veículo." },
       { property: "og:title", content: "Nova vistoria | ANPEXC Vistorias" },
-      { property: "og:description", content: "Checklist, fotos e assinaturas da vistoria do veículo." },
+      {
+        property: "og:description",
+        content: "Checklist, fotos e assinaturas da vistoria do veículo.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -104,6 +107,7 @@ function NovaVistoria() {
       const o = ops.data.find((x) => x.name === search.op);
       if (o) setD((p) => ({ ...p, opId: o.id }));
     }
+    return undefined;
   }, [ops.data, search.op, d.opId]);
   useEffect(() => {
     const t = setTimeout(() => {
@@ -127,13 +131,25 @@ function NovaVistoria() {
     if (!d.opId) return (setTab("campos"), toast.error("Escolha o tipo de operação."));
     const miss = missingRequired(allFields, d.answers);
     if (miss.length)
-      return toast.error(`Faltam ${miss.length} obrigatório(s): ${miss.slice(0, 3).map((f) => f.label).join(", ")}…`);
+      return toast.error(
+        `Faltam ${miss.length} obrigatório(s): ${miss
+          .slice(0, 3)
+          .map((f) => f.label)
+          .join(", ")}…`,
+      );
     if (!d.sigInspector) return toast.error("Falta a assinatura do vistoriador.");
     if (!navigator.onLine)
-      return toast.warning("Sem internet: a vistoria ficou guardada como rascunho, pendente de envio. Conclua quando a conexão voltar.", { duration: 7000 });
+      return toast.warning(
+        "Sem internet: a vistoria ficou guardada como rascunho, pendente de envio. Conclua quando a conexão voltar.",
+        { duration: 7000 },
+      );
     setSaving(true);
     try {
-      const { data: veh } = await supabase.from("vehicles").select("id").eq("plate", d.plate).maybeSingle();
+      const { data: veh } = await supabase
+        .from("vehicles")
+        .select("id")
+        .eq("plate", d.plate)
+        .maybeSingle();
       const op = ops.data?.find((o) => o.id === d.opId);
       const { data: ins, error } = await supabase
         .from("inspections")
@@ -154,12 +170,17 @@ function NovaVistoria() {
       if (error) throw error;
       const base = `${ins.id}`;
       const sigI = await uploadDataUrl(`${base}/assinatura-vistoriador.png`, d.sigInspector);
-      const sigD = d.sigDriver ? await uploadDataUrl(`${base}/assinatura-motorista.png`, d.sigDriver) : null;
+      const sigD = d.sigDriver
+        ? await uploadDataUrl(`${base}/assinatura-motorista.png`, d.sigDriver)
+        : null;
       await supabase
         .from("inspections")
         .update({ inspector_signature: sigI, driver_signature: sigD } as never)
         .eq("id", ins.id)
-        .then(() => undefined, () => undefined);
+        .then(
+          () => undefined,
+          () => undefined,
+        );
       const rows = [];
       for (const g of groups)
         for (const f of g.fields) {
@@ -203,7 +224,9 @@ function NovaVistoria() {
     <div className="mx-auto w-full max-w-2xl pb-28">
       <div className="sticky top-16 z-[5] space-y-2 border-b bg-background/95 p-3 backdrop-blur">
         <div className="flex items-center gap-2 text-sm">
-          <span className="rounded border bg-white px-2 py-0.5 font-mono font-bold text-black">{d.plate ?? "SEM PLACA"}</span>
+          <span className="rounded border bg-white px-2 py-0.5 font-mono font-bold text-black">
+            {d.plate ?? "SEM PLACA"}
+          </span>
           <span className="truncate text-muted-foreground">
             {ops.data?.find((o) => o.id === d.opId)?.name ?? "Tipo de operação"}
           </span>
@@ -242,7 +265,9 @@ function NovaVistoria() {
                     onClick={() => setD((p) => ({ ...p, opId: o.id }))}
                     className={cn(
                       "min-h-11 rounded-md border px-2 text-sm",
-                      d.opId === o.id ? "border-primary bg-primary text-primary-foreground" : "bg-card",
+                      d.opId === o.id
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "bg-card",
                     )}
                   >
                     {o.name}
@@ -251,79 +276,154 @@ function NovaVistoria() {
               </div>
             </Section>
             <Section title="Dados">
-              <Input className="h-12" inputMode="numeric" placeholder="KM" value={d.km} onChange={(e) => setD((p) => ({ ...p, km: e.target.value }))} />
+              <Input
+                className="h-12"
+                inputMode="numeric"
+                placeholder="KM"
+                value={d.km}
+                onChange={(e) => setD((p) => ({ ...p, km: e.target.value }))}
+              />
               <div className="grid grid-cols-5 gap-1">
                 {FUEL.map((f) => (
-                  <button key={f} onClick={() => setD((p) => ({ ...p, fuel: f }))} className={cn("h-11 rounded-md border text-xs", d.fuel === f ? "border-primary bg-primary text-primary-foreground" : "bg-card")}>
+                  <button
+                    key={f}
+                    onClick={() => setD((p) => ({ ...p, fuel: f }))}
+                    className={cn(
+                      "h-11 rounded-md border text-xs",
+                      d.fuel === f
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "bg-card",
+                    )}
+                  >
                     {f}
                   </button>
                 ))}
               </div>
-              <Input className="h-12" placeholder="Motorista" value={d.driver} onChange={(e) => setD((p) => ({ ...p, driver: e.target.value }))} />
-              <Input className="h-12" placeholder="Cliente" value={d.client} onChange={(e) => setD((p) => ({ ...p, client: e.target.value }))} />
-              <Textarea placeholder="Observações" value={d.notes} onChange={(e) => setD((p) => ({ ...p, notes: e.target.value }))} />
+              <Input
+                className="h-12"
+                placeholder="Motorista"
+                value={d.driver}
+                onChange={(e) => setD((p) => ({ ...p, driver: e.target.value }))}
+              />
+              <Input
+                className="h-12"
+                placeholder="Cliente"
+                value={d.client}
+                onChange={(e) => setD((p) => ({ ...p, client: e.target.value }))}
+              />
+              <Textarea
+                placeholder="Observações"
+                value={d.notes}
+                onChange={(e) => setD((p) => ({ ...p, notes: e.target.value }))}
+              />
             </Section>
-            {groups.filter((g) => g.tab === "campos").map((g) => (
-              <Section key={g.id} title={g.name}>
-                {g.fields.map((f) => (
-                  <div key={f.id} className="space-y-1">
-                    <FieldLabel label={f.label} required={f.required} />
-                    <Input className="h-12" inputMode={f.kind === "number" ? "numeric" : undefined} value={d.answers[f.id]?.value ?? ""} onChange={(e) => setAns(f.id, { value: e.target.value })} />
-                  </div>
-                ))}
-              </Section>
-            ))}
-            <Button className="h-12 w-full" onClick={() => setTab("checklist")}>Próximo: Checklist</Button>
+            {groups
+              .filter((g) => g.tab === "campos")
+              .map((g) => (
+                <Section key={g.id} title={g.name}>
+                  {g.fields.map((f) => (
+                    <div key={f.id} className="space-y-1">
+                      <FieldLabel label={f.label} required={f.required} />
+                      <Input
+                        className="h-12"
+                        inputMode={f.kind === "number" ? "numeric" : undefined}
+                        value={d.answers[f.id]?.value ?? ""}
+                        onChange={(e) => setAns(f.id, { value: e.target.value })}
+                      />
+                    </div>
+                  ))}
+                </Section>
+              ))}
+            <Button className="h-12 w-full" onClick={() => setTab("checklist")}>
+              Próximo: Checklist
+            </Button>
           </>
         )}
 
         {tab === "checklist" &&
-          groups.filter((g) => g.tab === "checklist").map((g) => (
-            <Section key={g.id} title={g.name}>
-              {g.fields.map((f) => {
-                const a = d.answers[f.id];
-                const bad = a?.status === "ruim" || a?.status === "atencao";
-                return (
-                  <div key={f.id} className="space-y-2 rounded-lg border p-3">
-                    <FieldLabel label={f.label} required={f.required} />
-                    {f.kind === "check" ? (
-                      <div className="grid grid-cols-4 gap-1">
-                        {(Object.keys(STATUS_LABEL) as CheckStatus[]).map((s) => (
-                          <button key={s} onClick={() => setAns(f.id, { status: s })} className={cn("h-12 rounded-md border text-sm font-semibold", a?.status === s ? STATUS_STYLE[s] : "bg-card")}>
-                            {STATUS_LABEL[s]}
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <Input className="h-12" value={a?.value ?? ""} onChange={(e) => setAns(f.id, { value: e.target.value })} />
-                    )}
-                    {bad && (
-                      <div className="space-y-2">
-                        <Input placeholder="Descreva a avaria" value={a?.note ?? ""} onChange={(e) => setAns(f.id, { note: e.target.value })} />
-                        <PhotoInput value={a?.photo} onChange={(photo) => setAns(f.id, { photo })} label="Foto da avaria" />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </Section>
-          ))}
+          groups
+            .filter((g) => g.tab === "checklist")
+            .map((g) => (
+              <Section key={g.id} title={g.name}>
+                {g.fields.map((f) => {
+                  const a = d.answers[f.id];
+                  const bad = a?.status === "ruim" || a?.status === "atencao";
+                  return (
+                    <div key={f.id} className="space-y-2 rounded-lg border p-3">
+                      <FieldLabel label={f.label} required={f.required} />
+                      {f.kind === "check" ? (
+                        <div className="grid grid-cols-4 gap-1">
+                          {(Object.keys(STATUS_LABEL) as CheckStatus[]).map((s) => (
+                            <button
+                              key={s}
+                              onClick={() => setAns(f.id, { status: s })}
+                              className={cn(
+                                "h-12 rounded-md border text-sm font-semibold",
+                                a?.status === s ? STATUS_STYLE[s] : "bg-card",
+                              )}
+                            >
+                              {STATUS_LABEL[s]}
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <Input
+                          className="h-12"
+                          value={a?.value ?? ""}
+                          onChange={(e) => setAns(f.id, { value: e.target.value })}
+                        />
+                      )}
+                      {bad && (
+                        <div className="space-y-2">
+                          <Input
+                            placeholder="Descreva a avaria"
+                            value={a?.note ?? ""}
+                            onChange={(e) => setAns(f.id, { note: e.target.value })}
+                          />
+                          <PhotoInput
+                            value={a?.photo}
+                            onChange={(photo) => setAns(f.id, { photo })}
+                            label="Foto da avaria"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </Section>
+            ))}
 
         {tab === "fotos" &&
-          groups.filter((g) => g.tab === "fotos").map((g) => (
-            <Section key={g.id} title={g.name}>
-              <div className="grid grid-cols-2 gap-2">
-                {g.fields.map((f) => (
-                  <PhotoInput key={f.id} label={f.label} required={f.required} value={d.answers[f.id]?.photo} onChange={(photo) => setAns(f.id, { photo })} />
-                ))}
-              </div>
-            </Section>
-          ))}
+          groups
+            .filter((g) => g.tab === "fotos")
+            .map((g) => (
+              <Section key={g.id} title={g.name}>
+                <div className="grid grid-cols-2 gap-2">
+                  {g.fields.map((f) => (
+                    <PhotoInput
+                      key={f.id}
+                      label={f.label}
+                      required={f.required}
+                      value={d.answers[f.id]?.photo}
+                      onChange={(photo) => setAns(f.id, { photo })}
+                    />
+                  ))}
+                </div>
+              </Section>
+            ))}
 
         {tab === "assinar" && (
           <Section title="Assinaturas e conclusão">
-            <SignaturePad label="Vistoriador *" value={d.sigInspector} onChange={(v) => setD((p) => ({ ...p, sigInspector: v }))} />
-            <SignaturePad label="Motorista / cliente" value={d.sigDriver} onChange={(v) => setD((p) => ({ ...p, sigDriver: v }))} />
+            <SignaturePad
+              label="Vistoriador *"
+              value={d.sigInspector}
+              onChange={(v) => setD((p) => ({ ...p, sigInspector: v }))}
+            />
+            <SignaturePad
+              label="Motorista / cliente"
+              value={d.sigDriver}
+              onChange={(v) => setD((p) => ({ ...p, sigDriver: v }))}
+            />
             <p className="text-sm text-muted-foreground">
               Avarias marcadas: <b>{countDamages(d.answers)}</b> · Progresso {pct}%
             </p>
@@ -354,12 +454,26 @@ function FieldLabel({ label, required }: { label: string; required: boolean }) {
   return (
     <div className="flex items-center gap-2 text-sm font-medium">
       {label}
-      {required && <Badge variant="outline" className="text-[10px]">Obrigatório</Badge>}
+      {required && (
+        <Badge variant="outline" className="text-[10px]">
+          Obrigatório
+        </Badge>
+      )}
     </div>
   );
 }
 
-function PhotoInput({ label, required, value, onChange }: { label: string; required?: boolean; value?: string; onChange: (v: string | undefined) => void }) {
+function PhotoInput({
+  label,
+  required,
+  value,
+  onChange,
+}: {
+  label: string;
+  required?: boolean;
+  value?: string | undefined;
+  onChange: (v: string | undefined) => void;
+}) {
   return (
     <label className="relative flex aspect-[4/3] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border-2 border-dashed bg-muted/40 text-center text-xs">
       {value ? (
@@ -371,7 +485,11 @@ function PhotoInput({ label, required, value, onChange }: { label: string; requi
           {required && <span className="text-[10px] text-destructive">Obrigatório</span>}
         </>
       )}
-      {value && <span className="absolute inset-x-0 bottom-0 bg-black/60 px-1 py-0.5 text-[11px] text-white">{label} · toque para trocar</span>}
+      {value && (
+        <span className="absolute inset-x-0 bottom-0 bg-black/60 px-1 py-0.5 text-[11px] text-white">
+          {label} · toque para trocar
+        </span>
+      )}
       <input
         type="file"
         accept="image/*"

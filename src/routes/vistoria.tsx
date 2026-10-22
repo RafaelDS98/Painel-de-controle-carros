@@ -227,7 +227,13 @@ function VistoriaShell({ name }: { name: string }) {
           <div className="ml-auto flex items-center gap-2">
             {back}
             <span className="hidden text-sm text-muted-foreground sm:inline">{name}</span>
-            <Button variant="ghost" size="icon" className="h-10 w-10" onClick={signOut} aria-label="Sair">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10"
+              onClick={signOut}
+              aria-label="Sair"
+            >
               <LogOut className="h-4 w-4" />
             </Button>
           </div>
