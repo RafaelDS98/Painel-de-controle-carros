@@ -16,7 +16,9 @@ export function inspectionStats(rows: StatRow[], now: Date) {
   const month = today.slice(0, 7);
   const inMonth = valid.filter((r) => spDay(r.created_at).startsWith(month));
   const byInspector = new Map<string, number>();
-  inMonth.forEach((r) => byInspector.set(r.inspector_id, (byInspector.get(r.inspector_id) ?? 0) + 1));
+  inMonth.forEach((r) =>
+    byInspector.set(r.inspector_id, (byInspector.get(r.inspector_id) ?? 0) + 1),
+  );
   const days: { day: string; total: number }[] = [];
   for (let i = 6; i >= 0; i--) {
     const d = spDay(new Date(now.getTime() - i * 86400_000));

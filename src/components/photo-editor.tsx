@@ -79,7 +79,10 @@ export function PhotoEditor({
   function pos(e: React.PointerEvent<HTMLCanvasElement>): [number, number] {
     const r = e.currentTarget.getBoundingClientRect();
     const c = e.currentTarget;
-    return [((e.clientX - r.left) / r.width) * c.width, ((e.clientY - r.top) / r.height) * c.height];
+    return [
+      ((e.clientX - r.left) / r.width) * c.width,
+      ((e.clientY - r.top) / r.height) * c.height,
+    ];
   }
 
   return (
@@ -94,7 +97,12 @@ export function PhotoEditor({
           )}
           {editing && (
             <>
-              <Button size="sm" variant="secondary" onClick={() => setOps((o) => o.slice(0, -1))} disabled={!ops.length}>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => setOps((o) => o.slice(0, -1))}
+                disabled={!ops.length}
+              >
                 <Undo2 className="h-4 w-4" /> Desfazer
               </Button>
               <Button
@@ -117,12 +125,26 @@ export function PhotoEditor({
         <div className="flex flex-wrap items-center gap-2 rounded-md bg-card p-2 text-xs">
           <button
             onClick={() => setTool("pen")}
-            className={cn("flex h-9 items-center gap-1 rounded-md border px-2", tool === "pen" && "border-primary bg-primary text-primary-foreground")}
+            className={cn(
+              "flex h-9 items-center gap-1 rounded-md border px-2",
+              tool === "pen" && "border-primary bg-primary text-primary-foreground",
+            )}
           >
             <Pencil className="h-3.5 w-3.5" /> Traço
           </button>
-          <input type="color" aria-label="Cor do traço" value={color} onChange={(e) => (setColor(e.target.value), setTool("pen"))} className="h-9 w-10 cursor-pointer rounded border bg-transparent" />
-          <select aria-label="Espessura" value={width} onChange={(e) => setWidth(Number(e.target.value))} className="h-9 rounded-md border bg-background px-1">
+          <input
+            type="color"
+            aria-label="Cor do traço"
+            value={color}
+            onChange={(e) => (setColor(e.target.value), setTool("pen"))}
+            className="h-9 w-10 cursor-pointer rounded border bg-transparent"
+          />
+          <select
+            aria-label="Espessura"
+            value={width}
+            onChange={(e) => setWidth(Number(e.target.value))}
+            className="h-9 rounded-md border bg-background px-1"
+          >
             <option value={2}>Fino</option>
             <option value={3}>Médio</option>
             <option value={5}>Grosso</option>
@@ -132,9 +154,15 @@ export function PhotoEditor({
             <button
               key={l.code}
               onClick={() => setTool(l.code)}
-              className={cn("flex h-9 items-center gap-1 rounded-md border px-2", tool === l.code && "ring-2 ring-primary")}
+              className={cn(
+                "flex h-9 items-center gap-1 rounded-md border px-2",
+                tool === l.code && "ring-2 ring-primary",
+              )}
             >
-              <span className="flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold text-white" style={{ background: l.color }}>
+              <span
+                className="flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold text-white"
+                style={{ background: l.color }}
+              >
                 {l.code}
               </span>
               {l.label}
@@ -145,7 +173,10 @@ export function PhotoEditor({
       <div className="flex min-h-0 flex-1 items-center justify-center pt-2">
         <canvas
           ref={canvas}
-          className={cn("max-h-full max-w-full object-contain", editing && "touch-none cursor-crosshair")}
+          className={cn(
+            "max-h-full max-w-full object-contain",
+            editing && "touch-none cursor-crosshair",
+          )}
           onPointerDown={(e) => {
             if (!editing) return;
             const [x, y] = pos(e);
