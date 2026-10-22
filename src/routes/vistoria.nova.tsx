@@ -120,13 +120,13 @@ function NovaVistoria() {
     return () => clearTimeout(t);
   }, [d]);
 
-  const groups = config.data ?? [];
+  const groups = useMemo(() => config.data ?? [], [config.data]);
   const allFields = useMemo(() => groups.flatMap((g) => g.fields), [groups]);
   const pct = progress(allFields, d.answers);
   const setAns = (id: string, patch: AnswerDraft) =>
     setD((p) => ({ ...p, answers: { ...p.answers, [id]: { ...p.answers[id], ...patch } } }));
 
-  async function finish() {
+  async function finish(): Promise<unknown> {
     if (!d.plate) return (setTab("campos"), toast.error("Escolha a placa do veículo."));
     if (!d.opId) return (setTab("campos"), toast.error("Escolha o tipo de operação."));
     const miss = missingRequired(allFields, d.answers);
