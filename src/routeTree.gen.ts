@@ -19,6 +19,10 @@ import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/h
 import { Route as AuthenticatedNoticiasRouteImport } from './routes/_authenticated/noticias'
 import { Route as AuthenticatedVeiculosRouteImport } from './routes/_authenticated/veiculos'
 import { Route as VistoriaIndexRouteImport } from './routes/vistoria.index'
+import { Route as VistoriaIdRouteImport } from './routes/vistoria.$id'
+import { Route as VistoriaListaRouteImport } from './routes/vistoria.lista'
+import { Route as VistoriaNovaRouteImport } from './routes/vistoria.nova'
+import { Route as VistoriaPlacaRouteImport } from './routes/vistoria.placa'
 import { Route as AuthenticatedOrdensServicoIndexRouteImport } from './routes/_authenticated/ordens-servico.index'
 import { Route as AuthenticatedOrdensServicoIdRouteImport } from './routes/_authenticated/ordens-servico.$id'
 import { Route as AuthenticatedOrdensServicoNovaRouteImport } from './routes/_authenticated/ordens-servico.nova'
@@ -75,6 +79,26 @@ const VistoriaIndexRoute = VistoriaIndexRouteImport.update({
   path: '/',
   getParentRoute: () => VistoriaRoute,
 } as any)
+const VistoriaIdRoute = VistoriaIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => VistoriaRoute,
+} as any)
+const VistoriaListaRoute = VistoriaListaRouteImport.update({
+  id: '/lista',
+  path: '/lista',
+  getParentRoute: () => VistoriaRoute,
+} as any)
+const VistoriaNovaRoute = VistoriaNovaRouteImport.update({
+  id: '/nova',
+  path: '/nova',
+  getParentRoute: () => VistoriaRoute,
+} as any)
+const VistoriaPlacaRoute = VistoriaPlacaRouteImport.update({
+  id: '/placa',
+  path: '/placa',
+  getParentRoute: () => VistoriaRoute,
+} as any)
 const AuthenticatedOrdensServicoIndexRoute =
   AuthenticatedOrdensServicoIndexRouteImport.update({
     id: '/ordens-servico/',
@@ -120,6 +144,10 @@ export interface FileRoutesByFullPath {
   '/home': typeof AuthenticatedHomeRoute
   '/noticias': typeof AuthenticatedNoticiasRoute
   '/veiculos': typeof AuthenticatedVeiculosRoute
+  '/vistoria/$id': typeof VistoriaIdRoute
+  '/vistoria/lista': typeof VistoriaListaRoute
+  '/vistoria/nova': typeof VistoriaNovaRoute
+  '/vistoria/placa': typeof VistoriaPlacaRoute
   '/vistoria/': typeof VistoriaIndexRoute
   '/ordens-servico/$id': typeof AuthenticatedOrdensServicoIdRoute
   '/ordens-servico/nova': typeof AuthenticatedOrdensServicoNovaRoute
@@ -135,6 +163,10 @@ export interface FileRoutesByTo {
   '/home': typeof AuthenticatedHomeRoute
   '/noticias': typeof AuthenticatedNoticiasRoute
   '/veiculos': typeof AuthenticatedVeiculosRoute
+  '/vistoria/$id': typeof VistoriaIdRoute
+  '/vistoria/lista': typeof VistoriaListaRoute
+  '/vistoria/nova': typeof VistoriaNovaRoute
+  '/vistoria/placa': typeof VistoriaPlacaRoute
   '/': typeof AuthenticatedIndexRoute
   '/vistoria': typeof VistoriaIndexRoute
   '/ordens-servico/$id': typeof AuthenticatedOrdensServicoIdRoute
@@ -154,6 +186,10 @@ export interface FileRoutesById {
   '/_authenticated/home': typeof AuthenticatedHomeRoute
   '/_authenticated/noticias': typeof AuthenticatedNoticiasRoute
   '/_authenticated/veiculos': typeof AuthenticatedVeiculosRoute
+  '/vistoria/$id': typeof VistoriaIdRoute
+  '/vistoria/lista': typeof VistoriaListaRoute
+  '/vistoria/nova': typeof VistoriaNovaRoute
+  '/vistoria/placa': typeof VistoriaPlacaRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/vistoria/': typeof VistoriaIndexRoute
   '/_authenticated/ordens-servico/$id': typeof AuthenticatedOrdensServicoIdRoute
@@ -174,6 +210,10 @@ export interface FileRouteTypes {
     | '/home'
     | '/noticias'
     | '/veiculos'
+    | '/vistoria/$id'
+    | '/vistoria/lista'
+    | '/vistoria/nova'
+    | '/vistoria/placa'
     | '/vistoria/'
     | '/ordens-servico/$id'
     | '/ordens-servico/nova'
@@ -189,6 +229,10 @@ export interface FileRouteTypes {
     | '/home'
     | '/noticias'
     | '/veiculos'
+    | '/vistoria/$id'
+    | '/vistoria/lista'
+    | '/vistoria/nova'
+    | '/vistoria/placa'
     | '/'
     | '/vistoria'
     | '/ordens-servico/$id'
@@ -207,6 +251,10 @@ export interface FileRouteTypes {
     | '/_authenticated/home'
     | '/_authenticated/noticias'
     | '/_authenticated/veiculos'
+    | '/vistoria/$id'
+    | '/vistoria/lista'
+    | '/vistoria/nova'
+    | '/vistoria/placa'
     | '/_authenticated/'
     | '/vistoria/'
     | '/_authenticated/ordens-servico/$id'
@@ -296,6 +344,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VistoriaIndexRouteImport
       parentRoute: typeof VistoriaRoute
     }
+    '/vistoria/$id': {
+      id: '/vistoria/$id'
+      path: '/$id'
+      fullPath: '/vistoria/$id'
+      preLoaderRoute: typeof VistoriaIdRouteImport
+      parentRoute: typeof VistoriaRoute
+    }
+    '/vistoria/lista': {
+      id: '/vistoria/lista'
+      path: '/lista'
+      fullPath: '/vistoria/lista'
+      preLoaderRoute: typeof VistoriaListaRouteImport
+      parentRoute: typeof VistoriaRoute
+    }
+    '/vistoria/nova': {
+      id: '/vistoria/nova'
+      path: '/nova'
+      fullPath: '/vistoria/nova'
+      preLoaderRoute: typeof VistoriaNovaRouteImport
+      parentRoute: typeof VistoriaRoute
+    }
+    '/vistoria/placa': {
+      id: '/vistoria/placa'
+      path: '/placa'
+      fullPath: '/vistoria/placa'
+      preLoaderRoute: typeof VistoriaPlacaRouteImport
+      parentRoute: typeof VistoriaRoute
+    }
     '/_authenticated/ordens-servico/': {
       id: '/_authenticated/ordens-servico/'
       path: '/ordens-servico'
@@ -373,10 +449,18 @@ const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
 interface VistoriaRouteChildren {
+  VistoriaIdRoute: typeof VistoriaIdRoute
+  VistoriaListaRoute: typeof VistoriaListaRoute
+  VistoriaNovaRoute: typeof VistoriaNovaRoute
+  VistoriaPlacaRoute: typeof VistoriaPlacaRoute
   VistoriaIndexRoute: typeof VistoriaIndexRoute
 }
 
 const VistoriaRouteChildren: VistoriaRouteChildren = {
+  VistoriaIdRoute: VistoriaIdRoute,
+  VistoriaListaRoute: VistoriaListaRoute,
+  VistoriaNovaRoute: VistoriaNovaRoute,
+  VistoriaPlacaRoute: VistoriaPlacaRoute,
   VistoriaIndexRoute: VistoriaIndexRoute,
 }
 
