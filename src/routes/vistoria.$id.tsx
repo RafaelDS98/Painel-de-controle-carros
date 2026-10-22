@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useMyPermissions } from "@/lib/permissions";
 import { STATUS_LABEL, type CheckStatus } from "@/lib/vistoria";
 import { signedUrls } from "@/lib/vistoria-data";
+import { buildLaudoPdf, laudoFileName } from "@/lib/laudo-pdf";
 
 export const Route = createFileRoute("/vistoria/$id")({
   head: () => ({
@@ -38,7 +39,8 @@ function Detalhe() {
   const { id } = Route.useParams();
   const qc = useQueryClient();
   const perms = useMyPermissions();
-  const [big, setBig] = useState<string | null>(null);
+  const [big, setBig] = useState<{ src: string; caption: string } | null>(null);
+  const [pdfBusy, setPdfBusy] = useState(false);
   const [reason, setReason] = useState("");
   const [cancelOpen, setCancelOpen] = useState(false);
   const q = useQuery({
@@ -75,6 +77,42 @@ function Detalhe() {
   const groups = [
     ...new Set(answers.filter((a) => a.kind !== "photo").map((a) => a.group_name ?? "")),
   ];
+  const caption = (a: { label: string; photo_taken_at: string | null }) =>
+    `${a.label.toUpperCase()} · ${a.photo_taken_at ? new Date(a.photo_taken_at).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }).replace(",", "") : "sem data"}`;
+  const open = (a: { label: string; photo_path: string | null; photo_taken_at: string | null }) =>
+    a.photo_path && urls[a.photo_path] && setBig({ src: urls[a.photo_path], caption: caption(a) });
+  async function downloadPdf() {
+    setPdfBusy(true);
+    try {
+      const fotos = answers.filter((a) => a.kind === "photo");
+      const others = answers.filter((a) => a.kind !== "photo");
+      const doc = await buildLaudoPdf({
+        number: ins.number,
+        plate: ins.plate,
+        operation: ins.operation_name ?? "",
+        createdAt: ins.created_at,
+        model: veh?.modelo ?? "",
+        inspector,
+        client: ins.client_name ?? "",
+        driver: ins.driver_name ?? "",
+        km: ins.km,
+        fuel: ins.fuel,
+        notes: ins.notes,
+        questionnaire: ins.questionnaire,
+        validationCode: ins.validation_code,
+        details: (ins.details ?? {}) as Record<string, string>,
+        answers: [...fotos, ...others],
+        urls,
+        inspectorSignature: ins.inspector_signature,
+        driverSignature: ins.driver_signature,
+      });
+      doc.save(laudoFileName(ins.plate, ins.number, ins.created_at));
+    } catch (e) {
+      toast.error(`Não foi possível gerar o laudo: ${(e as Error).message}`);
+    } finally {
+      setPdfBusy(false);
+    }
+  }
   async function cancel() {
     const { error } = await supabase
       .from("inspections")
@@ -109,7 +147,7 @@ function Detalhe() {
             </div>
           </div>
           <div className="ml-auto flex gap-2 print:hidden">
-            <Button size="sm" variant="secondary" onClick={() => window.print()}>
+            <Button size="sm" variant="secondary" onClick={downloadPdf} disabled={pdfBusy}>
               <Printer className="h-4 w-4" /> Laudo PDF
             </Button>
             <Button size="sm" variant="secondary" onClick={share}>
@@ -151,8 +189,13 @@ function Detalhe() {
                   <span className="flex-1">{a.label}</span>
                   {a.note && <span className="text-xs text-muted-foreground">{a.note}</span>}
                   {a.photo_path && urls[a.photo_path] && (
+                  <button onClick={() => open(a)} className="max-w-[12rem] truncate text-xs text-link underline">
+                    {a.photo_name ?? "foto.jpg"}
+                  </button>
+                )}
+                {false && (
                     <button
-                      onClick={() => setBig(urls[a.photo_path!] ?? null)}
+                      onClick={() => setBig(null)}
                       className="text-xs text-link"
                     >
                       foto
@@ -167,12 +210,12 @@ function Detalhe() {
         </section>
       ))}
       <section className="rounded-xl border bg-card p-4">
-        <h2 className="mb-2 font-semibold">Fotos ({photos.length})</h2>
+        <h2 id="fotos" className="mb-2 font-semibold">Fotos ({photos.length})</h2>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {photos.map((p) => (
             <button
               key={p.id}
-              onClick={() => setBig(urls[p.photo_path!] ?? null)}
+              onClick={() => open(p)}
               className="overflow-hidden rounded-lg border text-left"
             >
               <img
