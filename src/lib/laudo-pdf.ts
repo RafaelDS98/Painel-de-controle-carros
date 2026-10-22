@@ -34,7 +34,13 @@ export interface LaudoData {
   driverSignature: string | null;
 }
 
-const FUEL_LEVEL: Record<string, number> = { Reserva: 0.06, "1/4": 0.25, "1/2": 0.5, "3/4": 0.75, Cheio: 1 };
+const FUEL_LEVEL: Record<string, number> = {
+  Reserva: 0.06,
+  "1/4": 0.25,
+  "1/2": 0.5,
+  "3/4": 0.75,
+  Cheio: 1,
+};
 const STATUS_COLOR: Record<string, [number, number, number]> = {
   bom: [34, 160, 80],
   ruim: [210, 50, 50],
@@ -82,7 +88,9 @@ export async function buildLaudoPdf(d: LaudoData): Promise<jsPDF> {
     doc.text(lab, x, y);
     doc.setFont("helvetica", "normal").setTextColor(60);
     doc.text(doc.splitTextToSize(value || "—", w - 2), x, y + lab.length * 3.2);
-    doc.setDrawColor(225).line(x, y + lab.length * 3.2 + 2.5, x + w - 4, y + lab.length * 3.2 + 2.5);
+    doc
+      .setDrawColor(225)
+      .line(x, y + lab.length * 3.2 + 2.5, x + w - 4, y + lab.length * 3.2 + 2.5);
   };
   const row = (cols: [string, string][], h = 11, widths?: number[]) => {
     ensure(h);
@@ -104,15 +112,23 @@ export async function buildLaudoPdf(d: LaudoData): Promise<jsPDF> {
     ["Tipo Operação", d.operation.toUpperCase()],
     ["Data/Hora", fmt(d.createdAt)],
   ]);
-  row([
-    ["VEICULO", d.model.toUpperCase()],
-    ["PLACA", d.plate],
-  ], 11, [90, 30]);
+  row(
+    [
+      ["VEICULO", d.model.toUpperCase()],
+      ["PLACA", d.plate],
+    ],
+    11,
+    [90, 30],
+  );
   // Marcador de combustível ao lado da placa
   {
-    const gx = 135, gy = y - 14, gw = 60;
+    const gx = 135,
+      gy = y - 14,
+      gw = 60;
     doc.setFont("helvetica", "bold").setFontSize(8).setTextColor(40);
-    ["E", "1/4", "1/2", "3/4", "F"].forEach((t, i) => doc.text(t, gx + (gw * i) / 4, gy, { align: "center" }));
+    ["E", "1/4", "1/2", "3/4", "F"].forEach((t, i) =>
+      doc.text(t, gx + (gw * i) / 4, gy, { align: "center" }),
+    );
     doc.setFillColor(225).rect(gx, gy + 2, gw, 3, "F");
     const lvl = d.fuel ? (FUEL_LEVEL[d.fuel] ?? 0) : 0;
     doc.setFillColor(40, 120, 200).rect(gx, gy + 2, gw * lvl, 3, "F");
@@ -123,28 +139,42 @@ export async function buildLaudoPdf(d: LaudoData): Promise<jsPDF> {
     ["VISTORIADOR", d.inspector.toUpperCase()],
     ["CLIENTE", d.client.toUpperCase()],
   ]);
-  row([
-    ["Motorista", d.driver.toUpperCase()],
-    ["Pertences Retirados", det["pertences"] ?? ""],
-    ["Km Odometro", d.km != null ? `${d.km} Km` : ""],
-    ["Whatsapp do Cliente", det["whatsapp"] ?? ""],
-  ], 12);
-  row([
-    ["Pneu Dianteiro Esquerdo", det["pneu_de"] ?? ""],
-    ["Pneu Dianteiro Direito", det["pneu_dd"] ?? ""],
-    ["Pneu Traseiro Esquerdo", det["pneu_te"] ?? ""],
-    ["Pneu Traseiro Direito", det["pneu_td"] ?? ""],
-  ], 14);
+  row(
+    [
+      ["Motorista", d.driver.toUpperCase()],
+      ["Pertences Retirados", det["pertences"] ?? ""],
+      ["Km Odometro", d.km != null ? `${d.km} Km` : ""],
+      ["Whatsapp do Cliente", det["whatsapp"] ?? ""],
+    ],
+    12,
+  );
+  row(
+    [
+      ["Pneu Dianteiro Esquerdo", det["pneu_de"] ?? ""],
+      ["Pneu Dianteiro Direito", det["pneu_dd"] ?? ""],
+      ["Pneu Traseiro Esquerdo", det["pneu_te"] ?? ""],
+      ["Pneu Traseiro Direito", det["pneu_td"] ?? ""],
+    ],
+    14,
+  );
   row([["Pneu Estepe", det["pneu_estepe"] ?? ""]]);
   row([["Observacao", d.notes ?? ""]], 12, [180]);
-  row([
-    ["Avaliação Técnica", ""],
-    ["Pertences retirados?", (det["pertences"] ?? "").toUpperCase()],
-  ], 11, [90, 90]);
-  row([
-    ["Tipo de Veículo?", det["tipo_veiculo"] ?? ""],
-    ["Câmbio", det["cambio"] ?? ""],
-  ], 11, [90, 90]);
+  row(
+    [
+      ["Avaliação Técnica", ""],
+      ["Pertences retirados?", (det["pertences"] ?? "").toUpperCase()],
+    ],
+    11,
+    [90, 90],
+  );
+  row(
+    [
+      ["Tipo de Veículo?", det["tipo_veiculo"] ?? ""],
+      ["Câmbio", det["cambio"] ?? ""],
+    ],
+    11,
+    [90, 90],
+  );
 
   // Questionário
   ensure(20);
@@ -168,12 +198,21 @@ export async function buildLaudoPdf(d: LaudoData): Promise<jsPDF> {
         doc.setDrawColor(215).rect(x, y, cw, 11);
         const c = STATUS_COLOR[a.status ?? ""] ?? [200, 200, 200];
         doc.setFillColor(...c).roundedRect(x + 3, y + 2.5, 6, 6, 1, 1, "F");
-        doc.setFont("helvetica", "bold").setFontSize(a.status === "na" ? 4.5 : 7).setTextColor(255);
-        doc.text(a.status ? STATUS_MARK[a.status]! : a.value ? "" : "", x + 6, y + 6.6, { align: "center" });
+        doc
+          .setFont("helvetica", "bold")
+          .setFontSize(a.status === "na" ? 4.5 : 7)
+          .setTextColor(255);
+        doc.text(a.status ? STATUS_MARK[a.status]! : a.value ? "" : "", x + 6, y + 6.6, {
+          align: "center",
+        });
         doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(40);
         const txt = a.status ? a.label : `${a.label}: ${a.value ?? "—"}`;
         doc.text(doc.splitTextToSize(txt, cw - 14).slice(0, 2), x + 12, y + 5);
-        if (a.note) doc.setFontSize(6.5).setTextColor(170, 40, 40).text(doc.splitTextToSize(a.note, cw - 14)[0], x + 12, y + 9);
+        if (a.note)
+          doc
+            .setFontSize(6.5)
+            .setTextColor(170, 40, 40)
+            .text(doc.splitTextToSize(a.note, cw - 14)[0], x + 12, y + 9);
       });
       y += 11;
     }
@@ -206,11 +245,18 @@ export async function buildLaudoPdf(d: LaudoData): Promise<jsPDF> {
 
   // Termo de aceite
   newPage();
-  doc.setFont("helvetica", "normal").setFontSize(14).setTextColor(20).text("Termos de Aceite", M, y);
+  doc
+    .setFont("helvetica", "normal")
+    .setFontSize(14)
+    .setTextColor(20)
+    .text("Termos de Aceite", M, y);
   y += 8;
   for (const para of VISTORIA_TERM) {
     const heading = /^[A-ZÇÃÕÉÍÓÚÂÊ0-9 .–-]{8,}$/.test(para);
-    doc.setFont("helvetica", heading ? "bold" : "normal").setFontSize(8).setTextColor(30);
+    doc
+      .setFont("helvetica", heading ? "bold" : "normal")
+      .setFontSize(8)
+      .setTextColor(30);
     const lines = doc.splitTextToSize(para, W - 2 * M);
     ensure(lines.length * 3.6 + 2);
     doc.text(lines, M, y);
@@ -220,7 +266,15 @@ export async function buildLaudoPdf(d: LaudoData): Promise<jsPDF> {
   // Assinaturas
   newPage();
   const sigs: [string, string | null, string[]][] = [
-    ["Assinatura RESPONSAVEL", d.driverSignature, [`Nome : ${det["resp_nome"] || d.driver}`, `RG: ${det["resp_rg"] ?? ""}`, `Telefone: ${det["resp_tel"] ?? ""}`]],
+    [
+      "Assinatura RESPONSAVEL",
+      d.driverSignature,
+      [
+        `Nome : ${det["resp_nome"] || d.driver}`,
+        `RG: ${det["resp_rg"] ?? ""}`,
+        `Telefone: ${det["resp_tel"] ?? ""}`,
+      ],
+    ],
     ["Assinatura VISTORIADOR", d.inspectorSignature, [`Vistoriador: ${d.inspector.toUpperCase()}`]],
   ];
   for (let i = 0; i < sigs.length; i++) {
@@ -234,17 +288,33 @@ export async function buildLaudoPdf(d: LaudoData): Promise<jsPDF> {
     lines.forEach((l, k) => doc.text(l, x, y + 38 + k * 5));
   }
   y += 60;
-  doc.setFontSize(9).setTextColor(60).text(`Valide este laudo pelo código ${d.validationCode} no painel ANPEXC.`, W / 2, y, { align: "center" });
+  doc
+    .setFontSize(9)
+    .setTextColor(60)
+    .text(`Valide este laudo pelo código ${d.validationCode} no painel ANPEXC.`, W / 2, y, {
+      align: "center",
+    });
 
   // Cabeçalho e rodapé em todas as páginas
   const total = doc.getNumberOfPages();
   for (let p = 1; p <= total; p++) {
     doc.setPage(p);
     if (logo) doc.addImage(logo, "PNG", M, 8, 22, 22);
-    doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(90).text(`Página ${p} de ${total}`, W - M, 12, { align: "right" });
+    doc
+      .setFont("helvetica", "normal")
+      .setFontSize(9)
+      .setTextColor(90)
+      .text(`Página ${p} de ${total}`, W - M, 12, { align: "right" });
     doc.setFillColor(238).rect(W - M - 70, 15, 70, 7, "F");
-    doc.setFontSize(8).setTextColor(60).text("Nº Vistoria:", W - M - 22, 19.8, { align: "right" });
-    doc.setFont("helvetica", "bold").setFontSize(10).setTextColor(20).text(String(d.number), W - M - 2, 20, { align: "right" });
+    doc
+      .setFontSize(8)
+      .setTextColor(60)
+      .text("Nº Vistoria:", W - M - 22, 19.8, { align: "right" });
+    doc
+      .setFont("helvetica", "bold")
+      .setFontSize(10)
+      .setTextColor(20)
+      .text(String(d.number), W - M - 2, 20, { align: "right" });
     doc.setDrawColor(220).line(M, 287, W - M, 287);
     doc.setFont("helvetica", "normal").setFontSize(6.5).setTextColor(120);
     doc.text(`ANPEXC Vistorias · código ${d.validationCode}`, M, 291);

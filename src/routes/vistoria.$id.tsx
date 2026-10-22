@@ -41,6 +41,7 @@ function Detalhe() {
   const perms = useMyPermissions();
   const [big, setBig] = useState<{ src: string; caption: string } | null>(null);
   const [pdfBusy, setPdfBusy] = useState(false);
+  const [showPhotos, setShowPhotos] = useState(false);
   const [reason, setReason] = useState("");
   const [cancelOpen, setCancelOpen] = useState(false);
   const q = useQuery({
@@ -189,16 +190,11 @@ function Detalhe() {
                   <span className="flex-1">{a.label}</span>
                   {a.note && <span className="text-xs text-muted-foreground">{a.note}</span>}
                   {a.photo_path && urls[a.photo_path] && (
-                  <button onClick={() => open(a)} className="max-w-[12rem] truncate text-xs text-link underline">
-                    {a.photo_name ?? "foto.jpg"}
-                  </button>
-                )}
-                {false && (
                     <button
-                      onClick={() => setBig(null)}
-                      className="text-xs text-link"
+                      onClick={() => open(a)}
+                      className="max-w-[12rem] truncate text-xs text-link underline"
                     >
-                      foto
+                      {a.photo_name ?? "foto.jpg"}
                     </button>
                   )}
                   <b className={COLOR[a.status ?? ""] ?? ""}>
@@ -210,8 +206,25 @@ function Detalhe() {
         </section>
       ))}
       <section className="rounded-xl border bg-card p-4">
-        <h2 id="fotos" className="mb-2 font-semibold">Fotos ({photos.length})</h2>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <button
+          id="fotos"
+          onClick={() => setShowPhotos(!showPhotos)}
+          className="font-semibold text-link underline-offset-2 hover:underline"
+        >
+          Fotos ({photos.length}) {showPhotos ? "▲" : "▼"}
+        </button>
+        {!showPhotos && (
+          <ul className="mt-2 space-y-1 text-xs">
+            {photos.map((p) => (
+              <li key={p.id}>
+                <button onClick={() => open(p)} className="text-link underline">
+                  {p.label}: {p.photo_name ?? "foto.jpg"}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className={showPhotos ? "mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4" : "hidden"}>
           {photos.map((p) => (
             <button
               key={p.id}
@@ -223,7 +236,7 @@ function Detalhe() {
                 alt={p.label}
                 className="aspect-[4/3] w-full object-cover"
               />
-              <span className="block truncate px-2 py-1 text-xs">{p.label}</span>
+              <span className="block truncate px-2 py-1 text-xs">{caption(p)}</span>
             </button>
           ))}
         </div>
@@ -280,7 +293,14 @@ function Detalhe() {
           onClick={() => setBig(null)}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4"
         >
-          <img src={big} alt="Foto ampliada" className="max-h-full max-w-full object-contain" />
+          <figure className="flex max-h-full max-w-full flex-col items-center">
+            <img
+              src={big.src}
+              alt={big.caption}
+              className="max-h-[85vh] max-w-full object-contain"
+            />
+            <figcaption className="mt-2 text-sm font-medium text-white">{big.caption}</figcaption>
+          </figure>
         </button>
       )}
     </div>

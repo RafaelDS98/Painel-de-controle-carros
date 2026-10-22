@@ -94,9 +94,7 @@ export async function compressPhoto(file: File, label: string): Promise<StampedP
     c.height = Math.round(img.height * scale);
     const ctx = c.getContext("2d")!;
     ctx.drawImage(img, 0, 0, c.width, c.height);
-    const stamp = at
-      .toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })
-      .replace(",", "");
+    const stamp = at.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }).replace(",", "");
     const size = Math.max(18, Math.round(c.width / 36));
     ctx.font = `bold ${size}px sans-serif`;
     ctx.textAlign = "right";
@@ -105,7 +103,11 @@ export async function compressPhoto(file: File, label: string): Promise<StampedP
     ctx.shadowBlur = 4;
     ctx.fillText(label.toUpperCase(), c.width - 12, c.height - size * 1.4 - 10);
     ctx.fillText(stamp, c.width - 12, c.height - 10);
-    return { photo: c.toDataURL("image/jpeg", 0.75), photoName: photoFileName(label, at), photoAt: at.toISOString() };
+    return {
+      photo: c.toDataURL("image/jpeg", 0.75),
+      photoName: photoFileName(label, at),
+      photoAt: at.toISOString(),
+    };
   } finally {
     URL.revokeObjectURL(url);
   }

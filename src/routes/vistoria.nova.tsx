@@ -69,7 +69,11 @@ interface Draft {
 const DETAIL_FIELDS: [string, string, string[]?][] = [
   ["pertences", "Pertences retirados", ["Sim", "Não"]],
   ["whatsapp", "WhatsApp do cliente"],
-  ["tipo_veiculo", "Tipo de veículo", ["HATCH", "SEDAN", "SUV", "PICAPE", "UTILITÁRIO", "VAN", "MOTO"]],
+  [
+    "tipo_veiculo",
+    "Tipo de veículo",
+    ["HATCH", "SEDAN", "SUV", "PICAPE", "UTILITÁRIO", "VAN", "MOTO"],
+  ],
   ["cambio", "Câmbio", ["MANUAL", "AUTOMATICO"]],
   ["pneu_de", "Pneu dianteiro esquerdo"],
   ["pneu_dd", "Pneu dianteiro direito"],
@@ -608,4 +612,3 @@ function ItemPhoto({
     </div>
   );
 }
-

@@ -34,5 +34,5 @@ export const VISTORIA_TERM: string[] = [
   "• Realizar “chupeta” na bateria;",
   "• Lavar o motor;",
   "• Deixar o veículo em locais inadequados ou de risco;",
-  "• Utilizar óleo, combustível ou produtos em desacordo com as especificações do fabricante."
+  "• Utilizar óleo, combustível ou produtos em desacordo com as especificações do fabricante.",
 ];
