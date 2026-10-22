@@ -120,3 +120,4 @@
 - Checklist no celular (Campos/Checklist/Fotos/Assinar), fotos comprimidas com data/hora, avaria com foto+observação, assinaturas, rascunho no aparelho (pendente de envio sem internet).
 - Lista com filtros/CSV, detalhe com galeria, laudo (imprimir/PDF), WhatsApp, cancelamento com motivo; Localizar por placa com comparação.
 - Pendente: editor Master de tipos/grupos/campos (Etapa 3), envio automático em fila offline, integração com Pátio, filtro por vistoriador/cliente.
+- Vistorias (22/10): foto opcional em cada item do checklist (mostra só o nome do arquivo; abre ao clicar), carimbo com campo + data/hora, laudo PDF no formato atual (dados principais, pneus, combustível, checklist, fotos 2 por página, termo, assinaturas, código de validação). Pendente: termo editável pelo Master (Etapa 3) e página pública de validação do código.
