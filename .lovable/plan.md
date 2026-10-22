@@ -1,6 +1,6 @@
 # Módulo Vistorias (substituto do VEX) — Roadmap
 
-Módulo novo dentro do painel ANPEXC, com o mesmo login, cores, logo e banco. Fica em `/vistorias`, com menu lateral próprio e um botão fixo **"Voltar ao painel ANPEXC"** no topo e no menu. Também pode abrir direto por um subdomínio (ex.: vistorias.anpexc.app) depois.
+Módulo novo dentro do painel ANPEXC, com o mesmo login, cores, logo e banco. Fica em `/vistorias`, com menu lateral próprio e um botão fixo **"Voltar ao painel ANPEXC"** no topo e no menu. Sem subdomínio: o acesso é só pelo próprio painel.
 
 A vistoria é feita pelo celular, no navegador, dentro do próprio painel (sem instalar app).
 
