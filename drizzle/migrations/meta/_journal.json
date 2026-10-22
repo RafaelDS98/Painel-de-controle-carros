@@ -288,6 +288,13 @@
       "when": 1792680703085,
       "tag": "0040_vistorias_laudo_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1792681321119,
+      "tag": "0041_vistorias_realtime",
+      "breakpoints": true
     }
   ]
 }
