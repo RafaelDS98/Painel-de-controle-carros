@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { PlateCombobox } from "@/components/plate-combobox";
 import { SignaturePad } from "@/components/signature-pad";
+import { PhotoViewer } from "@/components/photo-viewer";
 import { cn } from "@/lib/utils";
 import {
   countDamages,
@@ -58,12 +59,27 @@ interface Draft {
   driver: string;
   client: string;
   notes: string;
+  details?: Record<string, string>;
   answers: Record<string, AnswerDraft>;
   sigInspector: string | null;
   sigDriver: string | null;
   savedAt?: number;
 }
 
+const DETAIL_FIELDS: [string, string, string[]?][] = [
+  ["pertences", "Pertences retirados", ["Sim", "Não"]],
+  ["whatsapp", "WhatsApp do cliente"],
+  ["tipo_veiculo", "Tipo de veículo", ["HATCH", "SEDAN", "SUV", "PICAPE", "UTILITÁRIO", "VAN", "MOTO"]],
+  ["cambio", "Câmbio", ["MANUAL", "AUTOMATICO"]],
+  ["pneu_de", "Pneu dianteiro esquerdo"],
+  ["pneu_dd", "Pneu dianteiro direito"],
+  ["pneu_te", "Pneu traseiro esquerdo"],
+  ["pneu_td", "Pneu traseiro direito"],
+  ["pneu_estepe", "Pneu estepe"],
+  ["resp_nome", "Responsável: nome"],
+  ["resp_rg", "Responsável: RG"],
+  ["resp_tel", "Responsável: telefone"],
+];
 const FUEL = ["Reserva", "1/4", "1/2", "3/4", "Cheio"];
 const STATUS_STYLE: Record<CheckStatus, string> = {
   bom: "bg-success text-success-foreground border-success",
@@ -99,6 +115,7 @@ function NovaVistoria() {
       driver: "",
       client: "",
       notes: "",
+      details: { pertences: "Sim" },
       answers: {},
       sigInspector: null,
       sigDriver: null,
@@ -125,6 +142,8 @@ function NovaVistoria() {
   const groups = useMemo(() => config.data ?? [], [config.data]);
   const allFields = useMemo(() => groups.flatMap((g) => g.fields), [groups]);
   const pct = progress(allFields, d.answers);
+  const setDetail = (k: string, v: string) =>
+    setD((p) => ({ ...p, details: { ...p.details, [k]: v } }));
   const setAns = (id: string, patch: AnswerDraft) =>
     setD((p) => ({ ...p, answers: { ...p.answers, [id]: { ...p.answers[id], ...patch } } }));
 
@@ -165,6 +184,7 @@ function NovaVistoria() {
           driver_name: d.driver || null,
           client_name: d.client || null,
           notes: d.notes || null,
+          details: d.details ?? {},
           damage_count: countDamages(d.answers),
         })
         .select("id")
@@ -324,6 +344,37 @@ function NovaVistoria() {
                 onChange={(e) => setD((p) => ({ ...p, notes: e.target.value }))}
               />
             </Section>
+            <Section title="Dados do laudo">
+              <div className="grid grid-cols-2 gap-2">
+                {DETAIL_FIELDS.map(([k, label, opts]) =>
+                  opts ? (
+                    <select
+                      key={k}
+                      aria-label={label}
+                      className="h-12 rounded-md border bg-background px-2 text-sm"
+                      value={d.details?.[k] ?? ""}
+                      onChange={(e) => setDetail(k, e.target.value)}
+                    >
+                      <option value="">{label}</option>
+                      {opts.map((o) => (
+                        <option key={o} value={o}>
+                          {label}: {o}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <Input
+                      key={k}
+                      className="h-12"
+                      placeholder={label}
+                      inputMode={k === "whatsapp" || k === "resp_tel" ? "tel" : undefined}
+                      value={d.details?.[k] ?? ""}
+                      onChange={(e) => setDetail(k, e.target.value)}
+                    />
+                  ),
+                )}
+              </div>
+            </Section>
             {groups
               .filter((g) => g.tab === "campos")
               .map((g) => (
@@ -441,6 +492,7 @@ function NovaVistoria() {
         )}
       </div>
 
+      <PhotoViewer src={view} onClose={() => setView(null)} />
       <div className="fixed inset-x-0 bottom-0 z-10 border-t bg-card/95 p-3 backdrop-blur md:left-60">
         <Button className="h-14 w-full text-base" disabled={saving} onClick={finish}>
           <CheckCircle2 className="h-5 w-5" />
@@ -557,16 +609,3 @@ function ItemPhoto({
   );
 }
 
-export function PhotoViewer({ src, onClose }: { src: string | null; onClose: () => void }) {
-  if (!src) return null;
-  return (
-    <button
-      type="button"
-      onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4"
-      aria-label="Fechar foto"
-    >
-      <img src={src} alt="Foto" className="max-h-full max-w-full object-contain" />
-    </button>
-  );
-}
