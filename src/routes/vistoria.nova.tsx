@@ -10,13 +10,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { PlateCombobox } from "@/components/plate-combobox";
 import { SignaturePad } from "@/components/signature-pad";
-import { PhotoViewer } from "@/components/photo-viewer";
+import { PhotoEditor } from "@/components/photo-editor";
 import { cn } from "@/lib/utils";
 import {
   countDamages,
   missingRequired,
   progress,
   STATUS_LABEL,
+  QUESTIONNAIRES,
   type AnswerDraft,
   type CheckStatus,
 } from "@/lib/vistoria";
@@ -60,6 +61,7 @@ interface Draft {
   client: string;
   notes: string;
   details?: Record<string, string>;
+  questionnaire?: string;
   answers: Record<string, AnswerDraft>;
   sigInspector: string | null;
   sigDriver: string | null;
@@ -101,7 +103,7 @@ function NovaVistoria() {
   const config = useChecklistConfig();
   const [tab, setTab] = useState<Tab>("campos");
   const [saving, setSaving] = useState(false);
-  const [view, setView] = useState<string | null>(null);
+  const [view, setView] = useState<{ id: string; label: string } | null>(null);
   const [d, setD] = useState<Draft>(() => {
     if (search.rascunho && typeof window !== "undefined") {
       try {
@@ -189,6 +191,7 @@ function NovaVistoria() {
           client_name: d.client || null,
           notes: d.notes || null,
           details: d.details ?? {},
+          questionnaire: d.questionnaire ?? "AUTOMOVEL",
           damage_count: countDamages(d.answers),
         })
         .select("id")
@@ -349,6 +352,18 @@ function NovaVistoria() {
               />
             </Section>
             <Section title="Dados do laudo">
+              <select
+                aria-label="Questionário"
+                className="h-12 w-full rounded-md border bg-background px-2 text-sm"
+                value={d.questionnaire ?? "AUTOMOVEL"}
+                onChange={(e) => setD((p) => ({ ...p, questionnaire: e.target.value }))}
+              >
+                {QUESTIONNAIRES.map((q) => (
+                  <option key={q} value={q}>
+                    Questionário: {q}
+                  </option>
+                ))}
+              </select>
               <div className="grid grid-cols-2 gap-2">
                 {DETAIL_FIELDS.map(([k, label, opts]) =>
                   opts ? (
@@ -417,7 +432,7 @@ function NovaVistoria() {
                         <ItemPhoto
                           label={f.label}
                           answer={a}
-                          onView={setView}
+                          onView={() => setView({ id: f.id, label: f.label })}
                           onChange={(ph) => setAns(f.id, ph)}
                         />
                       </div>
@@ -471,6 +486,7 @@ function NovaVistoria() {
                       required={f.required}
                       value={d.answers[f.id]?.photo}
                       onChange={(ph) => setAns(f.id, ph)}
+                      onView={() => setView({ id: f.id, label: f.label })}
                     />
                   ))}
                 </div>
@@ -496,7 +512,14 @@ function NovaVistoria() {
         )}
       </div>
 
-      <PhotoViewer src={view} onClose={() => setView(null)} />
+      {view && d.answers[view.id]?.photo && (
+        <PhotoEditor
+          src={d.answers[view.id]!.photo!}
+          caption={`${view.label} · ${d.answers[view.id]?.photoName ?? ""}`}
+          onSave={(photo) => setAns(view.id, { photo })}
+          onClose={() => setView(null)}
+        />
+      )}
       <div className="fixed inset-x-0 bottom-0 z-10 border-t bg-card/95 p-3 backdrop-blur md:left-60">
         <Button className="h-14 w-full text-base" disabled={saving} onClick={finish}>
           <CheckCircle2 className="h-5 w-5" />
@@ -534,16 +557,33 @@ function PhotoInput({
   required,
   value,
   onChange,
+  onView,
 }: {
   label: string;
   required?: boolean;
   value?: string | undefined;
   onChange: (v: StampedPhoto) => void;
+  onView?: () => void;
 }) {
   return (
     <label className="relative flex aspect-[4/3] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border-2 border-dashed bg-muted/40 text-center text-xs">
       {value ? (
-        <img src={value} alt={label} className="absolute inset-0 h-full w-full object-cover" />
+        <>
+          <img src={value} alt={label} className="absolute inset-0 h-full w-full object-cover" />
+          {onView && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onView();
+              }}
+              className="absolute right-1 top-1 z-[1] rounded-md bg-black/70 px-2 py-1 text-[11px] font-medium text-white"
+            >
+              Ver / editar
+            </button>
+          )}
+        </>
       ) : (
         <>
           <Camera className="mb-1 h-6 w-6 text-muted-foreground" />
@@ -580,14 +620,14 @@ function ItemPhoto({
   label: string;
   answer: AnswerDraft | undefined;
   onChange: (v: StampedPhoto) => void;
-  onView: (src: string) => void;
+  onView: () => void;
 }) {
   return (
     <div className="flex min-w-0 items-center gap-2 text-xs">
       {answer?.photo && (
         <button
           type="button"
-          onClick={() => onView(answer.photo!)}
+          onClick={onView}
           className="max-w-[11rem] truncate text-link underline"
           title="Ver foto"
         >
