@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { PlateCombobox } from "@/components/plate-combobox";
 import { SignaturePad } from "@/components/signature-pad";
+import { PhotoViewer } from "@/components/photo-viewer";
 import { cn } from "@/lib/utils";
 import {
   countDamages,
@@ -21,6 +22,7 @@ import {
 } from "@/lib/vistoria";
 import {
   compressPhoto,
+  type StampedPhoto,
   DRAFT_KEY,
   uploadDataUrl,
   useChecklistConfig,
@@ -57,12 +59,31 @@ interface Draft {
   driver: string;
   client: string;
   notes: string;
+  details?: Record<string, string>;
   answers: Record<string, AnswerDraft>;
   sigInspector: string | null;
   sigDriver: string | null;
   savedAt?: number;
 }
 
+const DETAIL_FIELDS: [string, string, string[]?][] = [
+  ["pertences", "Pertences retirados", ["Sim", "Não"]],
+  ["whatsapp", "WhatsApp do cliente"],
+  [
+    "tipo_veiculo",
+    "Tipo de veículo",
+    ["HATCH", "SEDAN", "SUV", "PICAPE", "UTILITÁRIO", "VAN", "MOTO"],
+  ],
+  ["cambio", "Câmbio", ["MANUAL", "AUTOMATICO"]],
+  ["pneu_de", "Pneu dianteiro esquerdo"],
+  ["pneu_dd", "Pneu dianteiro direito"],
+  ["pneu_te", "Pneu traseiro esquerdo"],
+  ["pneu_td", "Pneu traseiro direito"],
+  ["pneu_estepe", "Pneu estepe"],
+  ["resp_nome", "Responsável: nome"],
+  ["resp_rg", "Responsável: RG"],
+  ["resp_tel", "Responsável: telefone"],
+];
 const FUEL = ["Reserva", "1/4", "1/2", "3/4", "Cheio"];
 const STATUS_STYLE: Record<CheckStatus, string> = {
   bom: "bg-success text-success-foreground border-success",
@@ -80,6 +101,7 @@ function NovaVistoria() {
   const config = useChecklistConfig();
   const [tab, setTab] = useState<Tab>("campos");
   const [saving, setSaving] = useState(false);
+  const [view, setView] = useState<string | null>(null);
   const [d, setD] = useState<Draft>(() => {
     if (search.rascunho && typeof window !== "undefined") {
       try {
@@ -97,6 +119,7 @@ function NovaVistoria() {
       driver: "",
       client: "",
       notes: "",
+      details: { pertences: "Sim" },
       answers: {},
       sigInspector: null,
       sigDriver: null,
@@ -123,6 +146,8 @@ function NovaVistoria() {
   const groups = useMemo(() => config.data ?? [], [config.data]);
   const allFields = useMemo(() => groups.flatMap((g) => g.fields), [groups]);
   const pct = progress(allFields, d.answers);
+  const setDetail = (k: string, v: string) =>
+    setD((p) => ({ ...p, details: { ...p.details, [k]: v } }));
   const setAns = (id: string, patch: AnswerDraft) =>
     setD((p) => ({ ...p, answers: { ...p.answers, [id]: { ...p.answers[id], ...patch } } }));
 
@@ -163,6 +188,7 @@ function NovaVistoria() {
           driver_name: d.driver || null,
           client_name: d.client || null,
           notes: d.notes || null,
+          details: d.details ?? {},
           damage_count: countDamages(d.answers),
         })
         .select("id")
@@ -186,7 +212,9 @@ function NovaVistoria() {
         for (const f of g.fields) {
           const a = d.answers[f.id];
           if (!a) continue;
-          const photo = a.photo ? await uploadDataUrl(`${base}/${f.id}.jpg`, a.photo) : null;
+          const photo = a.photo
+            ? await uploadDataUrl(`${base}/${a.photoName ?? f.id + ".jpg"}`, a.photo)
+            : null;
           rows.push({
             inspection_id: ins.id,
             field_id: f.id,
@@ -196,6 +224,8 @@ function NovaVistoria() {
             status: a.status ?? null,
             value: a.value ?? null,
             photo_path: photo,
+            photo_name: a.photoName ?? null,
+            photo_taken_at: a.photoAt ?? null,
             note: a.note ?? null,
           });
         }
@@ -318,6 +348,37 @@ function NovaVistoria() {
                 onChange={(e) => setD((p) => ({ ...p, notes: e.target.value }))}
               />
             </Section>
+            <Section title="Dados do laudo">
+              <div className="grid grid-cols-2 gap-2">
+                {DETAIL_FIELDS.map(([k, label, opts]) =>
+                  opts ? (
+                    <select
+                      key={k}
+                      aria-label={label}
+                      className="h-12 rounded-md border bg-background px-2 text-sm"
+                      value={d.details?.[k] ?? ""}
+                      onChange={(e) => setDetail(k, e.target.value)}
+                    >
+                      <option value="">{label}</option>
+                      {opts.map((o) => (
+                        <option key={o} value={o}>
+                          {label}: {o}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <Input
+                      key={k}
+                      className="h-12"
+                      placeholder={label}
+                      inputMode={k === "whatsapp" || k === "resp_tel" ? "tel" : undefined}
+                      value={d.details?.[k] ?? ""}
+                      onChange={(e) => setDetail(k, e.target.value)}
+                    />
+                  ),
+                )}
+              </div>
+            </Section>
             {groups
               .filter((g) => g.tab === "campos")
               .map((g) => (
@@ -351,7 +412,15 @@ function NovaVistoria() {
                   const bad = a?.status === "ruim" || a?.status === "atencao";
                   return (
                     <div key={f.id} className="space-y-2 rounded-lg border p-3">
-                      <FieldLabel label={f.label} required={f.required} />
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <FieldLabel label={f.label} required={f.required} />
+                        <ItemPhoto
+                          label={f.label}
+                          answer={a}
+                          onView={setView}
+                          onChange={(ph) => setAns(f.id, ph)}
+                        />
+                      </div>
                       {f.kind === "check" ? (
                         <div className="grid grid-cols-4 gap-1">
                           {(Object.keys(STATUS_LABEL) as CheckStatus[]).map((s) => (
@@ -381,11 +450,6 @@ function NovaVistoria() {
                             value={a?.note ?? ""}
                             onChange={(e) => setAns(f.id, { note: e.target.value })}
                           />
-                          <PhotoInput
-                            value={a?.photo}
-                            onChange={(photo) => setAns(f.id, { photo })}
-                            label="Foto da avaria"
-                          />
                         </div>
                       )}
                     </div>
@@ -406,7 +470,7 @@ function NovaVistoria() {
                       label={f.label}
                       required={f.required}
                       value={d.answers[f.id]?.photo}
-                      onChange={(photo) => setAns(f.id, { photo })}
+                      onChange={(ph) => setAns(f.id, ph)}
                     />
                   ))}
                 </div>
@@ -432,6 +496,7 @@ function NovaVistoria() {
         )}
       </div>
 
+      <PhotoViewer src={view} onClose={() => setView(null)} />
       <div className="fixed inset-x-0 bottom-0 z-10 border-t bg-card/95 p-3 backdrop-blur md:left-60">
         <Button className="h-14 w-full text-base" disabled={saving} onClick={finish}>
           <CheckCircle2 className="h-5 w-5" />
@@ -473,7 +538,7 @@ function PhotoInput({
   label: string;
   required?: boolean;
   value?: string | undefined;
-  onChange: (v: string | undefined) => void;
+  onChange: (v: StampedPhoto) => void;
 }) {
   return (
     <label className="relative flex aspect-[4/3] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border-2 border-dashed bg-muted/40 text-center text-xs">
@@ -498,10 +563,52 @@ function PhotoInput({
         className="hidden"
         onChange={async (e) => {
           const f = e.target.files?.[0];
-          if (f) onChange(await compressPhoto(f));
+          if (f) onChange(await compressPhoto(f, label));
           e.target.value = "";
         }}
       />
     </label>
+  );
+}
+
+function ItemPhoto({
+  label,
+  answer,
+  onChange,
+  onView,
+}: {
+  label: string;
+  answer: AnswerDraft | undefined;
+  onChange: (v: StampedPhoto) => void;
+  onView: (src: string) => void;
+}) {
+  return (
+    <div className="flex min-w-0 items-center gap-2 text-xs">
+      {answer?.photo && (
+        <button
+          type="button"
+          onClick={() => onView(answer.photo!)}
+          className="max-w-[11rem] truncate text-link underline"
+          title="Ver foto"
+        >
+          {answer.photoName ?? "foto.jpg"}
+        </button>
+      )}
+      <label className="flex h-9 cursor-pointer items-center gap-1 rounded-md border px-2 font-medium hover:bg-muted">
+        <Camera className="h-4 w-4" />
+        {answer?.photo ? "Trocar" : "Foto"}
+        <input
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={async (e) => {
+            const f = e.target.files?.[0];
+            if (f) onChange(await compressPhoto(f, label));
+            e.target.value = "";
+          }}
+        />
+      </label>
+    </div>
   );
 }

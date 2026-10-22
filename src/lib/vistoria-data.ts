@@ -60,7 +60,26 @@ export function useChecklistConfig() {
 }
 
 /** Reduz a foto no celular antes de enviar (lado maior 1600px, JPEG 0.75) e carimba data/hora. */
-export async function compressPhoto(file: File): Promise<string> {
+export interface StampedPhoto {
+  photo: string;
+  photoName: string;
+  photoAt: string;
+}
+
+/** Nome de arquivo legível: CAMPO_ddmmaaaa_hhmmss.jpg */
+export function photoFileName(label: string, at: Date): string {
+  const p = (n: number) => String(n).padStart(2, "0");
+  const slug = label
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^A-Za-z0-9]+/g, "_")
+    .replace(/^_|_$/g, "")
+    .toUpperCase();
+  return `${slug}_${p(at.getDate())}${p(at.getMonth() + 1)}${at.getFullYear()}_${p(at.getHours())}${p(at.getMinutes())}${p(at.getSeconds())}.jpg`;
+}
+
+export async function compressPhoto(file: File, label: string): Promise<StampedPhoto> {
+  const at = new Date();
   const url = URL.createObjectURL(file);
   try {
     const img = await new Promise<HTMLImageElement>((ok, fail) => {
@@ -75,13 +94,20 @@ export async function compressPhoto(file: File): Promise<string> {
     c.height = Math.round(img.height * scale);
     const ctx = c.getContext("2d")!;
     ctx.drawImage(img, 0, 0, c.width, c.height);
-    const stamp = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
-    ctx.font = "bold 28px sans-serif";
-    ctx.fillStyle = "rgba(0,0,0,0.55)";
-    ctx.fillRect(0, c.height - 44, ctx.measureText(stamp).width + 24, 44);
+    const stamp = at.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }).replace(",", "");
+    const size = Math.max(18, Math.round(c.width / 36));
+    ctx.font = `bold ${size}px sans-serif`;
+    ctx.textAlign = "right";
     ctx.fillStyle = "#ffffff";
-    ctx.fillText(stamp, 12, c.height - 13);
-    return c.toDataURL("image/jpeg", 0.75);
+    ctx.shadowColor = "rgba(0,0,0,0.9)";
+    ctx.shadowBlur = 4;
+    ctx.fillText(label.toUpperCase(), c.width - 12, c.height - size * 1.4 - 10);
+    ctx.fillText(stamp, c.width - 12, c.height - 10);
+    return {
+      photo: c.toDataURL("image/jpeg", 0.75),
+      photoName: photoFileName(label, at),
+      photoAt: at.toISOString(),
+    };
   } finally {
     URL.revokeObjectURL(url);
   }

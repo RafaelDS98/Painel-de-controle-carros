@@ -281,6 +281,13 @@
       "when": 1792680011442,
       "tag": "0039_vistorias_core",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1792680703085,
+      "tag": "0040_vistorias_laudo_fields",
+      "breakpoints": true
     }
   ]
 }
