@@ -60,3 +60,15 @@ export function diffAnswers(
   const map = new Map(a.map((x) => [x.label, x.status]));
   return new Set(b.filter((x) => x.status && map.get(x.label) !== x.status).map((x) => x.label));
 }
+
+/** Legenda de avarias usada nas fotos e no laudo (mesmas letras e cores do laudo atual). */
+export const DAMAGE_LEGEND = [
+  { code: "A", label: "Amassado", color: "#e53935" },
+  { code: "F", label: "Falta", color: "#78909c" },
+  { code: "P", label: "Pique", color: "#7e57c2" },
+  { code: "Q", label: "Quebrado", color: "#ffa000" },
+  { code: "R", label: "Riscado", color: "#1e88e5" },
+  { code: "T", label: "Trincado", color: "#2e9d4a" },
+] as const;
+
+export const QUESTIONNAIRES = ["AUTOMOVEL", "UTILITARIO", "MOTO", "VAN/ONIBUS", "CAUTELAR"];
