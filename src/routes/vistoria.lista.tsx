@@ -57,8 +57,8 @@ function Lista() {
     queryKey: ["profiles-names", ids],
     enabled: ids.length > 0,
     queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("id,name").in("id", ids);
-      return Object.fromEntries((data ?? []).map((p) => [p.id, p.name as string]));
+      const { data } = await supabase.from("profiles").select("id,full_name").in("id", ids);
+      return Object.fromEntries((data ?? []).map((p) => [p.id, p.full_name ?? "—"]));
     },
   });
   const rows = q.data?.rows ?? [];

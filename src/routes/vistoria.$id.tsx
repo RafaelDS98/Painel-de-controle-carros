@@ -44,14 +44,14 @@ function Detalhe() {
       const ins = i.data;
       const [veh, prof] = await Promise.all([
         supabase.from("vehicles").select("modelo,ano").eq("plate", ins.plate).maybeSingle(),
-        supabase.from("profiles").select("name").eq("id", ins.inspector_id).maybeSingle(),
+        supabase.from("profiles").select("full_name").eq("id", ins.inspector_id).maybeSingle(),
       ]);
       const urls = await signedUrls([
         ...(a.data ?? []).map((x) => x.photo_path ?? ""),
         ins.inspector_signature ?? "",
         ins.driver_signature ?? "",
       ]);
-      return { ins, answers: a.data ?? [], veh: veh.data, inspector: prof.data?.name ?? "—", urls };
+      return { ins, answers: a.data ?? [], veh: veh.data, inspector: prof.data?.full_name ?? "—", urls };
     },
   });
   if (q.isLoading) return <p className="p-6 text-sm text-muted-foreground">Carregando…</p>;
@@ -61,7 +61,10 @@ function Detalhe() {
   const groups = [...new Set(answers.filter((a) => a.kind !== "photo").map((a) => a.group_name ?? ""))];
   async function cancel() {
     const { error } = await supabase.from("inspections").update({ status: "cancelada", cancel_reason: reason }).eq("id", id);
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     toast.success("Vistoria cancelada.");
     setCancelOpen(false);
     void qc.invalidateQueries({ queryKey: ["inspections"] });
@@ -100,7 +103,7 @@ function Detalhe() {
               <li key={a.id} className="flex flex-wrap items-center gap-2 py-2">
                 <span className="flex-1">{a.label}</span>
                 {a.note && <span className="text-xs text-muted-foreground">{a.note}</span>}
-                {a.photo_path && urls[a.photo_path] && <button onClick={() => setBig(urls[a.photo_path!])} className="text-xs text-link">foto</button>}
+                {a.photo_path && urls[a.photo_path] && <button onClick={() => setBig(urls[a.photo_path!] ?? null)} className="text-xs text-link">foto</button>}
                 <b className={COLOR[a.status ?? ""] ?? ""}>{a.status ? STATUS_LABEL[a.status as CheckStatus] : a.value}</b>
               </li>
             ))}
@@ -111,7 +114,7 @@ function Detalhe() {
         <h2 className="mb-2 font-semibold">Fotos ({photos.length})</h2>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {photos.map((p) => (
-            <button key={p.id} onClick={() => setBig(urls[p.photo_path!])} className="overflow-hidden rounded-lg border text-left">
+            <button key={p.id} onClick={() => setBig(urls[p.photo_path!] ?? null)} className="overflow-hidden rounded-lg border text-left">
               <img src={urls[p.photo_path!]} alt={p.label} className="aspect-[4/3] w-full object-cover" />
               <span className="block truncate px-2 py-1 text-xs">{p.label}</span>
             </button>

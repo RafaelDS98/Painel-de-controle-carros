@@ -26,7 +26,7 @@ export function SignaturePad({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  function pos(e: React.PointerEvent<HTMLCanvasElement>) {
+  function pos(e: React.PointerEvent<HTMLCanvasElement>): [number, number] {
     const r = e.currentTarget.getBoundingClientRect();
     return [((e.clientX - r.left) / r.width) * 600, ((e.clientY - r.top) / r.height) * 200];
   }

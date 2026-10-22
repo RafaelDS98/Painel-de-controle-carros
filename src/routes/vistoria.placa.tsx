@@ -7,7 +7,7 @@ import { PlateCombobox } from "@/components/plate-combobox";
 import { diffAnswers, STATUS_LABEL, type CheckStatus } from "@/lib/vistoria";
 
 export const Route = createFileRoute("/vistoria/placa")({
-  validateSearch: (s: Record<string, unknown>) => ({ placa: typeof s.placa === "string" ? s.placa : undefined }),
+  validateSearch: (s: Record<string, unknown>) => ({ placa: typeof s["placa"] === "string" ? s["placa"] : undefined }),
   head: () => ({
     meta: [
       { title: "Localizar por placa | ANPEXC Vistorias" },

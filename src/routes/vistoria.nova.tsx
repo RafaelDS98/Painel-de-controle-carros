@@ -29,9 +29,9 @@ import {
 
 export const Route = createFileRoute("/vistoria/nova")({
   validateSearch: (s: Record<string, unknown>) => ({
-    placa: typeof s.placa === "string" ? s.placa : undefined,
-    op: typeof s.op === "string" ? s.op : undefined,
-    rascunho: s.rascunho === 1 || s.rascunho === "1" ? 1 : undefined,
+    placa: typeof s["placa"] === "string" ? s["placa"] : undefined,
+    op: typeof s["op"] === "string" ? s["op"] : undefined,
+    rascunho: s["rascunho"] === 1 || s["rascunho"] === "1" ? 1 : undefined,
   }),
   head: () => ({
     meta: [

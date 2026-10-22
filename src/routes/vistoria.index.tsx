@@ -64,7 +64,7 @@ function VistoriaHome() {
   function start(op?: string) {
     if (draft && !confirm("Existe um rascunho neste aparelho. Começar uma nova vistoria descarta o rascunho. Continuar?")) return;
     localStorage.removeItem(DRAFT_KEY);
-    void navigate({ to: "/vistoria/nova", search: { placa: plate ?? undefined, op } });
+    void navigate({ to: "/vistoria/nova", search: { placa: plate ?? undefined, op, rascunho: undefined } });
   }
   async function addToHome() {
     if (install) {
@@ -101,7 +101,7 @@ function VistoriaHome() {
         </h2>
         {draft ? (
           <Button asChild variant="secondary" className="mt-2 h-12 w-full justify-start">
-            <Link to="/vistoria/nova" search={{ rascunho: 1 }}>
+            <Link to="/vistoria/nova" search={{ placa: undefined, op: undefined, rascunho: 1 }}>
               {draft.plate ?? "Sem placa"} · salvo{" "}
               {draft.savedAt ? new Date(draft.savedAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : ""}
               {typeof navigator !== "undefined" && !navigator.onLine && " · pendente de envio"}
