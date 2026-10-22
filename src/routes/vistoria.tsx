@@ -138,11 +138,16 @@ function VistoriaLogin() {
   );
 }
 
-const MENU: { label: string; icon: LucideIcon; to?: "/vistoria"; stage?: string }[] = [
+const MENU: {
+  label: string;
+  icon: LucideIcon;
+  to?: "/vistoria" | "/vistoria/nova" | "/vistoria/lista" | "/vistoria/placa";
+  stage?: string;
+}[] = [
   { label: "Início", icon: Home, to: "/vistoria" },
-  { label: "Nova vistoria", icon: ClipboardPlus, stage: "Etapa 1" },
-  { label: "Vistorias", icon: ListChecks, stage: "Etapa 1" },
-  { label: "Localizar por placa", icon: Search, stage: "Etapa 1" },
+  { label: "Nova vistoria", icon: ClipboardPlus, to: "/vistoria/nova" },
+  { label: "Vistorias", icon: ListChecks, to: "/vistoria/lista" },
+  { label: "Localizar por placa", icon: Search, to: "/vistoria/placa" },
   { label: "Ao Vivo", icon: Radio, stage: "Etapa 2" },
   { label: "Clientes", icon: Users, stage: "Etapa 4" },
   { label: "Relatórios", icon: BarChart3, stage: "Etapa 4" },
@@ -172,7 +177,7 @@ function VistoriaShell({ name }: { name: string }) {
   );
   return (
     <div className="flex min-h-screen bg-background text-foreground">
-      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r bg-sidebar md:flex">
+      <aside className="print:hidden sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r bg-sidebar md:flex">
         <div className="flex items-center gap-2 border-b px-4 py-4">
           <ClipboardCheck className="h-6 w-6 text-primary" />
           <span className="font-semibold">Vistorias</span>
@@ -183,7 +188,9 @@ function VistoriaShell({ name }: { name: string }) {
               <Link
                 key={item.label}
                 to={item.to}
-                className="flex h-10 items-center gap-3 rounded-md bg-sidebar-accent px-3 text-sm font-medium"
+                activeOptions={{ exact: true }}
+                activeProps={{ className: "bg-sidebar-accent" }}
+                className="flex h-10 items-center gap-3 rounded-md px-3 text-sm font-medium hover:bg-sidebar-accent"
               >
                 <item.icon className="h-4 w-4" />
                 {item.label}
@@ -214,17 +221,37 @@ function VistoriaShell({ name }: { name: string }) {
         )}
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-10 flex min-h-16 items-center gap-3 border-b bg-card/95 px-4 backdrop-blur">
+        <header className="print:hidden sticky top-0 z-10 flex min-h-16 items-center gap-3 border-b bg-card/95 px-4 backdrop-blur">
           <img src={logoAsset.url} alt="ANPEXC" className="h-9 w-auto object-contain" />
           <span className="font-semibold md:hidden">Vistorias</span>
           <div className="ml-auto flex items-center gap-2">
             {back}
             <span className="hidden text-sm text-muted-foreground sm:inline">{name}</span>
-            <Button variant="ghost" size="icon" className="h-10 w-10" onClick={signOut} aria-label="Sair">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10"
+              onClick={signOut}
+              aria-label="Sair"
+            >
               <LogOut className="h-4 w-4" />
             </Button>
           </div>
         </header>
+        <nav className="flex gap-1 overflow-x-auto border-b bg-card px-2 py-1 md:hidden print:hidden">
+          {MENU.filter((m) => m.to).map((m) => (
+            <Link
+              key={m.label}
+              to={m.to!}
+              activeOptions={{ exact: true }}
+              activeProps={{ className: "bg-primary text-primary-foreground" }}
+              className="flex h-10 shrink-0 items-center gap-1 rounded-md px-3 text-sm"
+            >
+              <m.icon className="h-4 w-4" />
+              {m.label}
+            </Link>
+          ))}
+        </nav>
         <main className="flex-1">
           <Outlet />
         </main>

@@ -1,9 +1,12 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { ClipboardPlus, Download, FileClock, ListChecks } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { PlateCombobox } from "@/components/plate-combobox";
+import { DRAFT_KEY, useOperationTypes } from "@/lib/vistoria-data";
 
 export const Route = createFileRoute("/vistoria/")({
   head: () => ({
@@ -19,14 +22,24 @@ export const Route = createFileRoute("/vistoria/")({
   component: VistoriaHome,
 });
 
-const SHORTCUTS = ["Entrada manutenção", "Saída manutenção", "Entrega reserva", "Devolução reserva"];
-
 type InstallPrompt = Event & { prompt: () => Promise<void> };
 
 function VistoriaHome() {
+  const navigate = useNavigate();
+  const ops = useOperationTypes();
   const [plate, setPlate] = useState<string | null>(null);
   const [install, setInstall] = useState<InstallPrompt | null>(null);
+  const [isPhone, setIsPhone] = useState(false);
+  const [draft, setDraft] = useState<{ plate: string | null; savedAt?: number } | null>(null);
   useEffect(() => {
+    const standalone = window.matchMedia("(display-mode: standalone)").matches;
+    setIsPhone(window.matchMedia("(pointer: coarse)").matches && !standalone);
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (raw) setDraft(JSON.parse(raw));
+    } catch {
+      /* ignora */
+    }
     const onPrompt = (e: Event) => {
       e.preventDefault();
       setInstall(e as InstallPrompt);
@@ -34,10 +47,33 @@ function VistoriaHome() {
     window.addEventListener("beforeinstallprompt", onPrompt);
     return () => window.removeEventListener("beforeinstallprompt", onPrompt);
   }, []);
-  function start(operation?: string) {
-    toast.info(
-      `A tela de checklist chega na próxima etapa${plate ? ` — placa ${plate}` : ""}${operation ? `, ${operation}` : ""}.`,
-    );
+  const today = useQuery({
+    queryKey: ["inspections", "today"],
+    queryFn: async () => {
+      const { data: u } = await supabase.auth.getUser();
+      const day = new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+      const { data } = await supabase
+        .from("inspections")
+        .select("id,number,plate,operation_name,damage_count,created_at")
+        .eq("inspector_id", u.user?.id ?? "")
+        .gte("created_at", `${day}T00:00:00-03:00`)
+        .order("created_at", { ascending: false });
+      return data ?? [];
+    },
+  });
+  function start(op?: string) {
+    if (
+      draft &&
+      !confirm(
+        "Existe um rascunho neste aparelho. Começar uma nova vistoria descarta o rascunho. Continuar?",
+      )
+    )
+      return;
+    localStorage.removeItem(DRAFT_KEY);
+    void navigate({
+      to: "/vistoria/nova",
+      search: { placa: plate ?? undefined, op, rascunho: undefined },
+    });
   }
   async function addToHome() {
     if (install) {
@@ -45,10 +81,9 @@ function VistoriaHome() {
       setInstall(null);
       return;
     }
-    toast.info(
-      "No celular, abra o menu do navegador e toque em “Adicionar à tela inicial”.",
-      { duration: 6000 },
-    );
+    toast.info("Abra o menu do navegador e toque em “Adicionar à tela inicial”.", {
+      duration: 6000,
+    });
   }
   return (
     <div className="mx-auto w-full max-w-xl space-y-5 p-4 sm:p-6">
@@ -64,9 +99,14 @@ function VistoriaHome() {
           Nova vistoria
         </Button>
         <div className="grid grid-cols-2 gap-2">
-          {SHORTCUTS.map((s) => (
-            <Button key={s} variant="outline" className="h-12 whitespace-normal" onClick={() => start(s)}>
-              {s}
+          {ops.data?.slice(0, 4).map((o) => (
+            <Button
+              key={o.id}
+              variant="outline"
+              className="h-12 whitespace-normal"
+              onClick={() => start(o.name)}
+            >
+              {o.name}
             </Button>
           ))}
         </div>
@@ -75,18 +115,57 @@ function VistoriaHome() {
         <h2 className="flex items-center gap-2 font-medium">
           <FileClock className="h-4 w-4" /> Continuar rascunho
         </h2>
-        <p className="mt-2 text-sm text-muted-foreground">Nenhum rascunho neste aparelho.</p>
+        {draft ? (
+          <Button asChild variant="secondary" className="mt-2 h-12 w-full justify-start">
+            <Link to="/vistoria/nova" search={{ placa: undefined, op: undefined, rascunho: 1 }}>
+              {draft.plate ?? "Sem placa"} · salvo{" "}
+              {draft.savedAt
+                ? new Date(draft.savedAt).toLocaleString("pt-BR", {
+                    dateStyle: "short",
+                    timeStyle: "short",
+                  })
+                : ""}
+              {typeof navigator !== "undefined" && !navigator.onLine && " · pendente de envio"}
+            </Link>
+          </Button>
+        ) : (
+          <p className="mt-2 text-sm text-muted-foreground">Nenhum rascunho neste aparelho.</p>
+        )}
       </section>
       <section className="rounded-xl border bg-card p-4">
         <h2 className="flex items-center gap-2 font-medium">
           <ListChecks className="h-4 w-4" /> Minhas vistorias de hoje
         </h2>
-        <p className="mt-2 text-sm text-muted-foreground">Nenhuma vistoria hoje.</p>
+        {today.data?.length ? (
+          <ul className="mt-2 divide-y text-sm">
+            {today.data.map((i) => (
+              <li key={i.id}>
+                <Link
+                  to="/vistoria/$id"
+                  params={{ id: i.id }}
+                  className="flex items-center gap-2 py-2"
+                >
+                  <span className="rounded border bg-white px-1.5 font-mono font-bold text-black">
+                    {i.plate}
+                  </span>
+                  <span className="flex-1 truncate">{i.operation_name}</span>
+                  <span className={i.damage_count ? "text-destructive" : "text-success"}>
+                    {i.damage_count} av.
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-2 text-sm text-muted-foreground">Nenhuma vistoria hoje.</p>
+        )}
       </section>
-      <Button variant="ghost" className="h-12 w-full" onClick={addToHome}>
-        <Download className="h-4 w-4" />
-        Adicionar à tela inicial do celular
-      </Button>
+      {isPhone && (
+        <Button variant="ghost" className="h-12 w-full" onClick={addToHome}>
+          <Download className="h-4 w-4" />
+          Adicionar à tela inicial do celular
+        </Button>
+      )}
     </div>
   );
 }
