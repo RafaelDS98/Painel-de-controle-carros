@@ -2,7 +2,7 @@
 
 Módulo novo dentro do painel ANPEXC, com o mesmo login, cores, logo e banco. Fica em `/vistorias`, com menu lateral próprio e um botão fixo **"Voltar ao painel ANPEXC"** no topo e no menu. Sem subdomínio: o acesso é só pelo próprio painel.
 
-A vistoria é feita pelo celular, no navegador, dentro do próprio painel (sem instalar app).
+A vistoria é feita pelo celular, no navegador, dentro do próprio painel (por enquanto sem app instalável; as regras e dados ficam no banco para que o futuro aplicativo reaproveite tudo sem retrabalho).
 
 ## Etapa 0 — Roadmap, base e acesso direto (esta entrega começa aqui)
 - **Acesso direto "como aplicativo":** abrir `anpexc.app/vistoria` já mostra a tela de login com a marca ANPEXC Vistorias; depois do login o usuário cai direto na tela inicial do vistoriador, não na Home do painel.
