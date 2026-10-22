@@ -66,3 +66,70 @@ Classificação e modelos de veículos, claviculário, fila de vistorias, bilhet
 - PDF do laudo gerado no navegador; Ao Vivo via Realtime.
 - Permissões novas entram em PERMISSIONS, `permission_default()` e `get_my_permissions()` juntas.
 - Testes para regras de cancelamento, numeração, filtros e comparação de vistorias.
+
+---
+
+# Parte 2 — Layout visual do módulo Vistorias
+
+Estrutura de telas baseada nos prints do VEX, mas com a identidade ANPEXC (cores azul/âmbar, fonte, logo, tema claro/escuro e o mesmo topo do painel). Nada do verde VEX.
+
+## Moldura geral (computador)
+```text
++--------------------------------------------------------------+
+| [logo ANPEXC] Vistorias   | busca | tema | usuário | <- Painel |
++-----------+--------------------------------------------------+
+| Início    |  Título da tela            [ação principal]      |
+| Vistorias |  Filtros (linha compacta, recolhível)            |
+| Nova      |  Conteúdo (cartões / tabela / quadro)            |
+| Placa     |                                                  |
+| Ao Vivo   |                                                  |
+| Clientes  |                                                  |
+| Relatórios|                                                  |
+| Config. > |                                                  |
+| <- Painel |                                                  |
++-----------+--------------------------------------------------+
+```
+- Menu lateral próprio do módulo, recolhível, com subitens (Configurações > Tipos de operação, Grupos e campos, Questionários, Áreas no mapa, E-mails, Laudo PDF). Mesmo comportamento do menu atual (dicas ao passar o mouse, lista flutuante quando recolhido).
+- Botão "Voltar ao painel ANPEXC" no topo e no rodapé do menu.
+
+## Telas (computador)
+1. **Página inicial** — 5 cartões de indicador no topo (Hoje, Mês, Veículos, Vistoriadores ativos, Com avaria); abaixo duas colunas: Top 5 vistoriadores (barras) e Últimos 7 dias (linha); depois Últimas vistorias (tabela curta com link do laudo) ao lado do Mapa das vistorias com botão tela cheia.
+2. **Vistorias (lista)** — filtros em grade compacta (Período, Tipo de operação, Tipo base, Placa, Chassi, Frota, Vistoriador, Cliente, Status, Avaria) com "Mais filtros"; tabela com selo de placa, ícones de laudo/histórico e botão de expandir linha; rodapé com paginação e três quadros de totais (por tipo, por operação, por vistoriador) e botões CSV/Excel.
+3. **Detalhe da vistoria** — cabeçalho escuro com placa, modelo, ano, KM, vistoriador, data e botões Ver laudo / Baixar / Enviar WhatsApp; abas Resumo · Checklist · Fotos · Avarias · Histórico. Aba Fotos = galeria: miniaturas à esquerda, foto grande à direita, "Ver original" e setas.
+4. **Localizar por placa** — campo de placas em "etiquetas" (várias placas, pesquisa exata/parcial); resultado com dados do veículo, local atual no Pátio e linha do tempo de vistorias; botão "Comparar" abre duas vistorias lado a lado (fotos e itens diferentes destacados em vermelho).
+5. **Ao Vivo** — quadro com uma coluna por tipo de operação, contador no título, rolagem própria em cada coluna e rolagem horizontal geral; cartão com placa (selo escuro), modelo, data/hora, ícone do laudo e etiqueta de avarias (verde "0 avarias" / vermelha "N avarias"); busca por placa no topo; clicar no cartão abre o detalhe em painel lateral.
+6. **Configurações** — lista em tabela (ID, nome, ordem editável, botões Perguntas/Fotos, status Ativo, Copiar). Editor de grupos e campos: cada grupo é um bloco recolhível com contador de campos e botões adicionar/editar/excluir; campos em linhas com tipo, "Obrigatório" e reordenação arrastando.
+7. **Clientes e Relatórios** — mesmo padrão de lista com filtros + tabela + exportação; relatórios com gráficos por período.
+
+## Telas do vistoriador (celular)
+```text
++----------------------+
+| ANPEXC Vistorias  [=]|
+| Olá, Fulano          |
+| [ Placa ______ ][cam]|
+| [   NOVA VISTORIA   ]|
+| Atalhos: Entrada |   |
+|          Saída  ...  |
+| Continuar rascunho   |
+| Minhas de hoje       |
++----------------------+
+```
+- **Início rápido:** saudação, campo de placa grande com botão de câmera, botão "Nova vistoria" ocupando a largura, atalhos de tipo de operação em botões, rascunhos e vistorias do dia.
+- **Assistente da vistoria:** topo fixo com placa, tipo e questionário; três abas Campos · Checklist · Fotos; barra de progresso.
+- **Checklist:** um cartão por item com 4 botões grandes de toque (Bom verde, Ruim vermelho, Atenção amarelo, N/A) e etiqueta "Obrigatório"; avaria abre foto + observação.
+- **Fotos:** grade 2 colunas com molduras-guia (Frente, Lateral dianteira direita…), selo "Obrigatório", botão câmera flutuante.
+- **Assinaturas e conclusão:** tela de assinatura em tela cheia (vistoriador e cliente), resumo e botão "Concluir"; aviso "pendente de envio" quando sem internet.
+- Botões com no mínimo 44px, textos legíveis no sol (alto contraste), funciona deitado ou em pé.
+
+## Padrões visuais
+- Cores do ANPEXC já existentes: azul principal, âmbar de destaque; verde/vermelho/amarelo só para estado (Bom/Ruim/Atenção, avarias).
+- Selo de placa no mesmo estilo branco do painel; números grandes nos indicadores; tabelas compactas como nas telas de O.S.
+- Estados vazios com ícone e frase curta (ex.: "Nenhuma vistoria neste tipo de operação").
+- Tudo validado em claro/escuro, computador (1280) e celular (390).
+
+## Ordem de construção do layout (acompanha o roadmap)
+- Etapa 0: moldura do módulo, menu, topo, botão voltar, início rápido do celular e login direto.
+- Etapa 1: assistente da vistoria (celular), lista, detalhe/galeria, localizar por placa e comparação.
+- Etapa 2: página inicial e Ao Vivo.
+- Etapa 3: telas de configuração e editor de grupos/campos.
+- Etapa 4+: clientes, relatórios, mapa, autoinspeção por link (mesmo assistente sem menu).
