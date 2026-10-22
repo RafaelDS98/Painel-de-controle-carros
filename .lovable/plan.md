@@ -22,6 +22,16 @@ A vistoria é feita pelo celular, no navegador, dentro do próprio painel (por e
 - **Detalhe:** respostas, galeria de fotos com ampliar, histórico, laudo em PDF para baixar/compartilhar, cancelamento (com motivo e regra de permissão).
 - **Localizar por placa:** linha do tempo das vistorias do veículo e comparação lado a lado de duas vistorias (ex.: entrega x devolução para achar avaria nova).
 - Integração com o painel: vistoria de Entrada/Saída manutenção pode registrar a entrada/saída no Pátio do veículo.
+- **Tela do checklist igual ao app VEX:** três abas (Campos / Checklist / Fotos); cada item com botões grandes de toque — Bom (verde), Ruim (vermelho), Atenção/reparo (amarelo), N/A — e etiqueta "Obrigatório"; não deixa concluir com obrigatório em branco. Fotos com moldura-guia (Frente, Lateral dianteira direita, Traseira…).
+- **Tipos base de vistoria (mesmo fluxo do VEX):**
+  - Pré-vistoria (empresa > empresa): fotos e dados antes de escolher o cliente.
+  - Entrega (empresa > cliente): pode puxar os dados de uma pré-vistoria.
+  - Cautelar (empresa > cliente): atualização intermediária opcional entre entrega e coleta.
+  - Coleta (cliente > empresa): devolução; puxa a entrega anterior para comparar e apontar avarias novas.
+  - Coleta com entrega (empresa > cliente > empresa): coleta e entrega numa só vistoria; só é concluída depois da assinatura de entrega.
+  - Autoinspeção (cliente > empresa): feita por link (Etapa 5).
+- **Assinatura digital** do vistoriador e do cliente/motorista na tela, gravada no laudo.
+- **Sem internet (modo offline básico):** o checklist e as fotos ficam guardados no celular e são enviados sozinhos quando a conexão volta, com aviso "pendente de envio". (Offline completo, abrindo o sistema sem nenhuma internet, fica para o futuro aplicativo.)
 
 ## Etapa 2 — Página inicial e Ao Vivo
 - KPIs (hoje, mês, veículos, vistoriadores ativos), Top 5 vistoriadores, gráfico dos últimos 7 dias, últimas 10 vistorias.
