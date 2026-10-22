@@ -212,6 +212,7 @@ function NovaVistoria() {
     } finally {
       setSaving(false);
     }
+    return undefined;
   }
 
   const tabs: { k: Tab; l: string }[] = [

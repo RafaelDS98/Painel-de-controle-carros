@@ -115,3 +115,8 @@
 - [ ] Etapa 4: clientes, e-mail do laudo, relatórios.
 - [ ] Etapa 5: leitura de placa pela câmera, cerco geográfico, checklist por link, mapa.
 - [ ] Etapa 6: importar histórico do VEX (aguarda exportação do VEX).
+
+## Vistorias — Etapa 1 (concluída em 22/10/2026)
+- Checklist no celular (Campos/Checklist/Fotos/Assinar), fotos comprimidas com data/hora, avaria com foto+observação, assinaturas, rascunho no aparelho (pendente de envio sem internet).
+- Lista com filtros/CSV, detalhe com galeria, laudo (imprimir/PDF), WhatsApp, cancelamento com motivo; Localizar por placa com comparação.
+- Pendente: editor Master de tipos/grupos/campos (Etapa 3), envio automático em fila offline, integração com Pátio, filtro por vistoriador/cliente.
