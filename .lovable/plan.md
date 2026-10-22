@@ -4,7 +4,13 @@ Módulo novo dentro do painel ANPEXC, com o mesmo login, cores, logo e banco. Fi
 
 A vistoria é feita pelo celular, no navegador, dentro do próprio painel (sem instalar app).
 
-## Etapa 0 — Roadmap e base (esta entrega começa aqui)
+## Etapa 0 — Roadmap, base e acesso direto (esta entrega começa aqui)
+- **Acesso direto "como aplicativo":** abrir `anpexc.app/vistoria` já mostra a tela de login com a marca ANPEXC Vistorias; depois do login o usuário cai direto na tela inicial do vistoriador, não na Home do painel.
+- **Tela inicial do vistoriador (celular):** botão grande "Nova vistoria", campo de placa logo no topo (digitar ou escolher da frota), atalhos para os tipos de operação mais usados (ex.: Entrada manutenção, Saída manutenção), lista "Continuar rascunho" e "Minhas vistorias de hoje". Do login ao checklist em 2 toques.
+- **Instalar na tela do celular:** botão "Adicionar à tela inicial" que cria um ícone ANPEXC Vistorias no celular, abrindo em tela cheia direto em `/vistoria`, como um app, sem loja.
+- **Login lembrado:** sessão continua aberta no celular (não pede senha toda vez); sair só pelo menu.
+- **Quem só faz vistoria:** perfis/usuários com apenas a permissão de vistoria sempre entram direto nessa tela; quem tem mais acessos vê o botão "Voltar ao painel ANPEXC".
+- Mesmo login do painel (mesma conta e senha), sem cadastro separado.
 - Registrar este roadmap em `roadmap.md` e as regras no AGENTS.md.
 - Estrutura do módulo: menu lateral próprio (Página inicial, Vistorias, Nova vistoria, Localizar por placa, Ao Vivo, Clientes, Relatórios, Configurações), botão de voltar ao ANPEXC e atalho "Vistorias" no menu do painel.
 - Permissões novas na tela de Permissões (acessar módulo, fazer vistoria, cancelar, configurar), Master controla.
