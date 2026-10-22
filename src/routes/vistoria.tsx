@@ -141,14 +141,21 @@ function VistoriaLogin() {
 const MENU: {
   label: string;
   icon: LucideIcon;
-  to?: "/vistoria" | "/vistoria/nova" | "/vistoria/lista" | "/vistoria/placa";
+  to?:
+    | "/vistoria"
+    | "/vistoria/nova"
+    | "/vistoria/lista"
+    | "/vistoria/placa"
+    | "/vistoria/painel"
+    | "/vistoria/ao-vivo";
   stage?: string;
 }[] = [
   { label: "Início", icon: Home, to: "/vistoria" },
+  { label: "Página inicial", icon: BarChart3, to: "/vistoria/painel" },
   { label: "Nova vistoria", icon: ClipboardPlus, to: "/vistoria/nova" },
   { label: "Vistorias", icon: ListChecks, to: "/vistoria/lista" },
   { label: "Localizar por placa", icon: Search, to: "/vistoria/placa" },
-  { label: "Ao Vivo", icon: Radio, stage: "Etapa 2" },
+  { label: "Ao Vivo", icon: Radio, to: "/vistoria/ao-vivo" },
   { label: "Clientes", icon: Users, stage: "Etapa 4" },
   { label: "Relatórios", icon: BarChart3, stage: "Etapa 4" },
   { label: "Configurações", icon: Settings, stage: "Etapa 3" },

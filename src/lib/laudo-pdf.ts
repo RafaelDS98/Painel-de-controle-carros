@@ -1,6 +1,7 @@
 import { jsPDF } from "jspdf";
 import logoAsset from "@/assets/logo-anpexc.png.asset.json";
 import { VISTORIA_TERM } from "@/lib/vistoria-term";
+import { DAMAGE_LEGEND } from "@/lib/vistoria";
 
 export interface LaudoAnswer {
   label: string;
@@ -225,21 +226,51 @@ export async function buildLaudoPdf(d: LaudoData): Promise<jsPDF> {
     newPage();
     doc.setFont("helvetica", "normal").setFontSize(14).setTextColor(20);
     doc.text(`Fotos da ${d.operation.toUpperCase()}`, M, y);
-    y += 10;
+    y += 7;
+    doc.setFontSize(9).setTextColor(110).text("Legenda avarias:", M, y);
+    y += 6;
+    DAMAGE_LEGEND.forEach((l, k) => {
+      const x = M + 2 + k * 30;
+      const rgb = [1, 3, 5].map((o) => parseInt(l.color.slice(o, o + 2), 16)) as [
+        number,
+        number,
+        number,
+      ];
+      doc.setFillColor(...rgb).circle(x, y - 1.2, 2.2, "F");
+      doc
+        .setFont("helvetica", "bold")
+        .setFontSize(6.5)
+        .setTextColor(255)
+        .text(l.code, x, y - 0.1, { align: "center" });
+      doc
+        .setFont("helvetica", "normal")
+        .setFontSize(9)
+        .setTextColor(30)
+        .text(l.label, x + 3.5, y);
+    });
+    y += 6;
     const pw = (W - 2 * M - 6) / 2;
     for (let i = 0; i < photos.length; i++) {
       const col = i % 2;
       if (i > 0 && col === 0) newPage();
       const p = photos[i]!;
       const x = M + col * (pw + 6);
-      doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(40);
-      doc.text(`${i + 1}/${photos.length} - ${p.label.toUpperCase()}`, x, y);
       const data = await img(p.photo_path);
+      let h = 120;
+      let iw = pw;
       if (data) {
         const prop = doc.getImageProperties(data);
-        const h = Math.min(160, (pw * prop.height) / prop.width);
-        doc.addImage(data, "JPEG", x, y + 3, (h * prop.width) / prop.height, h);
+        h = Math.min(160, (pw * prop.height) / prop.width);
+        iw = (h * prop.width) / prop.height;
       }
+      doc
+        .setDrawColor(60)
+        .setLineWidth(0.3)
+        .rect(x, y, pw, h + 5);
+      doc.setFont("helvetica", "bold").setFontSize(6.5).setTextColor(30);
+      doc.text(`${i + 1}/${photos.length} - ${p.label.toUpperCase()}`, x + 1.5, y + 3.5);
+      doc.line(x, y + 5, x + pw, y + 5);
+      if (data) doc.addImage(data, "JPEG", x + (pw - iw) / 2, y + 5, iw, h);
     }
   }
 
