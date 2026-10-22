@@ -21,6 +21,7 @@ import {
 } from "@/lib/vistoria";
 import {
   compressPhoto,
+  type StampedPhoto,
   DRAFT_KEY,
   uploadDataUrl,
   useChecklistConfig,
@@ -80,6 +81,7 @@ function NovaVistoria() {
   const config = useChecklistConfig();
   const [tab, setTab] = useState<Tab>("campos");
   const [saving, setSaving] = useState(false);
+  const [view, setView] = useState<string | null>(null);
   const [d, setD] = useState<Draft>(() => {
     if (search.rascunho && typeof window !== "undefined") {
       try {
@@ -186,7 +188,9 @@ function NovaVistoria() {
         for (const f of g.fields) {
           const a = d.answers[f.id];
           if (!a) continue;
-          const photo = a.photo ? await uploadDataUrl(`${base}/${f.id}.jpg`, a.photo) : null;
+          const photo = a.photo
+            ? await uploadDataUrl(`${base}/${a.photoName ?? f.id + ".jpg"}`, a.photo)
+            : null;
           rows.push({
             inspection_id: ins.id,
             field_id: f.id,
@@ -196,6 +200,8 @@ function NovaVistoria() {
             status: a.status ?? null,
             value: a.value ?? null,
             photo_path: photo,
+            photo_name: a.photoName ?? null,
+            photo_taken_at: a.photoAt ?? null,
             note: a.note ?? null,
           });
         }
@@ -351,7 +357,15 @@ function NovaVistoria() {
                   const bad = a?.status === "ruim" || a?.status === "atencao";
                   return (
                     <div key={f.id} className="space-y-2 rounded-lg border p-3">
-                      <FieldLabel label={f.label} required={f.required} />
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <FieldLabel label={f.label} required={f.required} />
+                        <ItemPhoto
+                          label={f.label}
+                          answer={a}
+                          onView={setView}
+                          onChange={(ph) => setAns(f.id, ph)}
+                        />
+                      </div>
                       {f.kind === "check" ? (
                         <div className="grid grid-cols-4 gap-1">
                           {(Object.keys(STATUS_LABEL) as CheckStatus[]).map((s) => (
@@ -381,11 +395,6 @@ function NovaVistoria() {
                             value={a?.note ?? ""}
                             onChange={(e) => setAns(f.id, { note: e.target.value })}
                           />
-                          <PhotoInput
-                            value={a?.photo}
-                            onChange={(photo) => setAns(f.id, { photo })}
-                            label="Foto da avaria"
-                          />
                         </div>
                       )}
                     </div>
@@ -406,7 +415,7 @@ function NovaVistoria() {
                       label={f.label}
                       required={f.required}
                       value={d.answers[f.id]?.photo}
-                      onChange={(photo) => setAns(f.id, { photo })}
+                      onChange={(ph) => setAns(f.id, ph)}
                     />
                   ))}
                 </div>
@@ -473,7 +482,7 @@ function PhotoInput({
   label: string;
   required?: boolean;
   value?: string | undefined;
-  onChange: (v: string | undefined) => void;
+  onChange: (v: StampedPhoto) => void;
 }) {
   return (
     <label className="relative flex aspect-[4/3] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border-2 border-dashed bg-muted/40 text-center text-xs">
@@ -498,10 +507,66 @@ function PhotoInput({
         className="hidden"
         onChange={async (e) => {
           const f = e.target.files?.[0];
-          if (f) onChange(await compressPhoto(f));
+          if (f) onChange(await compressPhoto(f, label));
           e.target.value = "";
         }}
       />
     </label>
+  );
+}
+
+function ItemPhoto({
+  label,
+  answer,
+  onChange,
+  onView,
+}: {
+  label: string;
+  answer: AnswerDraft | undefined;
+  onChange: (v: StampedPhoto) => void;
+  onView: (src: string) => void;
+}) {
+  return (
+    <div className="flex min-w-0 items-center gap-2 text-xs">
+      {answer?.photo && (
+        <button
+          type="button"
+          onClick={() => onView(answer.photo!)}
+          className="max-w-[11rem] truncate text-link underline"
+          title="Ver foto"
+        >
+          {answer.photoName ?? "foto.jpg"}
+        </button>
+      )}
+      <label className="flex h-9 cursor-pointer items-center gap-1 rounded-md border px-2 font-medium hover:bg-muted">
+        <Camera className="h-4 w-4" />
+        {answer?.photo ? "Trocar" : "Foto"}
+        <input
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={async (e) => {
+            const f = e.target.files?.[0];
+            if (f) onChange(await compressPhoto(f, label));
+            e.target.value = "";
+          }}
+        />
+      </label>
+    </div>
+  );
+}
+
+export function PhotoViewer({ src, onClose }: { src: string | null; onClose: () => void }) {
+  if (!src) return null;
+  return (
+    <button
+      type="button"
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4"
+      aria-label="Fechar foto"
+    >
+      <img src={src} alt="Foto" className="max-h-full max-w-full object-contain" />
+    </button>
   );
 }

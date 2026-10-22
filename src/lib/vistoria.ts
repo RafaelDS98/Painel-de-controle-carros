@@ -14,6 +14,8 @@ export interface AnswerDraft {
   value?: string | undefined;
   photo?: string | undefined; // dataURL comprimida enquanto não enviada
   note?: string | undefined;
+  photoName?: string | undefined;
+  photoAt?: string | undefined; // ISO da captura
 }
 
 export const STATUS_LABEL: Record<CheckStatus, string> = {
