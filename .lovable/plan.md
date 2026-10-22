@@ -37,9 +37,14 @@ A vistoria é feita pelo celular, no navegador, dentro do próprio painel (por e
 - Envio automático do laudo por e-mail ao concluir a vistoria (modelos baseados nos HTML enviados).
 - Relatórios: quantidade por período, por vistoriador, exportação, histórico de alterações.
 
-## Etapa 5 — Histórico do VEX e extras
+## Etapa 5 — Recursos avançados de campo
+- **Começar vistoria pela placa (câmera):** na tela do vistoriador, botão de câmera ao lado do campo placa; aponta para o carro, a placa é lida automaticamente, conferida com a frota cadastrada e a vistoria já abre com o veículo preenchido. Também lê QR Code/código de barras (ex.: etiqueta no para-brisa). Se não reconhecer, digita normalmente.
+- **Cerco geográfico:** Master cadastra áreas autorizadas no mapa (pátio, lojas, oficinas) com raio; cada tipo de operação pode exigir estar dentro de uma área. Ao iniciar/concluir, o celular informa a localização; fora da área a vistoria é bloqueada (ou só sinalizada, conforme configuração). Localização fica gravada na vistoria e aparece no detalhe/mapa.
+- **Checklist por link (autoinspeção):** o painel gera um link único e com validade para enviar por WhatsApp ao cliente/motorista; ele faz o checklist e as fotos obrigatórias pelo celular sem login, assina e envia. A vistoria entra marcada como "Autoinspeção" para revisão.
+- **Mapa das vistorias:** na Página inicial, mapa com as vistorias do dia pela localização registrada.
+
+## Etapa 6 — Histórico do VEX
 - Importar vistorias antigas do VEX (precisaremos de exportação Excel/CSV e, se possível, fotos).
-- Extras avaliados depois: checklist por link (autoinspeção do cliente sem login), leitura de placa pela câmera, cerco geográfico.
 
 ## Fora do escopo (não usados hoje pela operação)
 Classificação e modelos de veículos, claviculário, fila de vistorias, bilhetagem de e-mails, histórico de versão de dados, versões de aplicativo/dispositivos.
