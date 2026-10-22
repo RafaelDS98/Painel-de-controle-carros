@@ -648,7 +648,9 @@ export type Database = {
           kind: string
           label: string
           note: string | null
+          photo_name: string | null
           photo_path: string | null
+          photo_taken_at: string | null
           status: string | null
           value: string | null
         }
@@ -660,7 +662,9 @@ export type Database = {
           kind: string
           label: string
           note?: string | null
+          photo_name?: string | null
           photo_path?: string | null
+          photo_taken_at?: string | null
           status?: string | null
           value?: string | null
         }
@@ -672,7 +676,9 @@ export type Database = {
           kind?: string
           label?: string
           note?: string | null
+          photo_name?: string | null
           photo_path?: string | null
+          photo_taken_at?: string | null
           status?: string | null
           value?: string | null
         }
@@ -790,6 +796,7 @@ export type Database = {
           client_name: string | null
           created_at: string
           damage_count: number
+          details: Json
           driver_name: string | null
           driver_signature: string | null
           fuel: string | null
@@ -802,7 +809,9 @@ export type Database = {
           operation_name: string | null
           operation_type_id: string | null
           plate: string
+          questionnaire: string
           status: string
+          validation_code: string
           vehicle_id: string | null
         }
         Insert: {
@@ -812,6 +821,7 @@ export type Database = {
           client_name?: string | null
           created_at?: string
           damage_count?: number
+          details?: Json
           driver_name?: string | null
           driver_signature?: string | null
           fuel?: string | null
@@ -824,7 +834,9 @@ export type Database = {
           operation_name?: string | null
           operation_type_id?: string | null
           plate: string
+          questionnaire?: string
           status?: string
+          validation_code?: string
           vehicle_id?: string | null
         }
         Update: {
@@ -834,6 +846,7 @@ export type Database = {
           client_name?: string | null
           created_at?: string
           damage_count?: number
+          details?: Json
           driver_name?: string | null
           driver_signature?: string | null
           fuel?: string | null
@@ -846,7 +859,9 @@ export type Database = {
           operation_name?: string | null
           operation_type_id?: string | null
           plate?: string
+          questionnaire?: string
           status?: string
+          validation_code?: string
           vehicle_id?: string | null
         }
         Relationships: [
