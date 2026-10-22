@@ -16,6 +16,10 @@ export const PERMISSIONS = [
   { key: "action.news_edit", group: "Notícias", label: "Editar notícia" },
   { key: "action.news_delete", group: "Notícias", label: "Excluir notícia" },
   { key: "action.home_layout", group: "Notícias", label: "Organizar painéis da Home" },
+  { key: "module.vistorias", group: "Vistorias", label: "Acessar módulo Vistorias" },
+  { key: "action.inspection_create", group: "Vistorias", label: "Fazer vistoria" },
+  { key: "action.inspection_cancel", group: "Vistorias", label: "Cancelar vistoria" },
+  { key: "action.inspection_config", group: "Vistorias", label: "Configurar vistorias" },
 ] as const;
 
 export type PermissionKey = (typeof PERMISSIONS)[number]["key"];
@@ -44,6 +48,12 @@ export function permissionDefault(role: string | null | undefined, key: string):
     case "action.news_edit":
     case "action.news_delete":
     case "action.home_layout":
+      return role === "gerente";
+    case "module.vistorias":
+    case "action.inspection_create":
+      return true;
+    case "action.inspection_cancel":
+    case "action.inspection_config":
       return role === "gerente";
     default:
       return false;

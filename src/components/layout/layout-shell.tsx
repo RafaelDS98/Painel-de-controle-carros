@@ -12,6 +12,7 @@ import {
   Settings,
   ChevronsRight,
   ClipboardList,
+  ClipboardCheck,
   DollarSign,
   FileText,
   HelpCircle,
@@ -132,6 +133,7 @@ const NAV: NavItem[] = [
     ],
   },
   { to: "/veiculos", label: "Veículos", icon: Truck, perm: "module.veiculos" },
+  { to: "/vistoria", label: "Vistorias", icon: ClipboardCheck, perm: "module.vistorias" },
 ];
 
 /** Módulos futuros — visíveis desabilitados até existirem. */
