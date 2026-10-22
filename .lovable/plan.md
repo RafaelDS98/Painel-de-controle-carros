@@ -8,7 +8,7 @@ A vistoria é feita pelo celular, no navegador, dentro do próprio painel (por e
 - **Acesso direto "como aplicativo":** abrir `anpexc.app/vistoria` já mostra a tela de login com a marca ANPEXC Vistorias; depois do login o usuário cai direto na tela inicial do vistoriador, não na Home do painel.
 - **Tela inicial do vistoriador (celular):** botão grande "Nova vistoria", campo de placa logo no topo (digitar ou escolher da frota), atalhos para os tipos de operação mais usados (ex.: Entrada manutenção, Saída manutenção — tipos, grupos e campos da vistoria são criados e editados pelo Master, ex.: campos "Foto da placa", "Foto da lateral" dentro do grupo "Avarias", com tipo de campo, obrigatoriedade e ordem; a tela do vistoriador monta o checklist a partir dessa configuração), lista "Continuar rascunho" e "Minhas vistorias de hoje". Do login ao checklist em 2 toques.
 - **Instalar na tela do celular:** botão "Adicionar à tela inicial" que cria um ícone ANPEXC Vistorias no celular, abrindo em tela cheia direto em `/vistoria`, como um app, sem loja.
-- **Login lembrado:** sessão continua aberta no celular (não pede senha toda vez); sair só pelo menu.
+- **Login lembrado:** sessão continua aberta no celular por até 12h (não pede senha toda vez); sair só pelo menu.
 - **Quem só faz vistoria:** perfis/usuários com apenas a permissão de vistoria sempre entram direto nessa tela; quem tem mais acessos vê o botão "Voltar ao painel ANPEXC".
 - Mesmo login do painel (mesma conta e senha), sem cadastro separado.
 - Registrar este roadmap em `roadmap.md` e as regras no AGENTS.md.
