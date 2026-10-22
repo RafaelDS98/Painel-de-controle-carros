@@ -106,3 +106,12 @@
 - [x] Consultas → O.S.: corrigido erro do perfil Oficina, mostra todas ao abrir, ordem escolhida pelo usuário.
 - [x] Oficina consulta O.S. por padrão; telas de O.S./Notícias conferem permissão ao abrir; atalhos da Home filtrados.
 - [x] Notícias publicadas visíveis para a Oficina.
+
+## Módulo Vistorias (substituto do VEX) — plano aprovado em .lovable/plan/módulo-vistorias-*.md
+- [x] Etapa 0: /vistoria com login direto (sessão 12h), início rápido no celular, menu próprio, botão "Voltar ao painel ANPEXC", "Adicionar à tela inicial", item no menu do painel, permissões de vistoria.
+- [ ] Etapa 1: tabelas/config de tipos, grupos e campos; assistente de checklist (Campos/Checklist/Fotos, assinatura, rascunho offline); lista, detalhe/galeria, PDF, localizar por placa e comparação; tipos base (pré-vistoria, entrega, cautelar, coleta, coleta com entrega).
+- [ ] Etapa 2: página inicial com indicadores e Ao Vivo.
+- [ ] Etapa 3: configurações completas (questionários, grupos/campos editáveis pelo Master).
+- [ ] Etapa 4: clientes, e-mail do laudo, relatórios.
+- [ ] Etapa 5: leitura de placa pela câmera, cerco geográfico, checklist por link, mapa.
+- [ ] Etapa 6: importar histórico do VEX (aguarda exportação do VEX).

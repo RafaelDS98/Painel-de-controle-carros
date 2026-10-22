@@ -11,12 +11,14 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as VistoriaRouteImport } from './routes/vistoria'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedHistoricosRouteImport } from './routes/_authenticated/historicos'
 import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
 import { Route as AuthenticatedNoticiasRouteImport } from './routes/_authenticated/noticias'
 import { Route as AuthenticatedVeiculosRouteImport } from './routes/_authenticated/veiculos'
+import { Route as VistoriaIndexRouteImport } from './routes/vistoria.index'
 import { Route as AuthenticatedOrdensServicoIndexRouteImport } from './routes/_authenticated/ordens-servico.index'
 import { Route as AuthenticatedOrdensServicoIdRouteImport } from './routes/_authenticated/ordens-servico.$id'
 import { Route as AuthenticatedOrdensServicoNovaRouteImport } from './routes/_authenticated/ordens-servico.nova'
@@ -31,6 +33,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VistoriaRoute = VistoriaRouteImport.update({
+  id: '/vistoria',
+  path: '/vistoria',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
@@ -62,6 +69,11 @@ const AuthenticatedVeiculosRoute = AuthenticatedVeiculosRouteImport.update({
   id: '/veiculos',
   path: '/veiculos',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const VistoriaIndexRoute = VistoriaIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => VistoriaRoute,
 } as any)
 const AuthenticatedOrdensServicoIndexRoute =
   AuthenticatedOrdensServicoIndexRouteImport.update({
@@ -102,11 +114,13 @@ const ApiPublicHooksSglocSyncRoute = ApiPublicHooksSglocSyncRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthRoute
+  '/vistoria': typeof VistoriaRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/historicos': typeof AuthenticatedHistoricosRoute
   '/home': typeof AuthenticatedHomeRoute
   '/noticias': typeof AuthenticatedNoticiasRoute
   '/veiculos': typeof AuthenticatedVeiculosRoute
+  '/vistoria/': typeof VistoriaIndexRoute
   '/ordens-servico/$id': typeof AuthenticatedOrdensServicoIdRoute
   '/ordens-servico/nova': typeof AuthenticatedOrdensServicoNovaRoute
   '/usuarios/permissoes': typeof AuthenticatedUsuariosPermissoesRoute
@@ -122,6 +136,7 @@ export interface FileRoutesByTo {
   '/noticias': typeof AuthenticatedNoticiasRoute
   '/veiculos': typeof AuthenticatedVeiculosRoute
   '/': typeof AuthenticatedIndexRoute
+  '/vistoria': typeof VistoriaIndexRoute
   '/ordens-servico/$id': typeof AuthenticatedOrdensServicoIdRoute
   '/ordens-servico/nova': typeof AuthenticatedOrdensServicoNovaRoute
   '/usuarios/permissoes': typeof AuthenticatedUsuariosPermissoesRoute
@@ -133,12 +148,14 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/vistoria': typeof VistoriaRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/historicos': typeof AuthenticatedHistoricosRoute
   '/_authenticated/home': typeof AuthenticatedHomeRoute
   '/_authenticated/noticias': typeof AuthenticatedNoticiasRoute
   '/_authenticated/veiculos': typeof AuthenticatedVeiculosRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/vistoria/': typeof VistoriaIndexRoute
   '/_authenticated/ordens-servico/$id': typeof AuthenticatedOrdensServicoIdRoute
   '/_authenticated/ordens-servico/nova': typeof AuthenticatedOrdensServicoNovaRoute
   '/_authenticated/usuarios/permissoes': typeof AuthenticatedUsuariosPermissoesRoute
@@ -151,11 +168,13 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/vistoria'
     | '/dashboard'
     | '/historicos'
     | '/home'
     | '/noticias'
     | '/veiculos'
+    | '/vistoria/'
     | '/ordens-servico/$id'
     | '/ordens-servico/nova'
     | '/usuarios/permissoes'
@@ -171,6 +190,7 @@ export interface FileRouteTypes {
     | '/noticias'
     | '/veiculos'
     | '/'
+    | '/vistoria'
     | '/ordens-servico/$id'
     | '/ordens-servico/nova'
     | '/usuarios/permissoes'
@@ -181,12 +201,14 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_authenticated'
     | '/auth'
+    | '/vistoria'
     | '/_authenticated/dashboard'
     | '/_authenticated/historicos'
     | '/_authenticated/home'
     | '/_authenticated/noticias'
     | '/_authenticated/veiculos'
     | '/_authenticated/'
+    | '/vistoria/'
     | '/_authenticated/ordens-servico/$id'
     | '/_authenticated/ordens-servico/nova'
     | '/_authenticated/usuarios/permissoes'
@@ -198,6 +220,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  VistoriaRoute: typeof VistoriaRouteWithChildren
   ApiPublicHooksSglocSyncRoute: typeof ApiPublicHooksSglocSyncRoute
 }
 
@@ -215,6 +238,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/vistoria': {
+      id: '/vistoria'
+      path: '/vistoria'
+      fullPath: '/vistoria'
+      preLoaderRoute: typeof VistoriaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/': {
@@ -258,6 +288,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/veiculos'
       preLoaderRoute: typeof AuthenticatedVeiculosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/vistoria/': {
+      id: '/vistoria/'
+      path: '/'
+      fullPath: '/vistoria/'
+      preLoaderRoute: typeof VistoriaIndexRouteImport
+      parentRoute: typeof VistoriaRoute
     }
     '/_authenticated/ordens-servico/': {
       id: '/_authenticated/ordens-servico/'
@@ -335,9 +372,22 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
+interface VistoriaRouteChildren {
+  VistoriaIndexRoute: typeof VistoriaIndexRoute
+}
+
+const VistoriaRouteChildren: VistoriaRouteChildren = {
+  VistoriaIndexRoute: VistoriaIndexRoute,
+}
+
+const VistoriaRouteWithChildren = VistoriaRoute._addFileChildren(
+  VistoriaRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  VistoriaRoute: VistoriaRouteWithChildren,
   ApiPublicHooksSglocSyncRoute: ApiPublicHooksSglocSyncRoute,
 }
 export const routeTree = rootRouteImport

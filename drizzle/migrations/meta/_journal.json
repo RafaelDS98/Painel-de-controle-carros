@@ -267,6 +267,13 @@
       "when": 1792610441779,
       "tag": "0037_news_media_read_all_roles",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1792679140658,
+      "tag": "0038_vistorias_permissions",
+      "breakpoints": true
     }
   ]
 }
