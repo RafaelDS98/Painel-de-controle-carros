@@ -639,6 +639,233 @@ export type Database = {
         }
         Relationships: []
       }
+      inspection_answers: {
+        Row: {
+          field_id: string | null
+          group_name: string | null
+          id: string
+          inspection_id: string
+          kind: string
+          label: string
+          note: string | null
+          photo_path: string | null
+          status: string | null
+          value: string | null
+        }
+        Insert: {
+          field_id?: string | null
+          group_name?: string | null
+          id?: string
+          inspection_id: string
+          kind: string
+          label: string
+          note?: string | null
+          photo_path?: string | null
+          status?: string | null
+          value?: string | null
+        }
+        Update: {
+          field_id?: string | null
+          group_name?: string | null
+          id?: string
+          inspection_id?: string
+          kind?: string
+          label?: string
+          note?: string | null
+          photo_path?: string | null
+          status?: string | null
+          value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inspection_answers_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "inspection_fields"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspection_answers_inspection_id_fkey"
+            columns: ["inspection_id"]
+            isOneToOne: false
+            referencedRelation: "inspections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inspection_fields: {
+        Row: {
+          active: boolean
+          group_id: string
+          id: string
+          kind: string
+          label: string
+          required: boolean
+          sort: number
+        }
+        Insert: {
+          active?: boolean
+          group_id: string
+          id?: string
+          kind?: string
+          label: string
+          required?: boolean
+          sort?: number
+        }
+        Update: {
+          active?: boolean
+          group_id?: string
+          id?: string
+          kind?: string
+          label?: string
+          required?: boolean
+          sort?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inspection_fields_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "inspection_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inspection_groups: {
+        Row: {
+          active: boolean
+          id: string
+          name: string
+          sort: number
+          tab: string
+        }
+        Insert: {
+          active?: boolean
+          id?: string
+          name: string
+          sort?: number
+          tab?: string
+        }
+        Update: {
+          active?: boolean
+          id?: string
+          name?: string
+          sort?: number
+          tab?: string
+        }
+        Relationships: []
+      }
+      inspection_operation_types: {
+        Row: {
+          active: boolean
+          base_type: string
+          created_at: string
+          id: string
+          name: string
+          sort: number
+        }
+        Insert: {
+          active?: boolean
+          base_type?: string
+          created_at?: string
+          id?: string
+          name: string
+          sort?: number
+        }
+        Update: {
+          active?: boolean
+          base_type?: string
+          created_at?: string
+          id?: string
+          name?: string
+          sort?: number
+        }
+        Relationships: []
+      }
+      inspections: {
+        Row: {
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          client_name: string | null
+          created_at: string
+          damage_count: number
+          driver_name: string | null
+          driver_signature: string | null
+          fuel: string | null
+          id: string
+          inspector_id: string
+          inspector_signature: string | null
+          km: number | null
+          notes: string | null
+          number: number
+          operation_name: string | null
+          operation_type_id: string | null
+          plate: string
+          status: string
+          vehicle_id: string | null
+        }
+        Insert: {
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          client_name?: string | null
+          created_at?: string
+          damage_count?: number
+          driver_name?: string | null
+          driver_signature?: string | null
+          fuel?: string | null
+          id?: string
+          inspector_id?: string
+          inspector_signature?: string | null
+          km?: number | null
+          notes?: string | null
+          number?: number
+          operation_name?: string | null
+          operation_type_id?: string | null
+          plate: string
+          status?: string
+          vehicle_id?: string | null
+        }
+        Update: {
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          client_name?: string | null
+          created_at?: string
+          damage_count?: number
+          driver_name?: string | null
+          driver_signature?: string | null
+          fuel?: string | null
+          id?: string
+          inspector_id?: string
+          inspector_signature?: string | null
+          km?: number | null
+          notes?: string | null
+          number?: number
+          operation_name?: string | null
+          operation_type_id?: string | null
+          plate?: string
+          status?: string
+          vehicle_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inspections_operation_type_id_fkey"
+            columns: ["operation_type_id"]
+            isOneToOne: false
+            referencedRelation: "inspection_operation_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspections_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       news_posts: {
         Row: {
           body: string
