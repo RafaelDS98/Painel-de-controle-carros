@@ -41,3 +41,4 @@
 - `src/integrations` é gerado pela plataforma e fica fora do eslint; o resto segue `prettier`, de modo que `bun run lint` termine sem erros — formate antes de commitar.
 - Permissões por usuário: user_permissions + has_permission()/permission_default(); aba/ação nova entra em PERMISSIONS (src/lib/permissions.ts), permission_default() e get_my_permissions() juntas — o master libera sem código.
 - Sessão nova: ler estes AGENTS.md e "Como continuar" no roadmap.md antes de mudar algo.
+- Módulo Vistorias fica em /vistoria fora de _authenticated (login próprio, sessão 12h em vistoria-session.ts, shell próprio com volta a /home) — acesso direto tipo app sem passar pelo painel.
