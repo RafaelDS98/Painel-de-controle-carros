@@ -129,7 +129,7 @@ export async function buildLaudoPdf(d: LaudoData): Promise<jsPDF> {
     ["E", "1/4", "1/2", "3/4", "F"].forEach((t, i) =>
       doc.text(t, gx + (gw * i) / 4, gy, { align: "center" }),
     );
-    doc.setFillColor(225).rect(gx, gy + 2, gw, 3, "F");
+    doc.setFillColor(225, 225, 225).rect(gx, gy + 2, gw, 3, "F");
     const lvl = d.fuel ? (FUEL_LEVEL[d.fuel] ?? 0) : 0;
     doc.setFillColor(40, 120, 200).rect(gx, gy + 2, gw * lvl, 3, "F");
     doc.setFillColor(170, 20, 30).rect(gx, gy + 2, 2.5, 3, "F");
@@ -305,7 +305,7 @@ export async function buildLaudoPdf(d: LaudoData): Promise<jsPDF> {
       .setFontSize(9)
       .setTextColor(90)
       .text(`Página ${p} de ${total}`, W - M, 12, { align: "right" });
-    doc.setFillColor(238).rect(W - M - 70, 15, 70, 7, "F");
+    doc.setFillColor(238, 238, 238).rect(W - M - 70, 15, 70, 7, "F");
     doc
       .setFontSize(8)
       .setTextColor(60)

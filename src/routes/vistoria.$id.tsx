@@ -81,7 +81,7 @@ function Detalhe() {
   const caption = (a: { label: string; photo_taken_at: string | null }) =>
     `${a.label.toUpperCase()} · ${a.photo_taken_at ? new Date(a.photo_taken_at).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }).replace(",", "") : "sem data"}`;
   const open = (a: { label: string; photo_path: string | null; photo_taken_at: string | null }) =>
-    a.photo_path && urls[a.photo_path] && setBig({ src: urls[a.photo_path], caption: caption(a) });
+    a.photo_path && urls[a.photo_path] && setBig({ src: urls[a.photo_path] ?? "", caption: caption(a) });
   async function downloadPdf() {
     setPdfBusy(true);
     try {
