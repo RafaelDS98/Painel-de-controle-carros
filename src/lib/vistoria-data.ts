@@ -125,7 +125,8 @@ export async function uploadDataUrl(path: string, dataUrl: string): Promise<stri
 export async function signedUrls(paths: string[]): Promise<Record<string, string>> {
   const list = paths.filter(Boolean);
   if (!list.length) return {};
-  const { data } = await supabase.storage.from("vistorias").createSignedUrls(list, 3600);
+  // Links curtos: acesso removido deixa de valer em até 2 minutos.
+  const { data } = await supabase.storage.from("vistorias").createSignedUrls(list, 120);
   const out: Record<string, string> = {};
   for (const d of data ?? []) if (d.path && d.signedUrl) out[d.path] = d.signedUrl;
   return out;
