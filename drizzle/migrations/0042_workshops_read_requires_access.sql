@@ -1,0 +1,2 @@
+DROP POLICY IF EXISTS "Authenticated read workshops" ON public.workshops;
+CREATE POLICY "Users with access read workshops" ON public.workshops FOR SELECT TO authenticated USING (public.has_access(auth.uid()));
