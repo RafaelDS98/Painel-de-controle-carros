@@ -97,7 +97,10 @@ function Lista() {
         names.data?.[r.inspector_id] ?? "",
         r.status,
       ]
-        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+        .map((v) => {
+          const s = typeof v === "string" && /^[=+\-@\t\r]/.test(v) ? `'${v}` : String(v);
+          return `"${s.replace(/"/g, '""')}"`;
+        })
         .join(";"),
     );
     const blob = new Blob(["\ufeff" + [head.join(";"), ...lines].join("\n")], { type: "text/csv" });
