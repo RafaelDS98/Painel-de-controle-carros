@@ -10,7 +10,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { OsConsultaPanel } from "@/components/os-consulta";
 import { SearchableSelect } from "@/components/searchable-select";
+import { useCan } from "@/lib/permissions";
 import {
+  canCancelOs,
+  isClosedStatus,
+  manualStatusOptions,
+  OS_STATUS,
   itemTotal,
   money,
   osDate,
@@ -143,6 +148,37 @@ export function Badge({
   );
 }
 
+function OsTabs() {
+  const [tab, setTab] = useState<"abertas" | "finalizadas" | "canceladas" | "encerradas">(
+    "abertas",
+  );
+  const tabs = [
+    ["abertas", "Em aberto"],
+    ["finalizadas", "Histórico · Finalizadas"],
+    ["canceladas", "Histórico · Canceladas"],
+    ["encerradas", "Histórico · Todas"],
+  ] as const;
+  return (
+    <div className="space-y-4">
+      <div role="tablist" aria-label="Situação das O.S." className="flex flex-wrap gap-2">
+        {tabs.map(([k, label]) => (
+          <Button
+            key={k}
+            role="tab"
+            aria-selected={tab === k}
+            size="sm"
+            variant={tab === k ? "default" : "outline"}
+            onClick={() => setTab(k)}
+          >
+            {label}
+          </Button>
+        ))}
+      </div>
+      <OsConsultaPanel key={tab} scope={tab} />
+    </div>
+  );
+}
+
 export function OsListPage({ canCreate }: { canCreate: boolean }) {
   return (
     <Shell
@@ -155,7 +191,7 @@ export function OsListPage({ canCreate }: { canCreate: boolean }) {
         ) : null
       }
     >
-      <OsConsultaPanel />
+      <OsTabs />
     </Shell>
   );
 }

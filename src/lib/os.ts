@@ -123,3 +123,26 @@ export function nowTimeSaoPaulo(now = new Date()): string {
     hour12: false,
   });
 }
+
+export type OsScope = "abertas" | "finalizadas" | "canceladas" | "encerradas";
+
+/** Escopo da aba: Em aberto esconde encerradas; Histórico separa Finalizadas e Canceladas. */
+export function scopeFilters(
+  scope: OsScope | undefined,
+  filters: Record<string, string>,
+): Record<string, string> {
+  if (!scope) return filters;
+  if (scope === "abertas") return { ...filters, nao_finalizadas: "1" };
+  const status =
+    scope === "finalizadas"
+      ? String(OS_STATUS.FINALIZADA)
+      : scope === "canceladas"
+        ? String(OS_STATUS.CANCELADA)
+        : `${OS_STATUS.CANCELADA},${OS_STATUS.FINALIZADA}`;
+  const chosen = filters["status_id"];
+  const allowed = status.split(",");
+  const pick = chosen ? chosen.split(",").filter((s) => allowed.includes(s)).join(",") : "";
+  const rest = { ...filters };
+  delete rest["nao_finalizadas"];
+  return { ...rest, status_id: pick || status };
+}
