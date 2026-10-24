@@ -625,8 +625,8 @@ export function OsDetailPage({ id }: { id: string }) {
         {closed && (
           <span className="text-sm text-muted-foreground">
             {cancelled
-              ? `Cancelada em ${osDate(os.cancelled_at)} · Motivo: ${String(os.cancel_reason ?? "—")}`
-              : `Finalizada em ${osDate(os.closed_at)}${os.close_note ? ` · ${String(os.close_note)}` : ""}`}
+              ? `Cancelada em ${osDate(os["cancelled_at"])} · Motivo: ${String(os["cancel_reason"] ?? "—")}`
+              : `Finalizada em ${osDate(os.closed_at)}${os["close_note"] ? ` · ${String(os["close_note"])}` : ""}`}
           </span>
         )}
         {closed && canEditClosed && (
