@@ -93,3 +93,33 @@ export function osConsultaFilters(draft: Record<string, string>): Record<string,
     if (k in out) out[k] = out[k] === "Sim" ? "true" : "false";
   return out;
 }
+
+export const OS_STATUS = { EM_ANDAMENTO: 1, CANCELADA: 3, FINALIZADA: 7, AGUARDANDO_RETIRADA: 8 } as const;
+
+/** Finalizada e Cancelada são "encerradas" e ficam fora das telas de trabalho. */
+export function isClosedStatus(statusId: unknown): boolean {
+  return Number(statusId) === OS_STATUS.CANCELADA || Number(statusId) === OS_STATUS.FINALIZADA;
+}
+
+/** Espelho do banco: qualquer perfil finaliza; só Master/Gerente cancelam. */
+export function canCancelOs(role: string | null | undefined): boolean {
+  return role === "master" || role === "gerente";
+}
+
+/** Situações oferecidas na troca manual: encerrar só pelos botões próprios. */
+export function manualStatusOptions<T extends { id: number | string }>(status: T[]): T[] {
+  return status.filter((s) => !isClosedStatus(s.id));
+}
+
+export function todaySaoPaulo(now = new Date()): string {
+  return now.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+}
+
+export function nowTimeSaoPaulo(now = new Date()): string {
+  return now.toLocaleTimeString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}

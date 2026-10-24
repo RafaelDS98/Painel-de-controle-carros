@@ -50,6 +50,8 @@ import { ForwardWorkshop } from "@/components/forward-workshop";
 import { useCan } from "@/lib/permissions";
 import { AppointmentHistory } from "@/components/edit-history";
 import { Link } from "@tanstack/react-router";
+import { nowTimeSaoPaulo, todaySaoPaulo } from "@/lib/os";
+import { AwaitingPickup } from "@/components/awaiting-pickup";
 import { usePageAction } from "@/hooks/use-page-action";
 import { MoreHorizontal } from "lucide-react";
 import {
