@@ -626,7 +626,14 @@ export function MaintenanceDashboard({
   }, []);
   const [settingsOpen, setSettingsOpen] = useState(false);
   usePageAction((a) => {
-    if (a === "novo" && canCreate) setNewOpen(true);
+    if (a === "novo" && canCreate) {
+      setNewMode("agendamento");
+      setNewOpen(true);
+    }
+    if (a === "atendimento" && canCreate) {
+      setNewMode("atendimento");
+      setNewOpen(true);
+    }
     if (a === "config" && currentUser.role === "master" && !workshopMode) setSettingsOpen(true);
   });
   const [accountOpen, setAccountOpen] = useState(false);
@@ -639,6 +646,9 @@ export function MaintenanceDashboard({
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [completedAtById, setCompletedAtById] = useState<Record<string, string>>({});
   const [newOpen, setNewOpen] = useState(false);
+  const [newMode, setNewMode] = useState<"agendamento" | "atendimento">("agendamento");
+  const [closing, setClosing] = useState<{ item: Appointment; kind: "finalizado" | "cancelado" } | null>(null);
+  const [closeReason, setCloseReason] = useState("");
   const [reworkSource, setReworkSource] = useState<Appointment | null>(null);
   const [reworksOnly, setReworksOnly] = useState(false);
   const [advanced, setAdvanced] = useState<AdvancedFilters>({});
@@ -767,6 +777,35 @@ export function MaintenanceDashboard({
     setCompletedAtById(latest);
   }
 
+  async function closeAppointment() {
+    if (!closing) return;
+    const reason = closeReason.trim();
+    if (closing.kind === "cancelado" && !reason) {
+      setMessage("Informe o motivo do cancelamento.");
+      return;
+    }
+    const { error } = await supabase
+      .from("appointments")
+      .update({
+        closed_at: new Date().toISOString(),
+        close_kind: closing.kind,
+        close_reason: reason || null,
+      })
+      .eq("id", closing.item.dbId);
+    if (error) {
+      setMessage(error.message || "Não foi possível encerrar o atendimento.");
+      return;
+    }
+    const plate = closing.item.plate;
+    const kind = closing.kind;
+    setClosing(null);
+    setSelected(null);
+    await loadAppointments();
+    setMessage(
+      `Atendimento de ${plate} ${kind === "finalizado" ? "finalizado" : "cancelado"}. Ele está em Históricos.`,
+    );
+  }
+
   async function archiveAppointment(item: Appointment) {
     if (!window.confirm(archiveConfirmText(item.sglocReference))) return;
     const { error } = await supabase
@@ -790,6 +829,7 @@ export function MaintenanceDashboard({
         .from("appointments")
         .select(rowColumns)
         .is("archived_at", null)
+        .is("closed_at", null)
         .order("date")
         .order("time")
         .range(offset, offset + 499);
@@ -1413,8 +1453,9 @@ export function MaintenanceDashboard({
   const [loadError, setLoadError] = useState("");
   const [extraColumns, setExtraColumns] = useState(false);
   async function createAppointment(fields: Partial<AppointmentFields>): Promise<boolean> {
-    const date = fields.date?.trim();
-    const time = fields.time?.trim();
+    const walkIn = newMode === "atendimento";
+    const date = walkIn ? todaySaoPaulo() : fields.date?.trim();
+    const time = fields.time?.trim() || (walkIn ? nowTimeSaoPaulo() : "");
     const plate = normalizePlate(fields.plate);
     if (!date || !time || !plate) {
       setMessage("Informe data, hora e placa.");
@@ -1430,6 +1471,8 @@ export function MaintenanceDashboard({
       original_deadline: fields.currentDeadline || null,
       current_deadline: fields.currentDeadline || null,
       priority_urgent: currentUser.role !== "atendimento" && newUrgent,
+      origin: walkIn ? "atendimento" : "agendamento",
+      ...(walkIn ? { registered_at: date } : {}),
     };
     values.custom_fields = fields.customFields ?? {};
     for (const [key, value] of Object.entries(fields)) {
@@ -1464,7 +1507,11 @@ export function MaintenanceDashboard({
     setNewUrgent(false);
     resetFilters();
     await loadAppointments();
-    setMessage(`Agendamento de ${plate} criado com sucesso.`);
+    setMessage(
+      walkIn
+        ? `Atendimento de ${plate} aberto com sucesso.`
+        : `Agendamento de ${plate} criado com sucesso.`,
+    );
     void sendToSgloc(data.id, "create");
     return true;
   }
@@ -3251,7 +3298,9 @@ export function MaintenanceDashboard({
       <Dialog open={newOpen} onOpenChange={setNewOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Novo agendamento</DialogTitle>
+            <DialogTitle>
+              {newMode === "atendimento" ? "Abrir atendimento" : "Novo agendamento"}
+            </DialogTitle>
             <DialogDescription>Dados do atendimento</DialogDescription>
           </DialogHeader>
           {newOpen && (
@@ -3273,7 +3322,12 @@ export function MaintenanceDashboard({
           )}
           {newOpen && (
             <AppointmentForm
-              initial={emptyFields}
+              initial={
+                newMode === "atendimento"
+                  ? { ...emptyFields, date: todaySaoPaulo(), time: nowTimeSaoPaulo() }
+                  : emptyFields
+              }
+              hideDate={newMode === "atendimento"}
               definitions={fieldDefinitions}
               onSave={createAppointment}
               catalog={catalog}
@@ -3283,6 +3337,45 @@ export function MaintenanceDashboard({
               }}
             />
           )}
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={Boolean(closing)}
+        onOpenChange={(open) => {
+          if (!open) setClosing(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {closing?.kind === "cancelado" ? "Cancelar atendimento" : "Finalizar atendimento"}
+            </DialogTitle>
+            <DialogDescription>
+              {closing ? `${closing.item.plate} • ${formatDateBR(closing.item.date)}` : ""}. Ele sai
+              da Agenda e vai para Históricos.
+            </DialogDescription>
+          </DialogHeader>
+          <label className="block text-sm">
+            <span className="mb-1.5 block text-xs font-medium uppercase text-muted-foreground">
+              {closing?.kind === "cancelado" ? "Motivo (obrigatório)" : "Observação (opcional)"}
+            </span>
+            <textarea
+              className="min-h-20 w-full rounded-md border bg-background p-2 text-sm"
+              value={closeReason}
+              onChange={(e) => setCloseReason(e.target.value)}
+            />
+          </label>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setClosing(null)}>
+              Voltar
+            </Button>
+            <Button
+              variant={closing?.kind === "cancelado" ? "destructive" : "default"}
+              onClick={() => void closeAppointment()}
+            >
+              Confirmar
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
       <Dialog
@@ -3503,6 +3596,27 @@ export function MaintenanceDashboard({
                 {canCreate && (
                   <Button variant="outline" onClick={() => openRework(selected)}>
                     <RotateCcw /> Registrar retrabalho
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setCloseReason("");
+                    setClosing({ item: selected, kind: "finalizado" });
+                  }}
+                >
+                  Finalizar atendimento
+                </Button>
+                {(currentUser.role === "master" || currentUser.role === "gerente") && (
+                  <Button
+                    variant="outline"
+                    className="text-destructive"
+                    onClick={() => {
+                      setCloseReason("");
+                      setClosing({ item: selected, kind: "cancelado" });
+                    }}
+                  >
+                    Cancelar atendimento
                   </Button>
                 )}
                 {currentUser.role === "master" && !workshopMode && (
