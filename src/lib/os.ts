@@ -94,7 +94,12 @@ export function osConsultaFilters(draft: Record<string, string>): Record<string,
   return out;
 }
 
-export const OS_STATUS = { EM_ANDAMENTO: 1, CANCELADA: 3, FINALIZADA: 7, AGUARDANDO_RETIRADA: 8 } as const;
+export const OS_STATUS = {
+  EM_ANDAMENTO: 1,
+  CANCELADA: 3,
+  FINALIZADA: 7,
+  AGUARDANDO_RETIRADA: 8,
+} as const;
 
 /** Finalizada e Cancelada são "encerradas" e ficam fora das telas de trabalho. */
 export function isClosedStatus(statusId: unknown): boolean {
@@ -141,7 +146,12 @@ export function scopeFilters(
         : `${OS_STATUS.CANCELADA},${OS_STATUS.FINALIZADA}`;
   const chosen = filters["status_id"];
   const allowed = status.split(",");
-  const pick = chosen ? chosen.split(",").filter((s) => allowed.includes(s)).join(",") : "";
+  const pick = chosen
+    ? chosen
+        .split(",")
+        .filter((s) => allowed.includes(s))
+        .join(",")
+    : "";
   const rest = { ...filters };
   delete rest["nao_finalizadas"];
   return { ...rest, status_id: pick || status };

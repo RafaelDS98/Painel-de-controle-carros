@@ -3,6 +3,11 @@ import { Button } from "@/components/ui/button";
 import { HistoryLogPage } from "@/components/historicos";
 import { CheckInLog } from "@/components/check-in-log";
 import { ProfileGate } from "@/components/profile-gate";
+import { ClosedAppointments } from "@/components/closed-appointments";
+import { OsConsultaPanel } from "@/components/os-consulta";
+
+type Aba = "geral" | "checkins" | "os" | "atendimentos";
+const ABAS: Aba[] = ["geral", "checkins", "os", "atendimentos"];
 
 export const Route = createFileRoute("/_authenticated/historicos")({
   head: () => ({
@@ -21,8 +26,8 @@ export const Route = createFileRoute("/_authenticated/historicos")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  validateSearch: (s: Record<string, unknown>): { aba?: "geral" | "checkins" | undefined } => ({
-    aba: s["aba"] === "checkins" ? "checkins" : s["aba"] === "geral" ? "geral" : undefined,
+  validateSearch: (s: Record<string, unknown>): { aba?: Aba | undefined } => ({
+    aba: ABAS.includes(s["aba"] as Aba) ? (s["aba"] as Aba) : undefined,
   }),
   component: Page,
 });
@@ -34,19 +39,38 @@ function Page() {
     <ProfileGate user={user} module="historicos">
       {() => (
         <div className="space-y-4">
-          <div role="tablist" className="flex gap-2">
-            <Button asChild variant={aba !== "checkins" ? "default" : "outline"} size="sm">
-              <Link to="/historicos" search={{ aba: "geral" }}>
-                Alterações
-              </Link>
-            </Button>
-            <Button asChild variant={aba === "checkins" ? "default" : "outline"} size="sm">
-              <Link to="/historicos" search={{ aba: "checkins" }}>
-                Check-ins
-              </Link>
-            </Button>
+          <div role="tablist" className="flex flex-wrap gap-2 px-5 pt-4">
+            {(
+              [
+                ["geral", "Alterações de atendimentos e agendamentos"],
+                ["atendimentos", "Atendimentos encerrados"],
+                ["os", "Histórico de O.S."],
+                ["checkins", "Check-ins"],
+              ] as const
+            ).map(([k, label]) => (
+              <Button
+                key={k}
+                asChild
+                size="sm"
+                variant={(aba ?? "geral") === k ? "default" : "outline"}
+              >
+                <Link to="/historicos" search={{ aba: k }}>
+                  {label}
+                </Link>
+              </Button>
+            ))}
           </div>
-          {aba === "checkins" ? <CheckInLog /> : <HistoryLogPage />}
+          {aba === "checkins" ? (
+            <CheckInLog />
+          ) : aba === "os" ? (
+            <div className="mx-auto max-w-[1600px] px-5">
+              <OsConsultaPanel scope="encerradas" />
+            </div>
+          ) : aba === "atendimentos" ? (
+            <ClosedAppointments />
+          ) : (
+            <HistoryLogPage />
+          )}
         </div>
       )}
     </ProfileGate>

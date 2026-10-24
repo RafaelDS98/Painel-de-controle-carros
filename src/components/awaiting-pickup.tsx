@@ -14,7 +14,9 @@ export function AwaitingPickup() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("ordens_servico")
-        .select("id, numero, plate, modelo, condutor_nome, condutor_contato, updated_at, workshops(name)")
+        .select(
+          "id, numero, plate, modelo, condutor_nome, condutor_contato, updated_at, workshops(name)",
+        )
         .eq("status_id", OS_STATUS.AGUARDANDO_RETIRADA)
         .is("archived_at", null)
         .order("updated_at", { ascending: true })
@@ -50,14 +52,17 @@ export function AwaitingPickup() {
                 className="block rounded-md border p-3 text-sm hover:bg-muted/40"
               >
                 <p className="font-bold">
-                  {r.plate} <span className="font-normal text-muted-foreground">· O.S. {r.numero}</span>
+                  {r.plate}{" "}
+                  <span className="font-normal text-muted-foreground">· O.S. {r.numero}</span>
                 </p>
                 <p className="text-muted-foreground">
-                  {[r.modelo, (r.workshops as { name?: string } | null)?.name].filter(Boolean).join(" · ") || "—"}
+                  {[r.modelo, (r.workshops as { name?: string } | null)?.name]
+                    .filter(Boolean)
+                    .join(" · ") || "—"}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Contato: {[r.condutor_nome, r.condutor_contato].filter(Boolean).join(" ") || "—"} ·
-                  pronto desde {osDate(r.updated_at)}
+                  Contato: {[r.condutor_nome, r.condutor_contato].filter(Boolean).join(" ") || "—"}{" "}
+                  · pronto desde {osDate(r.updated_at)}
                 </p>
               </Link>
             </li>

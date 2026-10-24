@@ -649,7 +649,10 @@ export function MaintenanceDashboard({
   const [completedAtById, setCompletedAtById] = useState<Record<string, string>>({});
   const [newOpen, setNewOpen] = useState(false);
   const [newMode, setNewMode] = useState<"agendamento" | "atendimento">("agendamento");
-  const [closing, setClosing] = useState<{ item: Appointment; kind: "finalizado" | "cancelado" } | null>(null);
+  const [closing, setClosing] = useState<{
+    item: Appointment;
+    kind: "finalizado" | "cancelado";
+  } | null>(null);
   const [closeReason, setCloseReason] = useState("");
   const [reworkSource, setReworkSource] = useState<Appointment | null>(null);
   const [reworksOnly, setReworksOnly] = useState(false);
