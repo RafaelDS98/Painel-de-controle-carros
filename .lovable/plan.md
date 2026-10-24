@@ -1,62 +1,29 @@
-# Backlog ANPEXC — organizado por prioridade
+# Finalizar e cancelar O.S. + Histórico de O.S.
 
-Formato profissional: cada item tem ID, prioridade (P0 crítico, P1 importante, P2 desejável), tamanho (P/M/G) e critério de pronto. O backlog vira a seção principal do `roadmap.md`, substituindo as listas soltas (o histórico concluído vai para um bloco "Concluído" no fim).
+## O que muda para o usuário
+1. **Finalizar O.S.** — botão "Finalizar" no detalhe da O.S., disponível para todos os perfis com acesso a O.S. Pede KM final, tanque, GNV e posição final (já existe no banco) e uma observação opcional. A O.S. passa para a situação **Finalizada** com data/hora e autor.
+2. **Cancelar O.S.** — botão "Cancelar" visível só para **Master e Gerente**. Exige motivo (obrigatório). Situação vira **Cancelada**, com data, autor e motivo registrados.
+3. **Situações Finalizada/Cancelada** — já existem na lista de situações; passam a ser tratadas como "encerradas". Uma O.S. encerrada fica travada: ninguém altera dados, itens ou situação, a não ser quem tiver a nova permissão **"Alterar O.S. finalizada/cancelada"** (Master tem por padrão; Master libera para outros em Usuários → Permissões). Reabrir também usa essa permissão.
+4. **Fora da tela principal** — O.S. encerradas deixam de aparecer na lista principal de O.S. e o agendamento ligado a elas sai da Agenda e do Pátio (não fica ocupando espaço). Nada é apagado.
+5. **Histórico de O.S.** — nova aba "Histórico de O.S." dentro de Ordens de Serviço (e acessível pela Consulta de O.S.), com filtro Finalizadas / Canceladas / Todas, período, placa, oficina e loja, mostrando quem encerrou, quando e o motivo. A atual tela Históricos ganha separação por categoria: **Histórico de O.S.** e **Histórico de alterações de atendimentos** (base para futuras categorias).
 
-## Sprint 1 — Fechar o que está aberto e validar (P0)
-| ID | Item | Tam. | Pronto quando |
-|---|---|---|---|
-| QA-01 | Testar uma vistoria completa logado (celular): campos, checklist, fotos com edição, assinaturas, laudo PDF | M | PDF sai com logo, fotos e assinaturas; aparece no Ao Vivo sem recarregar |
-| QA-02 | Corrigir logo ausente no laudo PDF | P | Logo visível no PDF |
-| QA-03 | Testar encaminhamento real com conta Atendimento | P | Carro aparece na Oficina com aviso imediato |
-| QA-04 | Testar perfil Oficina (quadro, O.S., notícias, aviso) | P | Sem erros de acesso |
-| VIS-01 | Fila offline: rascunhos pendentes enviados sozinhos quando a internet volta | M | Vistoria feita sem rede chega ao servidor sozinha |
-
-## Sprint 2 — Vistorias Etapa 3: Configurações (P1)
-| ID | Item | Tam. |
-|---|---|---|
-| VIS-10 | Editor Master de tipos de operação (tipo base, questionários permitidos, ativar/ordem) | M |
-| VIS-11 | Editor de grupos e campos (tipo, obrigatório, ordem por arrastar, copiar) | G |
-| VIS-12 | Editor de questionários (perguntas, fotos exigidas, nº de pneus) | M |
-| VIS-13 | Termo de aceite e textos do laudo editáveis | P |
-| VIS-14 | Página pública de validação do código do laudo | P |
-| VIS-15 | Filtros por vistoriador e cliente na lista | P |
-| VIS-16 | Entrada/Saída manutenção registra movimento no Pátio | M |
-
-## Sprint 3 — Vistorias Etapas 4 e 5 (P1/P2)
-- VIS-20 Cadastro de clientes com contatos/e-mails (M)
-- VIS-21 Envio automático do laudo por e-mail (M)
-- VIS-22 Relatórios por período/vistoriador com exportação (M)
-- VIS-30 Leitura de placa e QR Code pela câmera (G)
-- VIS-31 Cerco geográfico configurável por operação (G)
-- VIS-32 Autoinspeção por link com validade (G)
-- VIS-33 Mapa das vistorias na página inicial (M)
-
-## Sprint 4 — O.S. e substituição do SGLOC (P1)
-- OS-01 Pagamentos, compras, cotações e anexos na O.S. (G)
-- OS-02 Filtro Categoria do veículo e montadora por O.S. (P)
-- SG-01 Tarefa agendada da sincronização SGLOC (15 min)
-- SG-02 Ativar envio real ao SGLOC com teste controlado
-- SG-03 Plano de desligamento do SGLOC: checklist do que ainda depende dele
-
-## Dependem do Rafael (bloqueados)
-- DEP-01 Escolher pátios próprios em Pátio → Configurações → Locais
-- DEP-02 Lista de lojas (código/nome) e planilha das O.S. com coluna Loja
-- DEP-03 Decidir limpeza da linha "1146 VEÍCULOS" e montadora "MITISHUBISH"
-- DEP-04 Base complementar da frota (reserva, tipo, ano, status operacional)
-- DEP-05 Exportação do VEX para importar histórico (Etapa 6)
-- DEP-06 Definições dos módulos Motoristas, Contratos, Financeiro e Relatórios
-- DEP-07 Cor da situação "Recebido" em Configurações > Situações
-
-## Qualidade contínua (P2)
-- TEC-01 Testes automáticos das regras de vistoria (obrigatórios, numeração, cancelamento, comparação)
-- TEC-02 Revisão de segurança do banco (verificação automática) e correção dos alertas
-- TEC-03 Revisão visual claro/escuro e celular das telas de Vistorias
-- TEC-04 Atualizar o documento de continuidade a cada sprint
-
-## Como trabalhamos
-- Um sprint por vez; cada item fecha com teste real e marcação no backlog.
-- Pedidos novos entram primeiro no backlog com ID e prioridade, depois são encaixados.
+## Regras (o banco decide, a tela só espelha)
+- Finalizar: qualquer perfil com acesso a O.S. (inclusive Oficina).
+- Cancelar: somente Master/Gerente, motivo obrigatório.
+- Editar/reabrir O.S. encerrada: somente quem tem a permissão nova.
+- Cada finalização/cancelamento/reabertura fica no histórico de alterações da O.S.
 
 ## Detalhes técnicos
-- Reescrever `roadmap.md` com as seções acima; preservar "Como continuar" e mover itens `[x]` para "Concluído".
-- Nenhuma mudança de código ou banco nesta entrega.
+- Migração nova:
+  - `ordens_servico`: colunas `cancelled_at`, `cancelled_by`, `cancel_reason`, `closed_by`, `close_note` (nulas).
+  - `os_status`: coluna `is_closed boolean default false`, marcada em FINALIZADA/CANCELADA.
+  - Ajustar `os_finalize` para aceitar todos com `has_os_read`/módulo O.S., gravar `closed_by`; nova RPC `os_cancel(_os_id, _reason)` checando `has_role` master/gerente; nova RPC `os_reopen(_os_id, _status_id)` exigindo `has_permission(uid,'action.os_edit_closed')`.
+  - `os_transition_status` bloqueia ir para FINALIZADA/CANCELADA por fora das RPCs; `enforce_os_edit_rules` e `os_item_*`/`os_update` recusam O.S. encerrada sem a permissão.
+  - `permission_default` e `get_my_permissions` recebem `action.os_edit_closed` (padrão só Master).
+  - `search_ordens_servico` ganha filtro `encerradas` (padrão exclui encerradas; histórico pede só elas).
+- Frontend: `PERMISSIONS`/`permissionDefault` em `src/lib/permissions.ts`; botões e diálogos no detalhe (`ordens-servico.$id` / `ordens-servico.tsx`); lista principal com filtro padrão "abertas"; nova aba Histórico de O.S.; Agenda/Pátio escondem agendamentos cuja O.S. vinculada está encerrada (`agenda-safety.ts` / dados do Pátio).
+- Testes: regras puras em `src/lib/os.ts` (quem pode finalizar/cancelar/editar encerrada, filtro padrão), atualizando `os.test.ts` e `permissions.test.ts`.
+- Atualizar AGENTS.md e roadmap.md.
+
+## Ponto a confirmar
+Hoje o atendimento na Agenda tem situação própria (separada da O.S.). O plano esconde da Agenda/Pátio o atendimento cuja **O.S. vinculada** foi finalizada/cancelada. Se preferir também um "Finalizar/Cancelar" direto no agendamento sem O.S., é só avisar.
