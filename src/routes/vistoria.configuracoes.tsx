@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, Plus } from "lucide-react";
+import { ArrowDown, ArrowUp, HelpCircle, Info, Plus } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -34,13 +35,91 @@ const KINDS = [
   { v: "number", l: "Número" },
 ] as const;
 const BASES = [
-  { v: "pre_vistoria", l: "Pré-vistoria" },
-  { v: "entrega", l: "Entrega" },
-  { v: "cautelar", l: "Cautelar" },
-  { v: "coleta", l: "Coleta" },
-  { v: "coleta_entrega", l: "Coleta com entrega" },
-  { v: "autoinspecao", l: "Autoinspeção" },
+  {
+    v: "pre_vistoria",
+    l: "Pré-vistoria",
+    d: "Inspeção interna no pátio antes de liberar o carro: confere se está limpo, abastecido e pronto.",
+  },
+  {
+    v: "entrega",
+    l: "Entrega",
+    d: "O carro sai para o cliente ou motorista. Registra o estado de saída, base para comparar depois.",
+  },
+  {
+    v: "cautelar",
+    l: "Cautelar",
+    d: "Verificação preventiva durante o uso, sem devolução do carro.",
+  },
+  {
+    v: "coleta",
+    l: "Coleta",
+    d: "O carro volta para a empresa. É comparada com a última Entrega para achar avarias novas.",
+  },
+  {
+    v: "coleta_entrega",
+    l: "Coleta com entrega",
+    d: "Troca no mesmo ato: recolhe um carro e entrega outro (ex.: carro reserva).",
+  },
+  {
+    v: "autoinspecao",
+    l: "Autoinspeção",
+    d: "O próprio motorista faz fotos e checklist pelo celular, por um link.",
+  },
 ] as const;
+
+function BaseHelp() {
+  return (
+    <Popover>
+      <PopoverTrigger className="inline-flex items-center gap-1 text-sm text-primary underline-offset-4 hover:underline">
+        <HelpCircle className="h-4 w-4" /> Como funciona?
+      </PopoverTrigger>
+      <PopoverContent className="w-80 space-y-2 text-sm" align="start">
+        <p className="text-muted-foreground">
+          O nome é livre. O tipo base diz ao sistema como tratar a operação no histórico e no laudo.
+        </p>
+        {BASES.map((b) => (
+          <p key={b.v}>
+            <span className="font-semibold">{b.l}:</span> {b.d}
+          </p>
+        ))}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function BaseTip({ value }: { value: string }) {
+  const [open, setOpen] = useState(false);
+  const mouse = useRef(false);
+  const b = BASES.find((x) => x.v === value);
+  if (!b) return null;
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        type="button"
+        onPointerEnter={(e) => e.pointerType === "mouse" && setOpen(true)}
+        onPointerLeave={(e) => e.pointerType === "mouse" && setOpen(false)}
+        onPointerDown={(e) => (mouse.current = e.pointerType === "mouse")}
+        onClick={(e) => {
+          if (!mouse.current) return;
+          e.preventDefault();
+          setOpen(true);
+        }}
+        className="inline-flex h-10 w-8 items-center justify-center text-muted-foreground hover:text-foreground"
+        aria-label={`O que é ${b.l}?`}
+      >
+        <Info className="h-4 w-4" />
+      </PopoverTrigger>
+      <PopoverContent
+        role="tooltip"
+        side="top"
+        className="w-64 p-3 text-sm"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        <span className="font-semibold">{b.l}:</span> {b.d}
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 type Op = { id: string; name: string; base_type: string; sort: number; active: boolean };
 type Group = { id: string; name: string; tab: string; sort: number; active: boolean };
@@ -144,7 +223,10 @@ function Config() {
       </div>
 
       <section className="space-y-3 rounded-lg border bg-card p-4">
-        <h2 className="font-semibold">Tipos de operação</h2>
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="font-semibold">Tipos de operação</h2>
+          <BaseHelp />
+        </div>
         {ops.map((o, i) => (
           <Row
             key={o.id}
@@ -171,6 +253,7 @@ function Config() {
                 </option>
               ))}
             </select>
+            <BaseTip value={o.base_type} />
           </Row>
         ))}
         <Button
