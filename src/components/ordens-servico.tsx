@@ -409,6 +409,20 @@ export function OsNewPage({ appointmentId }: { appointmentId?: string | undefine
 
 export function OsDetailPage({ id }: { id: string }) {
   const config = useOsConfig();
+  const canEditClosed = useCan("action.os_edit_closed");
+  const myRole = useQuery({
+    queryKey: ["my-role"],
+    queryFn: async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return null;
+      const { data } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", u.user.id)
+        .maybeSingle();
+      return data?.role ?? null;
+    },
+  });
   const qc = useQueryClient();
   const detail = useQuery({
     queryKey: ["os-detail", id],
@@ -458,7 +472,8 @@ export function OsDetailPage({ id }: { id: string }) {
       </Shell>
     );
   const { os, items, observations } = detail.data;
-  const closed = Boolean(os.closed_at);
+  const closed = isClosedStatus(os.status_id);
+  const cancelled = Number(os.status_id) === OS_STATUS.CANCELADA;
   const total = items.reduce((s, i) => s + (Number(i.total) || itemTotal(i.qty, i.unit_price)), 0);
   const info: [string, unknown][] = [
     ["Placa", os.plate],
@@ -498,7 +513,7 @@ export function OsDetailPage({ id }: { id: string }) {
                 )
               }
             >
-              {config.data?.status.map((s) => (
+              {manualStatusOptions(config.data?.status ?? []).map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.label}
                 </option>
@@ -514,26 +529,82 @@ export function OsDetailPage({ id }: { id: string }) {
                   toast.error("Informe o KM só com números.");
                   return;
                 }
+                const note = window.prompt("Observação da finalização (opcional):", "") ?? "";
                 run(
-                  supabase.rpc("os_finalize", {
+                  supabase.rpc("os_close", {
                     _os_id: id,
                     _km_final: Number(km),
                     _tanque_final: "",
                     _gnv_final: "",
                     _posicao_final: "",
+                    _note: note,
                   }),
-                  "O.S. finalizada.",
+                  "O.S. finalizada. Ela está no Histórico de O.S.",
                 );
               }}
             >
               Finalizar O.S.
             </Button>
+            {Number(os.status_id) !== OS_STATUS.AGUARDANDO_RETIRADA && (
+              <Button
+                variant="outline"
+                disabled={busy}
+                title="Serviço concluído: avisar o cliente para retirar"
+                onClick={() =>
+                  run(
+                    supabase.rpc("os_transition_status", {
+                      _os_id: id,
+                      _new_status_id: OS_STATUS.AGUARDANDO_RETIRADA,
+                    }),
+                    "O.S. em Aguardando retirada; ela aparece na Agenda.",
+                  )
+                }
+              >
+                Serviço pronto (aguardando retirada)
+              </Button>
+            )}
+            {canCancelOs(myRole.data) && (
+              <Button
+                variant="outline"
+                className="text-destructive"
+                disabled={busy}
+                onClick={() => {
+                  const reason = window.prompt("Motivo do cancelamento (obrigatório):", "");
+                  if (reason === null) return;
+                  if (!reason.trim()) {
+                    toast.error("Informe o motivo do cancelamento.");
+                    return;
+                  }
+                  run(
+                    supabase.rpc("os_cancel", { _os_id: id, _reason: reason }),
+                    "O.S. cancelada. Ela está no Histórico de O.S.",
+                  );
+                }}
+              >
+                Cancelar O.S.
+              </Button>
+            )}
           </>
         )}
         {closed && (
           <span className="text-sm text-muted-foreground">
-            Finalizada em {osDate(os.closed_at)}
+            {cancelled
+              ? `Cancelada em ${osDate(os.cancelled_at)} · Motivo: ${String(os.cancel_reason ?? "—")}`
+              : `Finalizada em ${osDate(os.closed_at)}${os.close_note ? ` · ${String(os.close_note)}` : ""}`}
           </span>
+        )}
+        {closed && canEditClosed && (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={busy}
+            onClick={() => {
+              if (!window.confirm("Reabrir esta O.S. (volta para Em andamento)?")) return;
+              run(supabase.rpc("os_reopen", { _os_id: id }), "O.S. reaberta.");
+            }}
+          >
+            Reabrir O.S.
+          </Button>
         )}
       </div>
       <dl className="grid gap-3 rounded-lg border bg-card p-4 sm:grid-cols-2 lg:grid-cols-4">
