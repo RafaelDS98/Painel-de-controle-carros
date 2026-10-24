@@ -122,3 +122,11 @@
 - Pendente: editor Master de tipos/grupos/campos (Etapa 3), envio automático em fila offline, integração com Pátio, filtro por vistoriador/cliente.
 - Vistorias (22/10): foto opcional em cada item do checklist (mostra só o nome do arquivo; abre ao clicar), carimbo com campo + data/hora, laudo PDF no formato atual (dados principais, pneus, combustível, checklist, fotos 2 por página, termo, assinaturas, código de validação). Pendente: termo editável pelo Master (Etapa 3) e página pública de validação do código.
 - Vistorias (22/10): editor de foto (traço fino com cor e selos A/F/P/Q/R/T), legenda no laudo, escolha de questionário. Etapa 2 concluída: Página inicial (KPIs, Top 5, 7 dias, últimas 10) e Ao Vivo em tempo real. Próxima: Etapa 3 (configurações/editor de grupos e campos, termo editável).
+
+## O.S. — finalizar/cancelar (2026-10-24)
+- [ ] Finalizar O.S. (todos) com etapa Aguardando retirada visível na Agenda
+- [ ] Cancelar O.S. (Master/Gerente, motivo)
+- [ ] Permissão "Alterar O.S. finalizada/cancelada"
+- [ ] Histórico de O.S. (Finalizadas x Canceladas separadas)
+- [ ] Finalizar/cancelar agendamento sem O.S.; encerrados saem da Agenda
+- [ ] Botão "Abrir atendimento" (sem agendamento, data = hoje)
