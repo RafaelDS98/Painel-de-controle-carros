@@ -33,6 +33,8 @@
 - [x] Limite de alterações da Previsão de Entrega por perfil/usuário (Atendimento e Oficina, padrão 1).
 - [x] Lote A: auto-sync desligável, Atualizar do SGLOC, filtro Setor, gestão de listas (gerente/master)
 - [x] Fluxo de trabalho com Claude direto no GitHub documentado no AGENTS.md (sem créditos do Lovable).
+- [x] AGENTS.md da raiz enxugado abaixo de 5.120 bytes (24/10/2026): regras de layout/tema foram para src/components/AGENTS.md e listas >1000/filtros cruzados para src/lib/AGENTS.md; cópias antigas em `AGENTS-DESATUALIZADO.md` nas subpastas (a da raiz foi excluída no GitHub pelo Rafael).
+- [ ] Rafael: colar nas notas do projeto a versão curta (ANPEXC-notas-enxutas.md em Arquivos).
 - [x] Envio ao SGLOC: motivo visível quando integração/escrita está desligada (aviso na tela + push_failed com "Reenviar" na criação).
 - [ ] Envio ao SGLOC: confirmar no Supabase `sgloc_settings` (enabled e write_enabled = true) e que o operador tem conta SGLOC conectada; criar novo atendimento no painel e ver o resultado (Enviado ao SGLOC / motivo da falha).
 - [ ] Instalar Node/Bun na máquina do Rafael para rodar o painel e os testes localmente.
