@@ -26,4 +26,4 @@
 - Atualizar AGENTS.md e roadmap.md.
 
 ## Ponto a confirmar
-Hoje o atendimento na Agenda tem situação própria (separada da O.S.). O plano esconde da Agenda/Pátio o atendimento cuja **O.S. vinculada** foi finalizada/cancelada. Se preferir também um "Finalizar/Cancelar" direto no agendamento sem O.S., é só avisar.
+Hoje o atendimento na Agenda tem situação própria (separada da O.S.). O plano esconde da Agenda/Pátio o atendimento cuja **O.S. vinculada** foi finalizada/cancelada. Se preferir também um "Finalizar/Cancelar" direto no agendamento/atendimento sem O.S. (confirmado: incluído. O agendamento/atendimento é aberto sem O.S.; a O.S. só é gerada ao encaminhar para uma oficina. Assim, cliente que não comparece cancela apenas o agendamento, sem gerar O.S. cancelada; mesma regra de quem pode finalizar/cancelar e ida para o histórico de atendimentos e agendamentos), é só avisar.
