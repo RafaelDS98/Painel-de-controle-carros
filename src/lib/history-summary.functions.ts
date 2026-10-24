@@ -53,7 +53,10 @@ export const summarizeAppointmentHistory = createServerFn({ method: "POST" })
     const header = `Placa ${appt.plate} · atendimento ${appt.date ?? "sem data"} · situação atual: ${appt.status || "sem situação"} · local atual: ${appt.workshop || "não informado"}`;
     try {
       const result = streamText({
-        model: provider.responses("openai/gpt-6-astra"),
+        // Tipos do provider e do gateway interno do "ai" divergem só na versão; em execução são compatíveis.
+        model: provider.responses("openai/gpt-6-astra") as unknown as Parameters<
+          typeof streamText
+        >[0]["model"],
         system: INSTRUCTIONS,
         messages: [
           { role: "user", content: [header, ...buildSummaryLines(events, fieldLabels)].join("\n") },
