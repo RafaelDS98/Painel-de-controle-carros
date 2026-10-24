@@ -41,3 +41,4 @@
 - `src/integrations` é gerado pela plataforma e fica fora do eslint; o resto segue `prettier`, de modo que `bun run lint` termine sem erros — formate antes de commitar.
 - Permissões por usuário: user_permissions + has_permission()/permission_default(); aba/ação nova entra em PERMISSIONS (src/lib/permissions.ts), permission_default() e get_my_permissions() juntas — o master libera sem código.
 - Sessão nova: ler estes AGENTS.md e "Como continuar" no roadmap.md antes de mudar algo.
+- Encerramento: O.S. Finalizada(7)/Cancelada(3) só via os_close/os_cancel (cancelar = master/gerente), editar/reabrir exige action.os_edit_closed; agendamentos encerrados usam closed_at/close_kind e saem de Agenda/Pátio; atendimento sem agendamento = origin 'atendimento' — o banco decide, telas filtram closed_at.

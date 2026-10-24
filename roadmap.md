@@ -124,9 +124,9 @@
 - Vistorias (22/10): editor de foto (traço fino com cor e selos A/F/P/Q/R/T), legenda no laudo, escolha de questionário. Etapa 2 concluída: Página inicial (KPIs, Top 5, 7 dias, últimas 10) e Ao Vivo em tempo real. Próxima: Etapa 3 (configurações/editor de grupos e campos, termo editável).
 
 ## O.S. — finalizar/cancelar (2026-10-24)
-- [ ] Finalizar O.S. (todos) com etapa Aguardando retirada visível na Agenda
-- [ ] Cancelar O.S. (Master/Gerente, motivo)
-- [ ] Permissão "Alterar O.S. finalizada/cancelada"
-- [ ] Histórico de O.S. (Finalizadas x Canceladas separadas)
-- [ ] Finalizar/cancelar agendamento sem O.S.; encerrados saem da Agenda
-- [ ] Botão "Abrir atendimento" (sem agendamento, data = hoje)
+- [x] Finalizar O.S. (todos) com etapa Aguardando retirada visível na Agenda
+- [x] Cancelar O.S. (Master/Gerente, motivo)
+- [x] Permissão "Alterar O.S. finalizada/cancelada"
+- [x] Histórico de O.S. (Finalizadas x Canceladas separadas)
+- [x] Finalizar/cancelar agendamento sem O.S.; encerrados saem da Agenda
+- [x] Botão "Abrir atendimento" (sem agendamento, data = hoje)
