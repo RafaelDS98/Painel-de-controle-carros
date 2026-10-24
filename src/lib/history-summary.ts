@@ -39,7 +39,10 @@ const clean = (v: string | null) => {
 };
 
 /** Linhas cronológicas enviadas à IA; destaques marcados com [DESTAQUE]. Limita a 300 eventos. */
-export function buildSummaryLines(events: SummaryEvent[], labels: Record<string, string>): string[] {
+export function buildSummaryLines(
+  events: SummaryEvent[],
+  labels: Record<string, string>,
+): string[] {
   return [...events]
     .sort((a, b) => a.at.localeCompare(b.at))
     .slice(-300)

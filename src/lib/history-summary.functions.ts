@@ -12,7 +12,8 @@ Depois cite em uma frase as demais alterações relevantes. Não invente nada al
 export const summarizeAppointmentHistory = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { appointmentId: string }) => {
-    if (!/^[0-9a-f-]{36}$/i.test(input?.appointmentId ?? "")) throw new Error("Atendimento inválido.");
+    if (!/^[0-9a-f-]{36}$/i.test(input?.appointmentId ?? ""))
+      throw new Error("Atendimento inválido.");
     return input;
   })
   .handler(async ({ data, context }) => {
@@ -37,7 +38,8 @@ export const summarizeAppointmentHistory = createServerFn({ method: "POST" })
       by: (r.profiles as { full_name: string | null } | null)?.full_name ?? null,
     }));
     const counts = countHighlights(events);
-    if (!events.length) return { summary: "Nenhuma alteração registrada neste atendimento.", counts };
+    if (!events.length)
+      return { summary: "Nenhuma alteração registrada neste atendimento.", counts };
 
     const apiKey = process.env["LOVABLE_API_KEY"];
     if (!apiKey) return { summary: "", counts, error: "Resumo por IA não configurado." };
@@ -53,7 +55,9 @@ export const summarizeAppointmentHistory = createServerFn({ method: "POST" })
       const result = streamText({
         model: provider.responses("openai/gpt-6-astra"),
         system: INSTRUCTIONS,
-        messages: [{ role: "user", content: [header, ...buildSummaryLines(events, fieldLabels)].join("\n") }],
+        messages: [
+          { role: "user", content: [header, ...buildSummaryLines(events, fieldLabels)].join("\n") },
+        ],
         maxRetries: 0,
         providerOptions: {
           openai: {

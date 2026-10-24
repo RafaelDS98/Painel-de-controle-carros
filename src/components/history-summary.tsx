@@ -5,7 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { summarizeAppointmentHistory } from "@/lib/history-summary.functions";
 
-type Result = { summary: string; counts?: { data: number; oficina: number; situacao: number }; error?: string };
+type Result = {
+  summary: string;
+  counts?: { data: number; oficina: number; situacao: number };
+  error?: string;
+};
 
 /** Botão que gera, sob demanda, o resumo por IA das alterações de um atendimento. */
 export function AppointmentSummary({ appointmentId }: { appointmentId: string }) {
@@ -42,7 +46,9 @@ export function AppointmentSummary({ appointmentId }: { appointmentId: string })
         </p>
       )}
       {result?.summary && (
-        <p className="rounded-md bg-muted p-2 text-sm leading-relaxed text-foreground">{result.summary}</p>
+        <p className="rounded-md bg-muted p-2 text-sm leading-relaxed text-foreground">
+          {result.summary}
+        </p>
       )}
     </div>
   );
