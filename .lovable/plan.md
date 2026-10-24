@@ -1,7 +1,7 @@
 # Finalizar e cancelar O.S. + Histórico de O.S.
 
 ## O que muda para o usuário
-1. **Finalizar O.S.** — botão "Finalizar" no detalhe da O.S., disponível para todos os perfis com acesso a O.S. Pede KM final, tanque, GNV e posição final (já existe no banco) e uma observação opcional. A O.S. passa para a situação **Finalizada** com data/hora e autor.
+1. **Finalizar O.S. (com etapa "Aguardando retirada")** — quando a O.S. tiver serviço executado no veículo (revisão, manutenção, troca de óleo, pneus etc.), ao concluir o serviço ela vai para **Aguardando retirada**: aparece numa aba "Aguardando retirada" na Agenda, para o Atendimento acompanhar e avisar o cliente (registrando o contato). Quando o veículo for retirado, o botão "Finalizar" encerra de vez. Botão disponível para todos os perfis com acesso a O.S. Pede KM final, tanque, GNV e posição final (já existe no banco) e uma observação opcional. A O.S. passa para a situação **Finalizada** com data/hora e autor.
 2. **Cancelar O.S.** — botão "Cancelar" visível só para **Master e Gerente**. Exige motivo (obrigatório). Situação vira **Cancelada**, com data, autor e motivo registrados.
 3. **Situações Finalizada/Cancelada** — já existem na lista de situações; passam a ser tratadas como "encerradas". Uma O.S. encerrada fica travada: ninguém altera dados, itens ou situação, a não ser quem tiver a nova permissão **"Alterar O.S. finalizada/cancelada"** (Master tem por padrão; Master libera para outros em Usuários → Permissões). Reabrir também usa essa permissão.
 4. **Fora da tela principal** — O.S. encerradas deixam de aparecer na lista principal de O.S. e o agendamento ligado a elas sai da Agenda e do Pátio (não fica ocupando espaço). Nada é apagado.
