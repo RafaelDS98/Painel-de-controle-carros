@@ -28,7 +28,7 @@
 - Setor é só rótulo (profiles.sector, catalog_items kind "sector"; o do agendamento via appointment_creator_sectors()) — sem efeito em módulos, permissões ou RLS.
 - Migrations em drizzle/migrations são histórico já aplicado no banco (sem _journal); a verdade é o que está em produção.
 
-## Fluxo de trabalho (Claude direto no GitHub, sem gastar créditos do Lovable)
+## Fluxo de trabalho (Claude no GitHub, sem créditos do Lovable)
 - Alterações de código são feitas por Claude na pasta local e enviadas por commit/push ao GitHub; o Lovable só recebe o branch sincronizado — sem créditos. Nunca reescrever histórico e manter o branch sempre funcionando.
 - Antes de commitar rodar `bun run lint`, `bun run build` e `bunx vitest run`; sem Node/Bun na máquina, Claude valida em ambiente próprio e avisa o que não testou. O teste visual no publicado é do Rafael.
 - Mudanças de banco (tabelas, triggers, RLS, funções) viram arquivo em drizzle/migrations e SQL entregue ao Rafael, que aplica no SQL Editor; só depois a tela que depende delas é enviada.
