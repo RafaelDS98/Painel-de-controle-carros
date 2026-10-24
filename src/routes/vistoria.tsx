@@ -147,7 +147,8 @@ const MENU: {
     | "/vistoria/lista"
     | "/vistoria/placa"
     | "/vistoria/painel"
-    | "/vistoria/ao-vivo";
+    | "/vistoria/ao-vivo"
+    | "/vistoria/configuracoes";
   stage?: string;
 }[] = [
   { label: "Início", icon: Home, to: "/vistoria" },
@@ -158,7 +159,7 @@ const MENU: {
   { label: "Ao Vivo", icon: Radio, to: "/vistoria/ao-vivo" },
   { label: "Clientes", icon: Users, stage: "Etapa 4" },
   { label: "Relatórios", icon: BarChart3, stage: "Etapa 4" },
-  { label: "Configurações", icon: Settings, stage: "Etapa 3" },
+  { label: "Configurações", icon: Settings, to: "/vistoria/configuracoes" },
 ];
 
 function VistoriaShell({ name }: { name: string }) {
