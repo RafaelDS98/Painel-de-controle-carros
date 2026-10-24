@@ -216,17 +216,6 @@ function VistoriaShell({ name }: { name: string }) {
             ),
           )}
         </nav>
-        {canPanel && (
-          <div className="border-t p-2">
-            <Link
-              to="/home"
-              className="flex h-10 items-center gap-3 rounded-md px-3 text-sm font-medium text-link hover:bg-sidebar-accent"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Voltar ao painel ANPEXC
-            </Link>
-          </div>
-        )}
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="print:hidden sticky top-0 z-10 flex min-h-16 items-center gap-3 border-b bg-card/95 px-4 backdrop-blur">
