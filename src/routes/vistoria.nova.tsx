@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Camera, CheckCircle2 } from "lucide-react";
+import { Camera, CheckCircle2, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -537,7 +537,9 @@ function NovaVistoria() {
       <div className="fixed inset-x-0 bottom-0 z-10 border-t bg-card/95 p-3 backdrop-blur md:left-60">
         <Button
           className="mx-auto flex h-14 w-full max-w-2xl text-base lg:max-w-5xl"
-          disabled={saving} onClick={finish}>
+          disabled={saving}
+          onClick={finish}
+        >
           <CheckCircle2 className="h-5 w-5" />
           {saving ? "Enviando…" : "Concluir vistoria"}
         </Button>
