@@ -10,6 +10,7 @@ import { formatDateBR } from "@/lib/agenda-safety";
 import { logExportHeaders, logExportRows } from "@/lib/history-log";
 import { toCsv } from "@/lib/agenda-safety";
 import { normalizePlate } from "@/lib/normalize";
+import { AppointmentSummary } from "@/components/history-summary";
 
 const PAGE = 25;
 const EXPORT_LIMIT = 20000;
@@ -408,6 +409,7 @@ export function VehicleHistoryPage({ plate }: { plate: string }) {
                   {[row.model, row.contact, row.workshop].filter(Boolean).join(" · ") || "—"}
                 </p>
                 {row.issue && <p>{row.issue}</p>}
+                <AppointmentSummary appointmentId={row.id} />
               </li>
             ))}
           </ul>

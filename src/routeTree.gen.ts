@@ -21,6 +21,7 @@ import { Route as AuthenticatedVeiculosRouteImport } from './routes/_authenticat
 import { Route as VistoriaIndexRouteImport } from './routes/vistoria.index'
 import { Route as VistoriaIdRouteImport } from './routes/vistoria.$id'
 import { Route as VistoriaAoVivoRouteImport } from './routes/vistoria.ao-vivo'
+import { Route as VistoriaConfiguracoesRouteImport } from './routes/vistoria.configuracoes'
 import { Route as VistoriaListaRouteImport } from './routes/vistoria.lista'
 import { Route as VistoriaNovaRouteImport } from './routes/vistoria.nova'
 import { Route as VistoriaPainelRouteImport } from './routes/vistoria.painel'
@@ -91,6 +92,11 @@ const VistoriaAoVivoRoute = VistoriaAoVivoRouteImport.update({
   path: '/ao-vivo',
   getParentRoute: () => VistoriaRoute,
 } as any)
+const VistoriaConfiguracoesRoute = VistoriaConfiguracoesRouteImport.update({
+  id: '/configuracoes',
+  path: '/configuracoes',
+  getParentRoute: () => VistoriaRoute,
+} as any)
 const VistoriaListaRoute = VistoriaListaRouteImport.update({
   id: '/lista',
   path: '/lista',
@@ -158,6 +164,7 @@ export interface FileRoutesByFullPath {
   '/veiculos': typeof AuthenticatedVeiculosRoute
   '/vistoria/$id': typeof VistoriaIdRoute
   '/vistoria/ao-vivo': typeof VistoriaAoVivoRoute
+  '/vistoria/configuracoes': typeof VistoriaConfiguracoesRoute
   '/vistoria/lista': typeof VistoriaListaRoute
   '/vistoria/nova': typeof VistoriaNovaRoute
   '/vistoria/painel': typeof VistoriaPainelRoute
@@ -179,6 +186,7 @@ export interface FileRoutesByTo {
   '/veiculos': typeof AuthenticatedVeiculosRoute
   '/vistoria/$id': typeof VistoriaIdRoute
   '/vistoria/ao-vivo': typeof VistoriaAoVivoRoute
+  '/vistoria/configuracoes': typeof VistoriaConfiguracoesRoute
   '/vistoria/lista': typeof VistoriaListaRoute
   '/vistoria/nova': typeof VistoriaNovaRoute
   '/vistoria/painel': typeof VistoriaPainelRoute
@@ -204,6 +212,7 @@ export interface FileRoutesById {
   '/_authenticated/veiculos': typeof AuthenticatedVeiculosRoute
   '/vistoria/$id': typeof VistoriaIdRoute
   '/vistoria/ao-vivo': typeof VistoriaAoVivoRoute
+  '/vistoria/configuracoes': typeof VistoriaConfiguracoesRoute
   '/vistoria/lista': typeof VistoriaListaRoute
   '/vistoria/nova': typeof VistoriaNovaRoute
   '/vistoria/painel': typeof VistoriaPainelRoute
@@ -230,6 +239,7 @@ export interface FileRouteTypes {
     | '/veiculos'
     | '/vistoria/$id'
     | '/vistoria/ao-vivo'
+    | '/vistoria/configuracoes'
     | '/vistoria/lista'
     | '/vistoria/nova'
     | '/vistoria/painel'
@@ -251,6 +261,7 @@ export interface FileRouteTypes {
     | '/veiculos'
     | '/vistoria/$id'
     | '/vistoria/ao-vivo'
+    | '/vistoria/configuracoes'
     | '/vistoria/lista'
     | '/vistoria/nova'
     | '/vistoria/painel'
@@ -275,6 +286,7 @@ export interface FileRouteTypes {
     | '/_authenticated/veiculos'
     | '/vistoria/$id'
     | '/vistoria/ao-vivo'
+    | '/vistoria/configuracoes'
     | '/vistoria/lista'
     | '/vistoria/nova'
     | '/vistoria/painel'
@@ -380,6 +392,13 @@ declare module '@tanstack/react-router' {
       path: '/ao-vivo'
       fullPath: '/vistoria/ao-vivo'
       preLoaderRoute: typeof VistoriaAoVivoRouteImport
+      parentRoute: typeof VistoriaRoute
+    }
+    '/vistoria/configuracoes': {
+      id: '/vistoria/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/vistoria/configuracoes'
+      preLoaderRoute: typeof VistoriaConfiguracoesRouteImport
       parentRoute: typeof VistoriaRoute
     }
     '/vistoria/lista': {
@@ -489,6 +508,7 @@ const AuthenticatedRouteRouteWithChildren =
 interface VistoriaRouteChildren {
   VistoriaIdRoute: typeof VistoriaIdRoute
   VistoriaAoVivoRoute: typeof VistoriaAoVivoRoute
+  VistoriaConfiguracoesRoute: typeof VistoriaConfiguracoesRoute
   VistoriaListaRoute: typeof VistoriaListaRoute
   VistoriaNovaRoute: typeof VistoriaNovaRoute
   VistoriaPainelRoute: typeof VistoriaPainelRoute
@@ -499,6 +519,7 @@ interface VistoriaRouteChildren {
 const VistoriaRouteChildren: VistoriaRouteChildren = {
   VistoriaIdRoute: VistoriaIdRoute,
   VistoriaAoVivoRoute: VistoriaAoVivoRoute,
+  VistoriaConfiguracoesRoute: VistoriaConfiguracoesRoute,
   VistoriaListaRoute: VistoriaListaRoute,
   VistoriaNovaRoute: VistoriaNovaRoute,
   VistoriaPainelRoute: VistoriaPainelRoute,
