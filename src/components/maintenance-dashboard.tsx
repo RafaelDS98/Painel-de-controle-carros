@@ -2178,6 +2178,7 @@ export function MaintenanceDashboard({
 
       <main className="mx-auto max-w-[1600px] space-y-5 px-4 py-5 sm:px-5 lg:px-8">
         {tabs}
+        {!workshopMode && <AwaitingPickup />}
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="min-w-0">
             <p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">
