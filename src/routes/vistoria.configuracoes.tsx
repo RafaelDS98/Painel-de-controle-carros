@@ -119,7 +119,7 @@ function Config() {
 
   if (perms.isLoading || q.isLoading)
     return <p className="p-6 text-sm text-muted-foreground">Carregando…</p>;
-  if (!perms.data?.includes("action.inspection_config"))
+  if (!perms.data?.has("action.inspection_config"))
     return (
       <p className="p-6 text-sm text-muted-foreground">
         Sem acesso. Só quem tem permissão de configurar vistorias.
