@@ -1,0 +1,18 @@
+# Regras de src/components
+
+- A ficha de agendamento compartilha os campos da criação manual e envia somente colunas alteradas no UPDATE — mantém o trigger de permissões e o histórico como fonte das regras.
+- A edição em lote usa o UUID exportado, compara cada campo com a linha atual do banco e usa o mesmo UPDATE da ficha — evita duplicação e preserva as travas e o histórico.
+- Atalhos de período usam datas de São Paulo; a grade mostra só a semana atual do intervalo — evita misturar semanas.
+- A ficha grava Situação, Urgente e demais campos num único UPDATE montado por buildAppointmentUpdate (src/lib/appointment-update.ts) — cada Salvar conta uma só edição no limite.
+- Históricos é módulo próprio (rotas /historicos e /veiculo/$plate, src/components/historicos.tsx, protegidas por ProfileGate com o módulo `historicos`): log geral com filtros e exportação CSV/XLSX pelas funções puras de src/lib/history-log.ts (proteção de fórmula; autor "Sincronização SGLOC" quando changed_by é nulo). Perfil Oficina não tem o módulo.
+- Filtro avançado (src/components/advanced-filter-drawer.tsx + src/lib/advanced-filter.ts): campos vêm de custom_field_definitions visíveis, OU dentro do campo e E entre campos, junto dos demais filtros; visões salvas em saved_views (RLS: só do próprio usuário).
+- Componente de UI define a própria cor de texto pareada ao seu fundo (a variante `outline` do shadcn inclui `text-foreground`) — herdar cor de um contêiner colorido deixa o texto invisível em um dos temas.
+- Placa de entrada/saída avulsa só vem do cadastro de veículos: `PlateCombobox` + `QuickCheckInButton` na tela e trigger `validate_checkin_plate` no banco (avulso sem placa cadastrada é recusado) — evita veículos fantasmas.
+- Pátio próprio pode ser vários locais (`workshops.is_own_yard`); alterações em lote só por `set_own_yards` e `set_group_members_bulk` (Master conferido no banco); Configurações do Pátio ficam em abas (Locais, Grupos, Check-in, Avisos, Oficina e status), cada uma com seu Salvar.
+- Sidebar expanded links and collapsed popovers share the same permission-filtered children; Consultas is one item active for both internal tabs — prevents divergent navigation and forbidden shortcuts.
+- Icon-only controls carry their own name: `NameTip` (Radix Tooltip) wraps collapsed sidebar items and topbar icon buttons, and each keeps its `aria-label`; items with sub-screens show the name in the popover header instead of a tooltip — keeps the icon rail readable by mouse, touch and screen reader.
+- SearchableSelect uses a modal Popover so its portaled list accepts wheel and touch scrolling inside modal dialogs without unlocking the background.
+- Campos de data usam `DateInput` (exibe dd/mm/aaaa, valor segue aaaa-mm-dd) — nunca `<Input type="date">`, cujo formato depende do navegador.
+- Tela principal da oficina (src/components/yard-board.tsx + regras puras em src/lib/yard-board.ts): Chegando = encaminhado sem check-in; demais colunas por `status_options.yard_column` (main/ready/yard/hidden); nomes de colunas e campos do cartão em `yard_settings.board_config` (Master); Realtime em appointments recarrega o Pátio — a oficina vê chegadas na hora.
+- Telas protegidas por permissão usam `ProfileGate permission="..."` (confere get_my_permissions) além do filtro do menu/atalhos — link direto sem permissão mostra "Sem acesso".
+- Módulo Vistorias fica em /vistoria fora de _authenticated (login próprio, sessão 12h em vistoria-session.ts, shell próprio com volta a /home) — acesso direto tipo app sem passar pelo painel.
