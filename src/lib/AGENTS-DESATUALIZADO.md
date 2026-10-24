@@ -14,5 +14,3 @@
 - Notícias: news_posts + home_layout (ordem compartilhada dos painéis); mídia no bucket privado "noticias" exibida por link temporário (useMediaUrl em src/lib/news.ts).
 - Leitura de O.S. usa has_os_read() (has_access ou permissão module.os) em search_ordens_servico, os_get_detail, os_config_list e SELECT das tabelas os_* — Oficina consulta O.S. sem ganhar acesso às demais áreas; ordem da busca via filtro `order` (asc/desc).
 - Vistorias: regras puras em vistoria.ts (testadas); config de grupos/campos vem do banco (inspection_groups/fields) e respostas guardam rótulo/grupo copiados — mudar a config não altera laudos antigos. Cancelamento só via trigger (status+motivo).
-- Listas que podem passar de 1000 linhas buscam em blocos `.range(0,999)` — consulta única é cortada no limite padrão e a contagem sai errada.
-- Filtros cruzados dos gráficos (estilo Power BI) ficam em módulos puros e testados (`chart-selection.ts`, `dashboard-filter.ts`); as telas só aplicam o estado.

@@ -27,6 +27,8 @@
 - Yard separates configured own-yard locations from external workshops; workshop_movements records closed/open stays, and os_forward_appointment atomically creates/reuses the linked OS under appointment locking — prevents duplicate forwarding and invented historical durations.
 - Setor é só rótulo (profiles.sector, catalog_items kind "sector"; o do agendamento via appointment_creator_sectors()) — sem efeito em módulos, permissões ou RLS.
 - Migrations em drizzle/migrations são histórico já aplicado no banco (sem _journal); a verdade é o que está em produção.
+- Listas que podem passar de 1000 linhas buscam em blocos `.range(0,999)` — consulta única é cortada no limite padrão e a contagem sai errada.
+- Filtros cruzados dos gráficos (estilo Power BI) ficam em módulos puros e testados (`chart-selection.ts`, `dashboard-filter.ts`); as telas só aplicam o estado.
 
 ## Fluxo de trabalho (Claude direto no GitHub, sem gastar créditos do Lovable)
 - Alterações de código são feitas por Claude na pasta local e enviadas por commit/push ao GitHub; o Lovable só recebe o branch sincronizado — sem créditos. Nunca reescrever histórico e manter o branch sempre funcionando.
@@ -34,6 +36,8 @@
 - Mudanças de banco (tabelas, triggers, RLS, funções) viram arquivo em drizzle/migrations e SQL entregue ao Rafael, que aplica no SQL Editor; só depois a tela que depende delas é enviada.
 - Ao terminar cada mudança, atualizar este arquivo (decisão nova) e o roadmap.md (concluído ou pendente).
 - Envio ao SGLOC nunca é silencioso: desligado, criação/reenvio fica `push_failed` com o motivo e botão "Reenviar"; só atualização sem sgloc_reference é ignorada.
+- Layout: shell `layout-shell.tsx` com atalhos globais na topbar (via `?acao=`, lido por `usePageAction`) e subtelas em `children` da NAV usando parâmetro de URL (`?tab=`, `?aba=`) — uma fonte para menu, abas e atalhos.
+- Tema global: hook `use-theme.ts` (`.dark` no `<html>`, localStorage "theme", anti-flash em `__root.tsx`); gráficos leem `--chart-*` via `useChartColors`. Home/notícias em `/home`, Agenda em `/`.
 - `src/integrations` é gerado pela plataforma e fica fora do eslint; o resto segue `prettier`, de modo que `bun run lint` termine sem erros — formate antes de commitar.
 - Permissões por usuário: user_permissions + has_permission()/permission_default(); aba/ação nova entra em PERMISSIONS (src/lib/permissions.ts), permission_default() e get_my_permissions() juntas — o master libera sem código.
 - Sessão nova: ler estes AGENTS.md e "Como continuar" no roadmap.md antes de mudar algo.
