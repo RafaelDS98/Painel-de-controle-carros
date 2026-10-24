@@ -113,7 +113,7 @@
 - [x] Etapa 0: /vistoria com login direto (sessão 12h), início rápido no celular, menu próprio, botão "Voltar ao painel ANPEXC", "Adicionar à tela inicial", item no menu do painel, permissões de vistoria.
 - [ ] Etapa 1: tabelas/config de tipos, grupos e campos; assistente de checklist (Campos/Checklist/Fotos, assinatura, rascunho offline); lista, detalhe/galeria, PDF, localizar por placa e comparação; tipos base (pré-vistoria, entrega, cautelar, coleta, coleta com entrega).
 - [ ] Etapa 2: página inicial com indicadores e Ao Vivo.
-- [ ] Etapa 3: configurações completas (questionários, grupos/campos editáveis pelo Master).
+- [ ] Etapa 3: configurações completas (questionários, grupos/campos editáveis pelo Master). Pedido 24/10: Master cria/renomeia campos, fotos, grupos e operações em Configurações da Vistoria.
 - [ ] Etapa 4: clientes, e-mail do laudo, relatórios.
 - [ ] Etapa 5: leitura de placa pela câmera, cerco geográfico, checklist por link, mapa.
 - [ ] Etapa 6: importar histórico do VEX (aguarda exportação do VEX).
