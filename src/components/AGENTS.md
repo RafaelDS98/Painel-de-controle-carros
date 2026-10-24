@@ -16,3 +16,5 @@
 - Tela principal da oficina (src/components/yard-board.tsx + regras puras em src/lib/yard-board.ts): Chegando = encaminhado sem check-in; demais colunas por `status_options.yard_column` (main/ready/yard/hidden); nomes de colunas e campos do cartão em `yard_settings.board_config` (Master); Realtime em appointments recarrega o Pátio — a oficina vê chegadas na hora.
 - Telas protegidas por permissão usam `ProfileGate permission="..."` (confere get_my_permissions) além do filtro do menu/atalhos — link direto sem permissão mostra "Sem acesso".
 - Módulo Vistorias fica em /vistoria fora de _authenticated (login próprio, sessão 12h em vistoria-session.ts, shell próprio com volta a /home) — acesso direto tipo app sem passar pelo painel.
+- Layout: shell `layout-shell.tsx` com atalhos globais na topbar (via `?acao=`, lido por `usePageAction`) e subtelas em `children` da NAV usando parâmetro de URL (`?tab=`, `?aba=`) — uma fonte para menu, abas e atalhos.
+- Tema global: hook `use-theme.ts` (`.dark` no `<html>`, localStorage "theme", anti-flash em `__root.tsx`); gráficos leem `--chart-*` via `useChartColors`. Home/notícias em `/home`, Agenda em `/`.
