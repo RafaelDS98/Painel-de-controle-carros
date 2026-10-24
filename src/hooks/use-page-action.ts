@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 
-export type PageAction = "novo" | "config";
+export type PageAction = "novo" | "config" | "atendimento";
 
 /** Ações disparadas pela barra superior (?acao=...): executa uma vez e limpa da URL. */
 export function usePageAction(handler: (action: PageAction) => void) {
@@ -12,7 +12,7 @@ export function usePageAction(handler: (action: PageAction) => void) {
   const ref = useRef(handler);
   ref.current = handler;
   useEffect(() => {
-    if (acao !== "novo" && acao !== "config") return;
+    if (acao !== "novo" && acao !== "config" && acao !== "atendimento") return;
     ref.current(acao);
     void navigate({
       to: ".",
