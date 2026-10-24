@@ -111,8 +111,8 @@
 
 ## Módulo Vistorias (substituto do VEX) — plano aprovado em .lovable/plan/módulo-vistorias-*.md
 - [x] Etapa 0: /vistoria com login direto (sessão 12h), início rápido no celular, menu próprio, botão "Voltar ao painel ANPEXC", "Adicionar à tela inicial", item no menu do painel, permissões de vistoria.
-- [ ] Etapa 1: tabelas/config de tipos, grupos e campos; assistente de checklist (Campos/Checklist/Fotos, assinatura, rascunho offline); lista, detalhe/galeria, PDF, localizar por placa e comparação; tipos base (pré-vistoria, entrega, cautelar, coleta, coleta com entrega).
-- [ ] Etapa 2: página inicial com indicadores e Ao Vivo.
+- [x] Etapa 1 (22/10): tabelas/config de tipos, grupos e campos; assistente de checklist (Campos/Checklist/Fotos, assinatura, rascunho offline); lista, detalhe/galeria, PDF, localizar por placa e comparação. Pendente: tipos base avançados (pré-vistoria, cautelar, coleta, coleta com entrega, autoinspeção) e integração com Pátio.
+- [x] Etapa 2 (22/10): página inicial com indicadores (KPIs, Top 5, 7 dias, últimas 10) e Ao Vivo em tempo real.
 - [x] Etapa 3 (parte 1, 24/10): /vistoria/configuracoes — Master cria/renomeia/ordena/desativa operações, grupos, campos e fotos (obrigatório, tipo, aba). Pendente: termo de aceite editável.
 - [ ] Etapa 4: clientes, e-mail do laudo, relatórios.
 - [ ] Etapa 5: leitura de placa pela câmera, cerco geográfico, checklist por link, mapa.
@@ -121,7 +121,7 @@
 ## Vistorias — Etapa 1 (concluída em 22/10/2026)
 - Checklist no celular (Campos/Checklist/Fotos/Assinar), fotos comprimidas com data/hora, avaria com foto+observação, assinaturas, rascunho no aparelho (pendente de envio sem internet).
 - Lista com filtros/CSV, detalhe com galeria, laudo (imprimir/PDF), WhatsApp, cancelamento com motivo; Localizar por placa com comparação.
-- Pendente: editor Master de tipos/grupos/campos (Etapa 3), envio automático em fila offline, integração com Pátio, filtro por vistoriador/cliente.
+- Pendente: envio automático em fila offline, integração com Pátio, filtro por vistoriador/cliente.
 - Vistorias (22/10): foto opcional em cada item do checklist (mostra só o nome do arquivo; abre ao clicar), carimbo com campo + data/hora, laudo PDF no formato atual (dados principais, pneus, combustível, checklist, fotos 2 por página, termo, assinaturas, código de validação). Pendente: termo editável pelo Master (Etapa 3) e página pública de validação do código.
 - Vistorias (22/10): editor de foto (traço fino com cor e selos A/F/P/Q/R/T), legenda no laudo, escolha de questionário. Etapa 2 concluída: Página inicial (KPIs, Top 5, 7 dias, últimas 10) e Ao Vivo em tempo real. Próxima: Etapa 3 (configurações/editor de grupos e campos, termo editável).
 
