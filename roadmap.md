@@ -111,8 +111,8 @@
 
 ## Módulo Vistorias (substituto do VEX) — plano aprovado em .lovable/plan/módulo-vistorias-*.md
 - [x] Etapa 0: /vistoria com login direto (sessão 12h), início rápido no celular, menu próprio, botão "Voltar ao painel ANPEXC", "Adicionar à tela inicial", item no menu do painel, permissões de vistoria.
-- [ ] Etapa 1: tabelas/config de tipos, grupos e campos; assistente de checklist (Campos/Checklist/Fotos, assinatura, rascunho offline); lista, detalhe/galeria, PDF, localizar por placa e comparação; tipos base (pré-vistoria, entrega, cautelar, coleta, coleta com entrega).
-- [ ] Etapa 2: página inicial com indicadores e Ao Vivo.
+- [x] Etapa 1 (22/10): tabelas/config de tipos, grupos e campos; assistente de checklist (Campos/Checklist/Fotos, assinatura, rascunho offline); lista, detalhe/galeria, PDF, localizar por placa e comparação. Pendente: tipos base avançados (pré-vistoria, cautelar, coleta, coleta com entrega, autoinspeção) e integração com Pátio.
+- [x] Etapa 2 (22/10): página inicial com indicadores (KPIs, Top 5, 7 dias, últimas 10) e Ao Vivo em tempo real.
 - [x] Etapa 3 (parte 1, 24/10): /vistoria/configuracoes — Master cria/renomeia/ordena/desativa operações, grupos, campos e fotos (obrigatório, tipo, aba). Pendente: termo de aceite editável.
 - [ ] Etapa 4: clientes, e-mail do laudo, relatórios.
 - [ ] Etapa 5: leitura de placa pela câmera, cerco geográfico, checklist por link, mapa.
