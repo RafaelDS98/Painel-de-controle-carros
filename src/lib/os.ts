@@ -93,3 +93,66 @@ export function osConsultaFilters(draft: Record<string, string>): Record<string,
     if (k in out) out[k] = out[k] === "Sim" ? "true" : "false";
   return out;
 }
+
+export const OS_STATUS = {
+  EM_ANDAMENTO: 1,
+  CANCELADA: 3,
+  FINALIZADA: 7,
+  AGUARDANDO_RETIRADA: 8,
+} as const;
+
+/** Finalizada e Cancelada são "encerradas" e ficam fora das telas de trabalho. */
+export function isClosedStatus(statusId: unknown): boolean {
+  return Number(statusId) === OS_STATUS.CANCELADA || Number(statusId) === OS_STATUS.FINALIZADA;
+}
+
+/** Espelho do banco: qualquer perfil finaliza; só Master/Gerente cancelam. */
+export function canCancelOs(role: string | null | undefined): boolean {
+  return role === "master" || role === "gerente";
+}
+
+/** Situações oferecidas na troca manual: encerrar só pelos botões próprios. */
+export function manualStatusOptions<T extends { id: number | string }>(status: T[]): T[] {
+  return status.filter((s) => !isClosedStatus(s.id));
+}
+
+export function todaySaoPaulo(now = new Date()): string {
+  return now.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+}
+
+export function nowTimeSaoPaulo(now = new Date()): string {
+  return now.toLocaleTimeString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
+export type OsScope = "abertas" | "finalizadas" | "canceladas" | "encerradas";
+
+/** Escopo da aba: Em aberto esconde encerradas; Histórico separa Finalizadas e Canceladas. */
+export function scopeFilters(
+  scope: OsScope | undefined,
+  filters: Record<string, string>,
+): Record<string, string> {
+  if (!scope) return filters;
+  if (scope === "abertas") return { ...filters, nao_finalizadas: "1" };
+  const status =
+    scope === "finalizadas"
+      ? String(OS_STATUS.FINALIZADA)
+      : scope === "canceladas"
+        ? String(OS_STATUS.CANCELADA)
+        : `${OS_STATUS.CANCELADA},${OS_STATUS.FINALIZADA}`;
+  const chosen = filters["status_id"];
+  const allowed = status.split(",");
+  const pick = chosen
+    ? chosen
+        .split(",")
+        .filter((s) => allowed.includes(s))
+        .join(",")
+    : "";
+  const rest = { ...filters };
+  delete rest["nao_finalizadas"];
+  return { ...rest, status_id: pick || status };
+}

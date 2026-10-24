@@ -18,7 +18,9 @@ import {
   PAGAMENTO_STATUS,
   parseSearch,
   TIPO_ATENDIMENTO,
+  scopeFilters,
   type OsRow,
+  type OsScope,
 } from "@/lib/os";
 
 const sel = "h-10 w-full rounded-md border border-input bg-background px-3 text-sm";
@@ -50,7 +52,13 @@ type Draft = typeof EMPTY;
 const PAGE = 20;
 
 /** Consultas → O.S.: busca detalhada das ordens de serviço (filtros como no SGLOC). Começa vazia; só busca ao pesquisar. */
-export function OsConsultaPanel({ onOpenPlate }: { onOpenPlate?: (plate: string) => void }) {
+export function OsConsultaPanel({
+  onOpenPlate,
+  scope,
+}: {
+  onOpenPlate?: (plate: string) => void;
+  scope?: OsScope;
+}) {
   const config = useOsConfig();
   const brands = useQuery({
     queryKey: ["os-brands"],
@@ -104,7 +112,7 @@ export function OsConsultaPanel({ onOpenPlate }: { onOpenPlate?: (plate: string)
     enabled: filters !== null,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("search_ordens_servico", {
-        _filters: { ...(filters ?? {}), order },
+        _filters: { ...scopeFilters(scope, filters ?? {}), order },
         _page: page,
         _page_size: PAGE,
       });
@@ -137,7 +145,7 @@ export function OsConsultaPanel({ onOpenPlate }: { onOpenPlate?: (plate: string)
 
   async function exportXlsx() {
     const { data, error } = await supabase.rpc("search_ordens_servico", {
-      _filters: { ...(filters ?? {}), order },
+      _filters: { ...scopeFilters(scope, filters ?? {}), order },
       _page: 1,
       _page_size: 5000,
     });

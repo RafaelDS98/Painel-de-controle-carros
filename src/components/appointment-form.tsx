@@ -93,7 +93,9 @@ export function AppointmentForm({
   catalog = emptyCatalog(),
   canAddCatalog = false,
   onCatalogAdded,
+  hideDate = false,
 }: {
+  hideDate?: boolean;
   catalog?: Catalog;
   canAddCatalog?: boolean;
   onCatalogAdded?: () => Promise<void> | void;
@@ -202,20 +204,22 @@ export function AppointmentForm({
             )}
           </label>
         )}
-        {baseFields.map(({ key, label, type }) => (
-          <label key={key}>
-            <span className="mb-1.5 block text-xs font-medium uppercase text-muted-foreground">
-              {label}
-              {!editing ? " *" : ""}
-            </span>
-            <Input
-              type={type}
-              value={draft[key]}
-              required={!editing}
-              onChange={(event) => setDraft((prev) => ({ ...prev, [key]: event.target.value }))}
-            />
-          </label>
-        ))}
+        {baseFields
+          .filter((f) => !(hideDate && f.key === "date"))
+          .map(({ key, label, type }) => (
+            <label key={key}>
+              <span className="mb-1.5 block text-xs font-medium uppercase text-muted-foreground">
+                {label}
+                {!editing ? " *" : ""}
+              </span>
+              <Input
+                type={type}
+                value={draft[key]}
+                required={!editing}
+                onChange={(event) => setDraft((prev) => ({ ...prev, [key]: event.target.value }))}
+              />
+            </label>
+          ))}
         {definitions
           .filter((field) => field.visible && !readOnlyColumns.has(field.field_key))
           .map((field) => {

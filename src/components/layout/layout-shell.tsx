@@ -8,6 +8,7 @@ import {
   ChevronDown,
   ChevronsLeft,
   ClipboardPlus,
+  DoorOpen,
   Plus,
   Settings,
   ChevronsRight,
@@ -642,6 +643,17 @@ export function LayoutShell({
                   onClick={() => void navigate({ to: "/", search: { acao: "novo" } })}
                 >
                   <Plus /> <span className="hidden xl:inline">Novo agendamento</span>
+                </Button>
+              )}
+              {me?.role && me.role !== "oficina" && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="hidden md:inline-flex"
+                  title="Abrir atendimento (sem agendamento)"
+                  onClick={() => void navigate({ to: "/", search: { acao: "atendimento" } })}
+                >
+                  <DoorOpen /> <span className="hidden xl:inline">Abrir atendimento</span>
                 </Button>
               )}
               {me?.role && me.role !== "oficina" && (

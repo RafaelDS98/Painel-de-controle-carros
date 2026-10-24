@@ -28,6 +28,10 @@ export type Database = {
           check_out_note: string | null
           check_out_photo_url: string | null
           client_id: number | null
+          close_kind: string | null
+          close_reason: string | null
+          closed_at: string | null
+          closed_by: string | null
           contact: string
           contact_number: string
           created_at: string
@@ -52,6 +56,7 @@ export type Database = {
           note: string
           operator: string
           operator_id: number | null
+          origin: string
           original_deadline: string | null
           os_number: number | null
           plate: string
@@ -88,6 +93,10 @@ export type Database = {
           check_out_note?: string | null
           check_out_photo_url?: string | null
           client_id?: number | null
+          close_kind?: string | null
+          close_reason?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
           contact?: string
           contact_number?: string
           created_at?: string
@@ -112,6 +121,7 @@ export type Database = {
           note?: string
           operator?: string
           operator_id?: number | null
+          origin?: string
           original_deadline?: string | null
           os_number?: number | null
           plate?: string
@@ -148,6 +158,10 @@ export type Database = {
           check_out_note?: string | null
           check_out_photo_url?: string | null
           client_id?: number | null
+          close_kind?: string | null
+          close_reason?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
           contact?: string
           contact_number?: string
           created_at?: string
@@ -172,6 +186,7 @@ export type Database = {
           note?: string
           operator?: string
           operator_id?: number | null
+          origin?: string
           original_deadline?: string | null
           os_number?: number | null
           plate?: string
@@ -948,9 +963,14 @@ export type Database = {
           archived_by: string | null
           autorizacao: string | null
           autorizado_cliente: string | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
           centro_custo_id: string | null
           cliente: string | null
+          close_note: string | null
           closed_at: string | null
+          closed_by: string | null
           condutor_contato: string | null
           condutor_nome: string | null
           contrato_id: number | null
@@ -1004,9 +1024,14 @@ export type Database = {
           archived_by?: string | null
           autorizacao?: string | null
           autorizado_cliente?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           centro_custo_id?: string | null
           cliente?: string | null
+          close_note?: string | null
           closed_at?: string | null
+          closed_by?: string | null
           condutor_contato?: string | null
           condutor_nome?: string | null
           contrato_id?: number | null
@@ -1060,9 +1085,14 @@ export type Database = {
           archived_by?: string | null
           autorizacao?: string | null
           autorizado_cliente?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           centro_custo_id?: string | null
           cliente?: string | null
+          close_note?: string | null
           closed_at?: string | null
+          closed_by?: string | null
           condutor_contato?: string | null
           condutor_nome?: string | null
           contrato_id?: number | null
@@ -1511,6 +1541,7 @@ export type Database = {
           color: string
           created_at: string
           id: number
+          is_closed: boolean
           label: string
           sort_order: number
         }
@@ -1520,6 +1551,7 @@ export type Database = {
           color?: string
           created_at?: string
           id: number
+          is_closed?: boolean
           label: string
           sort_order?: number
         }
@@ -1529,6 +1561,7 @@ export type Database = {
           color?: string
           created_at?: string
           id?: number
+          is_closed?: boolean
           label?: string
           sort_order?: number
         }
@@ -2434,6 +2467,18 @@ export type Database = {
       norm_name: { Args: { _v: string }; Returns: string }
       norm_plate: { Args: { _v: string }; Returns: string }
       os_archive: { Args: { _os_id: string }; Returns: undefined }
+      os_cancel: { Args: { _os_id: string; _reason: string }; Returns: Json }
+      os_close: {
+        Args: {
+          _gnv_final: string
+          _km_final: number
+          _note: string
+          _os_id: string
+          _posicao_final: string
+          _tanque_final: string
+        }
+        Returns: Json
+      }
       os_config_list: { Args: never; Returns: Json }
       os_contrato_match: {
         Args: {
@@ -2525,6 +2570,8 @@ export type Database = {
         Args: { _approval: string; _os_id: string }
         Returns: undefined
       }
+      os_locked: { Args: { _os_id: string }; Returns: boolean }
+      os_reopen: { Args: { _os_id: string }; Returns: Json }
       os_transition_status: {
         Args: { _new_status_id: number; _os_id: string }
         Returns: Json

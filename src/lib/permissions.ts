@@ -11,6 +11,11 @@ export const PERMISSIONS = [
   { key: "module.noticias", group: "Abas", label: "Notícias (gerenciar)" },
   { key: "action.forward_workshop", group: "Ações", label: "Encaminhar veículo para oficina" },
   { key: "action.create_os", group: "Ações", label: "Criar ordem de serviço" },
+  {
+    key: "action.os_edit_closed",
+    group: "Ações",
+    label: "Alterar/reabrir O.S. e atendimentos finalizados/cancelados",
+  },
   { key: "action.manage_vehicles", group: "Ações", label: "Cadastrar/editar veículos" },
   { key: "action.news_create", group: "Notícias", label: "Publicar notícia" },
   { key: "action.news_edit", group: "Notícias", label: "Editar notícia" },
