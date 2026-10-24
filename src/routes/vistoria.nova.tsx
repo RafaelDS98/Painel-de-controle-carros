@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Camera, CheckCircle2 } from "lucide-react";
+import { Camera, CheckCircle2, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -255,7 +255,7 @@ function NovaVistoria() {
     { k: "assinar", l: "Assinar" },
   ];
   return (
-    <div className="mx-auto w-full max-w-2xl pb-28">
+    <div className="mx-auto w-full max-w-2xl pb-28 lg:max-w-5xl lg:px-4">
       <div className="sticky top-16 z-[5] space-y-2 border-b bg-background/95 p-3 backdrop-blur">
         <div className="flex items-center gap-2 text-sm">
           <span className="rounded border bg-white px-2 py-0.5 font-mono font-bold text-black">
@@ -265,6 +265,20 @@ function NovaVistoria() {
             {ops.data?.find((o) => o.id === d.opId)?.name ?? "Tipo de operação"}
           </span>
           <span className="ml-auto font-medium">{pct}%</span>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 text-destructive"
+            onClick={() => {
+              if (!window.confirm("Cancelar esta vistoria? O que foi preenchido será descartado."))
+                return;
+              localStorage.removeItem(DRAFT_KEY);
+              toast("Vistoria cancelada.");
+              void navigate({ to: "/vistoria" });
+            }}
+          >
+            <X className="h-4 w-4" /> Cancelar
+          </Button>
         </div>
         <div className="h-1.5 rounded bg-muted">
           <div className="h-1.5 rounded bg-primary transition-all" style={{ width: `${pct}%` }} />
@@ -292,7 +306,7 @@ function NovaVistoria() {
               <label className="text-sm font-medium">Placa *</label>
               <PlateCombobox value={d.plate} onChange={(plate) => setD((p) => ({ ...p, plate }))} />
               <label className="text-sm font-medium">Tipo de operação *</label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
                 {ops.data?.map((o) => (
                   <button
                     key={o.id}
@@ -521,7 +535,11 @@ function NovaVistoria() {
         />
       )}
       <div className="fixed inset-x-0 bottom-0 z-10 border-t bg-card/95 p-3 backdrop-blur md:left-60">
-        <Button className="h-14 w-full text-base" disabled={saving} onClick={finish}>
+        <Button
+          className="mx-auto flex h-14 w-full max-w-2xl text-base lg:max-w-5xl"
+          disabled={saving}
+          onClick={finish}
+        >
           <CheckCircle2 className="h-5 w-5" />
           {saving ? "Enviando…" : "Concluir vistoria"}
         </Button>
