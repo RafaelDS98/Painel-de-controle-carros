@@ -221,6 +221,7 @@ export function WorkshopYard({ currentUser, tabs, onSignOut, onOpenMovements }: 
                 .from("appointments")
                 .select("*")
                 .is("archived_at", null)
+                .is("closed_at", null)
                 .order("id")
                 .range(start, start + 999);
               if (r.error) return r;
